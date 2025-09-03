@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuizMaster - O Melhor App de Quiz Multiplayer</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/home.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <meta name="description" content="Desafie seus amigos no melhor app de quiz multiplayer! Jogue online ou offline, crie equipes e teste seus conhecimentos.">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="navbar">
+            <div class="container flex-between">
+                <div class="logo">
+                    <h1 class="logo-text">QuizMaster</h1>
+                    <span class="logo-subtitle">Pro</span>
+                </div>
+                <div class="nav-links">
+                    <a href="#features" class="nav-link">Recursos</a>
+                    <a href="#modes" class="nav-link">Modos</a>
+                    <a href="#ranking" class="nav-link">Ranking</a>
+                    <a href="menu.html" class="btn btn-primary">Jogar Agora</a>
+                </div>
+                <div class="mobile-menu-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-background">
+            <div class="hero-particles"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text animate-fade-in">
+                    <h1 class="hero-title">
+                        Desafie Seus Amigos no
+                        <span class="gradient-text">Quiz Definitivo</span>
+                    </h1>
+                    <p class="hero-description">
+                        Crie salas, forme equipes de até 4 jogadores e teste seus conhecimentos em diferentes categorias. 
+                        Jogue online ou offline via Wi-Fi hotspot!
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="menu.html" class="btn btn-primary btn-large animate-pulse">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="5,3 19,12 5,21 5,3"></polygon>
+                            </svg>
+                            Começar a Jogar
+                        </a>
+                        <a href="#features" class="btn btn-outline btn-large">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="m9,12 2,2 4,-4"></path>
+                            </svg>
+                            Saiba Mais
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-visual animate-slide-in">
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="quiz-preview">
+                                <div class="quiz-question">
+                                    <h3>Qual é a capital do Brasil?</h3>
+                                    <div class="quiz-options">
+                                        <div class="option">A) São Paulo</div>
+                                        <div class="option active">B) Brasília</div>
+                                        <div class="option">C) Rio de Janeiro</div>
+                                        <div class="option">D) Belo Horizonte</div>
+                                    </div>
+                                </div>
+                                <div class="quiz-stats">
+                                    <div class="stat">
+                                        <span class="stat-value">4</span>
+                                        <span class="stat-label">Jogadores</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-value">15</span>
+                                        <span class="stat-label">Segundos</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header text-center">
+                <h2 class="section-title">Por que escolher o QuizMaster?</h2>
+                <p class="section-subtitle">Recursos únicos que tornam cada partida emocionante</p>
+            </div>
+            <div class="features-grid grid grid-3">
+                <div class="feature-card card animate-fade-in">
+                    <div class="feature-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Multiplayer Épico</h3>
+                    <p class="feature-description">
+                        Jogue com até 8 pessoas divididas em 2 equipes de 4 jogadores cada. 
+                        Cada jogador especialista em uma categoria!
+                    </p>
+                </div>
+                <div class="feature-card card animate-fade-in">
+                    <div class="feature-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                            <path d="M2 17l10 5 10-5"></path>
+                            <path d="M2 12l10 5 10-5"></path>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Múltiplos Modos</h3>
+                    <p class="feature-description">
+                        Modo Equipe, 1v1, Quiz Clássico, estilo Kahoot e muito mais. 
+                        Cada modo com suas próprias regras e desafios únicos.
+                    </p>
+                </div>
+                <div class="feature-card card animate-fade-in">
+                    <div class="feature-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4"></path>
+                            <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+                            <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
+                            <path d="M12 3c0 1-1 3-3 3s-3-2-3-3 1-3 3-3 3 2 3 3"></path>
+                            <path d="M12 21c0-1 1-3 3-3s3 2 3 3-1 3-3 3-3-2-3-3"></path>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Online & Offline</h3>
+                    <p class="feature-description">
+                        Jogue online com pessoas do mundo todo ou crie um hotspot Wi-Fi 
+                        para jogar offline com seus amigos próximos.
+                    </p>
+                </div>
+                <div class="feature-card card animate-fade-in">
+                    <div class="feature-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9l6 6 6-6"></path>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Categorias Diversas</h3>
+                    <p class="feature-description">
+                        Matemática, Português, História, Geografia, Ciências e muito mais. 
+                        Perguntas atualizadas constantemente.
+                    </p>
+                </div>
+                <div class="feature-card card animate-fade-in">
+                    <div class="feature-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Sistema de Ranking</h3>
+                    <p class="feature-description">
+                        Conquiste medalhas, suba no ranking global e por categoria. 
+                        Acompanhe seu progresso e compete com os melhores!
+                    </p>
+                </div>
+                <div class="feature-card card animate-fade-in">
+                    <div class="feature-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Totalmente Customizável</h3>
+                    <p class="feature-description">
+                        Configure tempo de resposta, dificuldade, número de perguntas 
+                        e muito mais. Cada partida do seu jeito!
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Game Modes Section -->
+    <section id="modes" class="game-modes">
+        <div class="container">
+            <div class="section-header text-center">
+                <h2 class="section-title">Modos de Jogo</h2>
+                <p class="section-subtitle">Escolha sua forma favorita de jogar</p>
+            </div>
+            <div class="modes-grid grid grid-2">
+                <div class="mode-card card">
+                    <div class="mode-header">
+                        <div class="mode-icon team-icon">
+                            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                        </div>
+                        <h3 class="mode-title">Modo Equipe 4x4</h3>
+                    </div>
+                    <p class="mode-description">
+                        Forme duas equipes de até 4 jogadores cada. Cada jogador se especializa em uma categoria 
+                        (Matemática, Português, História, Ciências) e enfrenta o especialista da equipe adversária.
+                    </p>
+                    <div class="mode-features">
+                        <div class="feature">✓ Até 8 jogadores simultâneos</div>
+                        <div class="feature">✓ Especialização por categoria</div>
+                        <div class="feature">✓ Pontuação em equipe</div>
+                        <div class="feature">✓ Chat de equipe</div>
+                    </div>
+                </div>
+                <div class="mode-card card">
+                    <div class="mode-header">
+                        <div class="mode-icon duel-icon">
+                            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="mode-title">Duelo 1v1</h3>
+                    </div>
+                    <p class="mode-description">
+                        Desafie um amigo para um duelo direto. Escolha uma categoria específica ou 
+                        jogue com perguntas mistas. O mais rápido e preciso vence!
+                    </p>
+                    <div class="mode-features">
+                        <div class="feature">✓ Confronto direto</div>
+                        <div class="feature">✓ Categoria específica ou mista</div>
+                        <div class="feature">✓ Velocidade conta pontos</div>
+                        <div class="feature">✓ Melhor de 3, 5 ou 10</div>
+                    </div>
+                </div>
+                <div class="mode-card card">
+                    <div class="mode-header">
+                        <div class="mode-icon classic-icon">
+                            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"></path>
+                                <path d="M19 4H15a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="mode-title">Quiz Clássico</h3>
+                    </div>
+                    <p class="mode-description">
+                        O modo tradicional para testar seus conhecimentos sozinho. Escolha a categoria, 
+                        dificuldade e número de perguntas. Perfeito para treinar!
+                    </p>
+                    <div class="mode-features">
+                        <div class="feature">✓ Jogo individual</div>
+                        <div class="feature">✓ Múltiplas categorias</div>
+                        <div class="feature">✓ 3 níveis de dificuldade</div>
+                        <div class="feature">✓ Estatísticas detalhadas</div>
+                    </div>
+                </div>
+                <div class="mode-card card">
+                    <div class="mode-header">
+                        <div class="mode-icon kahoot-icon">
+                            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                                <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                                <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                            </svg>
+                        </div>
+                        <h3 class="mode-title">Estilo Kahoot</h3>
+                    </div>
+                    <p class="mode-description">
+                        Todos os jogadores veem a mesma pergunta ao mesmo tempo. Responda rápido para 
+                        ganhar mais pontos! Ideal para grupos grandes e eventos.
+                    </p>
+                    <div class="mode-features">
+                        <div class="feature">✓ Até 20 jogadores</div>
+                        <div class="feature">✓ Pergunta simultânea</div>
+                        <div class="feature">✓ Ranking ao vivo</div>
+                        <div class="feature">✓ Modo apresentação</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <div class="cta-content text-center">
+                <h2 class="cta-title">Pronto para o Desafio?</h2>
+                <p class="cta-description">
+                    Junte-se a milhares de jogadores e teste seus conhecimentos no quiz mais divertido do Brasil!
+                </p>
+                <div class="cta-buttons">
+                    <a href="menu.html" class="btn btn-primary btn-large">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5,3 19,12 5,21 5,3"></polygon>
+                        </svg>
+                        Começar Agora
+                    </a>
+                    <a href="ranking.html" class="btn btn-outline btn-large">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                        </svg>
+                        Ver Ranking
+                    </a>
+                </div>
+                <div class="cta-stats">
+                    <div class="stat">
+                        <span class="stat-number">50K+</span>
+                        <span class="stat-label">Jogadores Ativos</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">1M+</span>
+                        <span class="stat-label">Partidas Jogadas</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">10K+</span>
+                        <span class="stat-label">Perguntas</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="logo">
+                        <h3 class="logo-text">QuizMaster</h3>
+                        <span class="logo-subtitle">Pro</span>
+                    </div>
+                    <p class="footer-description">
+                        O melhor aplicativo de quiz multiplayer do Brasil. 
+                        Desafie seus amigos e teste seus conhecimentos!
+                    </p>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Jogo</h4>
+                    <ul class="footer-links">
+                        <li><a href="menu.html">Jogar Agora</a></li>
+                        <li><a href="create-room.html">Criar Sala</a></li>
+                        <li><a href="ranking.html">Ranking</a></li>
+                        <li><a href="achievements.html">Conquistas</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Suporte</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Como Jogar</a></li>
+                        <li><a href="#">FAQ</a></li>
+                        <li><a href="#">Contato</a></li>
+                        <li><a href="#">Reportar Bug</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Comunidade</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Discord</a></li>
+                        <li><a href="#">Instagram</a></li>
+                        <li><a href="#">Twitter</a></li>
+                        <li><a href="#">YouTube</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 QuizMaster Pro. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
+

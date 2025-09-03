@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Sala - QuizMaster</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/create-room.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="navbar">
+            <div class="container flex-between">
+                <div class="logo">
+                    <a href="index.html" class="logo-link">
+                        <h1 class="logo-text">QuizMaster</h1>
+                        <span class="logo-subtitle">Pro</span>
+                    </a>
+                </div>
+                <div class="nav-actions">
+                    <a href="menu.html" class="btn btn-outline btn-small">Voltar ao Menu</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="create-room-main">
+        <div class="container">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="page-title">Criar Nova Sala</h1>
+                <p class="page-subtitle">Configure sua sala e convide seus amigos para jogar</p>
+            </div>
+
+            <!-- Create Room Form -->
+            <div class="create-room-container">
+                <div class="form-section">
+                    <form class="create-room-form" id="createRoomForm">
+                        <!-- Room Basic Info -->
+                        <div class="form-group">
+                            <label class="form-label">Nome da Sala</label>
+                            <input type="text" class="form-input" id="roomName" placeholder="Ex: Sala dos Amigos" required>
+                            <small class="form-help">Escolha um nome único e fácil de lembrar</small>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Senha (Opcional)</label>
+                                <input type="password" class="form-input" id="roomPassword" placeholder="Digite uma senha">
+                                <small class="form-help">Deixe em branco para sala pública</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Máximo de Jogadores</label>
+                                <select class="form-select" id="maxPlayers">
+                                    <option value="2">2 Jogadores</option>
+                                    <option value="4">4 Jogadores</option>
+                                    <option value="6">6 Jogadores</option>
+                                    <option value="8" selected>8 Jogadores</option>
+                                    <option value="12">12 Jogadores</option>
+                                    <option value="20">20 Jogadores</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Game Mode Selection -->
+                        <div class="form-group">
+                            <label class="form-label">Modo de Jogo</label>
+                            <div class="game-mode-selector">
+                                <div class="mode-option active" data-mode="team">
+                                    <div class="mode-icon">
+                                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                            <circle cx="9" cy="7" r="4"></circle>
+                                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                        </svg>
+                                    </div>
+                                    <h4 class="mode-title">Modo Equipe</h4>
+                                    <p class="mode-description">2 equipes de até 4 jogadores</p>
+                                </div>
+
+                                <div class="mode-option" data-mode="duel">
+                                    <div class="mode-icon">
+                                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+                                        </svg>
+                                    </div>
+                                    <h4 class="mode-title">Duelo 1v1</h4>
+                                    <p class="mode-description">Confronto direto entre 2 jogadores</p>
+                                </div>
+
+                                <div class="mode-option" data-mode="kahoot">
+                                    <div class="mode-icon">
+                                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                                            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                                            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                                        </svg>
+                                    </div>
+                                    <h4 class="mode-title">Estilo Kahoot</h4>
+                                    <p class="mode-description">Todos respondem simultaneamente</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Game Configuration -->
+                        <div class="config-section">
+                            <h3 class="section-title">Configurações do Jogo</h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Categorias</label>
+                                    <div class="category-selector">
+                                        <div class="category-option active" data-category="mixed">
+                                            <span class="category-icon">🎯</span>
+                                            <span class="category-name">Mistas</span>
+                                        </div>
+                                        <div class="category-option" data-category="math">
+                                            <span class="category-icon">🔢</span>
+                                            <span class="category-name">Matemática</span>
+                                        </div>
+                                        <div class="category-option" data-category="portuguese">
+                                            <span class="category-icon">📚</span>
+                                            <span class="category-name">Português</span>
+                                        </div>
+                                        <div class="category-option" data-category="history">
+                                            <span class="category-icon">🏛️</span>
+                                            <span class="category-name">História</span>
+                                        </div>
+                                        <div class="category-option" data-category="geography">
+                                            <span class="category-icon">🌍</span>
+                                            <span class="category-name">Geografia</span>
+                                        </div>
+                                        <div class="category-option" data-category="science">
+                                            <span class="category-icon">🔬</span>
+                                            <span class="category-name">Ciências</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Dificuldade</label>
+                                    <div class="difficulty-selector">
+                                        <div class="difficulty-option" data-difficulty="easy">
+                                            <span class="difficulty-icon">😊</span>
+                                            <span class="difficulty-name">Fácil</span>
+                                        </div>
+                                        <div class="difficulty-option active" data-difficulty="medium">
+                                            <span class="difficulty-icon">😐</span>
+                                            <span class="difficulty-name">Médio</span>
+                                        </div>
+                                        <div class="difficulty-option" data-difficulty="hard">
+                                            <span class="difficulty-icon">😤</span>
+                                            <span class="difficulty-name">Difícil</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Tempo por Pergunta</label>
+                                    <select class="form-select" id="questionTime">
+                                        <option value="10">10 segundos</option>
+                                        <option value="15" selected>15 segundos</option>
+                                        <option value="20">20 segundos</option>
+                                        <option value="30">30 segundos</option>
+                                        <option value="60">1 minuto</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Número de Perguntas</label>
+                                    <select class="form-select" id="questionCount">
+                                        <option value="5">5 perguntas</option>
+                                        <option value="10" selected>10 perguntas</option>
+                                        <option value="15">15 perguntas</option>
+                                        <option value="20">20 perguntas</option>
+                                        <option value="25">25 perguntas</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Tipo de Conexão</label>
+                                    <div class="connection-selector">
+                                        <div class="connection-option active" data-connection="online">
+                                            <span class="connection-icon">🌐</span>
+                                            <span class="connection-name">Online</span>
+                                        </div>
+                                        <div class="connection-option" data-connection="hotspot">
+                                            <span class="connection-icon">📶</span>
+                                            <span class="connection-name">Hotspot Wi-Fi</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Settings -->
+                        <div class="advanced-settings">
+                            <div class="settings-header">
+                                <h3 class="section-title">Configurações Avançadas</h3>
+                                <button type="button" class="toggle-advanced" id="toggleAdvanced">
+                                    <span>Mostrar</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6,9 12,15 18,9"></polyline>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <div class="advanced-content" id="advancedContent">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Permitir Espectadores</label>
+                                        <div class="toggle-switch">
+                                            <input type="checkbox" id="allowSpectators" checked>
+                                            <label for="allowSpectators" class="toggle-label"></label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Chat Habilitado</label>
+                                        <div class="toggle-switch">
+                                            <input type="checkbox" id="enableChat" checked>
+                                            <label for="enableChat" class="toggle-label"></label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Mostrar Ranking em Tempo Real</label>
+                                        <div class="toggle-switch">
+                                            <input type="checkbox" id="showRealTimeRanking" checked>
+                                            <label for="showRealTimeRanking" class="toggle-label"></label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Permitir Reconexão</label>
+                                        <div class="toggle-switch">
+                                            <input type="checkbox" id="allowReconnection" checked>
+                                            <label for="allowReconnection" class="toggle-label"></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-outline" onclick="history.back()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary btn-large">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22,4 12,14.01 9,11.01"></polyline>
+                                </svg>
+                                Criar Sala
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Room Preview -->
+                <div class="room-preview">
+                    <div class="preview-card">
+                        <div class="preview-header">
+                            <h3 class="preview-title">Prévia da Sala</h3>
+                        </div>
+                        <div class="preview-content">
+                            <div class="room-info">
+                                <h4 class="room-name" id="previewRoomName">Sala dos Amigos</h4>
+                                <div class="room-details">
+                                    <div class="detail">
+                                        <span class="detail-icon">👥</span>
+                                        <span class="detail-text" id="previewPlayers">Máx. 8 jogadores</span>
+                                    </div>
+                                    <div class="detail">
+                                        <span class="detail-icon">🎮</span>
+                                        <span class="detail-text" id="previewMode">Modo Equipe</span>
+                                    </div>
+                                    <div class="detail">
+                                        <span class="detail-icon">🎯</span>
+                                        <span class="detail-text" id="previewCategory">Categorias Mistas</span>
+                                    </div>
+                                    <div class="detail">
+                                        <span class="detail-icon">⏱️</span>
+                                        <span class="detail-text" id="previewTime">15s por pergunta</span>
+                                    </div>
+                                    <div class="detail">
+                                        <span class="detail-icon">📊</span>
+                                        <span class="detail-text" id="previewQuestions">10 perguntas</span>
+                                    </div>
+                                    <div class="detail">
+                                        <span class="detail-icon">🌐</span>
+                                        <span class="detail-text" id="previewConnection">Online</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="room-code">
+                                <label class="code-label">Código da Sala</label>
+                                <div class="code-display">
+                                    <span class="code-text" id="roomCode">ABC123</span>
+                                    <button type="button" class="copy-code-btn" id="copyCodeBtn">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <small class="code-help">Compartilhe este código com seus amigos</small>
+                            </div>
+
+                            <div class="qr-code">
+                                <div class="qr-placeholder">
+                                    <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                        <rect x="3" y="3" width="7" height="7"></rect>
+                                        <rect x="14" y="3" width="7" height="7"></rect>
+                                        <rect x="3" y="14" width="7" height="7"></rect>
+                                        <path d="M5 5h3v3H5zM16 5h3v3h-3zM5 16h3v3H5z"></path>
+                                        <path d="M14 14h1v1h-1zM15 15h1v1h-1zM16 16h1v1h-1zM17 17h1v1h-1zM18 18h1v1h-1zM19 19h1v1h-1zM20 20h1v1h-1z"></path>
+                                    </svg>
+                                </div>
+                                <small class="qr-help">QR Code para acesso rápido</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="assets/js/main.js"></script>
+    <script src="assets/js/create-room.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz em Andamento - QuizMaster</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/quiz-game.css">
+</head>
+<body>
+    <!-- Game Header -->
+    <header class="game-header">
+        <div class="container">
+            <div class="game-info">
+                <div class="room-info">
+                    <h1 class="room-name">Sala dos Amigos</h1>
+                    <span class="room-code">Código: ABC123</span>
+                </div>
+                <div class="game-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 30%"></div>
+                    </div>
+                    <span class="progress-text">Pergunta 3 de 10</span>
+                </div>
+                <div class="game-timer">
+                    <div class="timer-circle">
+                        <svg class="timer-svg" viewBox="0 0 100 100">
+                            <circle class="timer-bg" cx="50" cy="50" r="45"></circle>
+                            <circle class="timer-progress" cx="50" cy="50" r="45"></circle>
+                        </svg>
+                        <span class="timer-text">12</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Game Content -->
+    <main class="game-main">
+        <div class="container">
+            <!-- Question Section -->
+            <section class="question-section">
+                <div class="question-card">
+                    <div class="question-header">
+                        <div class="category-badge">
+                            <span class="category-icon">🔢</span>
+                            <span class="category-name">Matemática</span>
+                        </div>
+                        <div class="difficulty-badge medium">
+                            <span class="difficulty-text">Médio</span>
+                        </div>
+                    </div>
+                    <div class="question-content">
+                        <h2 class="question-text">Qual é o resultado de 15 × 8 + 32 ÷ 4?</h2>
+                        <div class="question-image" style="display: none;">
+                            <img src="" alt="Imagem da pergunta" id="questionImage">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Answer Options -->
+                <div class="answer-options">
+                    <button class="answer-option" data-answer="A">
+                        <span class="option-letter">A</span>
+                        <span class="option-text">128</span>
+                    </button>
+                    <button class="answer-option" data-answer="B">
+                        <span class="option-letter">B</span>
+                        <span class="option-text">132</span>
+                    </button>
+                    <button class="answer-option" data-answer="C">
+                        <span class="option-letter">C</span>
+                        <span class="option-text">136</span>
+                    </button>
+                    <button class="answer-option" data-answer="D">
+                        <span class="option-letter">D</span>
+                        <span class="option-text">140</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Players Section -->
+            <section class="players-section">
+                <div class="players-container">
+                    <!-- Team A -->
+                    <div class="team-section team-a">
+                        <div class="team-header">
+                            <h3 class="team-name">Equipe A</h3>
+                            <div class="team-score">1,250</div>
+                        </div>
+                        <div class="team-players">
+                            <div class="player-card active">
+                                <div class="player-avatar">
+                                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face" alt="João">
+                                    <div class="player-status answering"></div>
+                                </div>
+                                <div class="player-info">
+                                    <span class="player-name">João</span>
+                                    <span class="player-category">Matemática</span>
+                                    <span class="player-score">320</span>
+                                </div>
+                                <div class="player-streak">
+                                    <span class="streak-count">3</span>
+                                    <span class="streak-icon">🔥</span>
+                                </div>
+                            </div>
+                            <div class="player-card">
+                                <div class="player-avatar">
+                                    <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=60&h=60&fit=crop&crop=face" alt="Maria">
+                                    <div class="player-status waiting"></div>
+                                </div>
+                                <div class="player-info">
+                                    <span class="player-name">Maria</span>
+                                    <span class="player-category">Português</span>
+                                    <span class="player-score">280</span>
+                                </div>
+                                <div class="player-streak">
+                                    <span class="streak-count">1</span>
+                                    <span class="streak-icon">⭐</span>
+                                </div>
+                            </div>
+                            <div class="player-card">
+                                <div class="player-avatar">
+                                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&crop=face" alt="Pedro">
+                                    <div class="player-status waiting"></div>
+                                </div>
+                                <div class="player-info">
+                                    <span class="player-name">Pedro</span>
+                                    <span class="player-category">História</span>
+                                    <span class="player-score">350</span>
+                                </div>
+                                <div class="player-streak">
+                                    <span class="streak-count">2</span>
+                                    <span class="streak-icon">⚡</span>
+                                </div>
+                            </div>
+                            <div class="player-card">
+                                <div class="player-avatar">
+                                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60&h=60&fit=crop&crop=face" alt="Ana">
+                                    <div class="player-status waiting"></div>
+                                </div>
+                                <div class="player-info">
+                                    <span class="player-name">Ana</span>
+                                    <span class="player-category">Ciências</span>
+                                    <span class="player-score">300</span>
+                                </div>
+                                <div class="player-streak">
+                                    <span class="streak-count">0</span>
+                                    <span class="streak-icon">💫</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VS Divider -->
+                    <div class="vs-divider">
+                        <div class="vs-circle">
+                            <span class="vs-text">VS</span>
+                        </div>
+                    </div>
+
+                    <!-- Team B -->
+                    <div class="team-section team-b">
+                        <div class="team-header">
+                            <h3 class="team-name">Equipe B</h3>
+                            <div class="team-score">1,180</div>
+                        </div>
+                        <div class="team-players">
+                            <div class="player-card">
+                                <div class="player-avatar">
+                                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=60&h=60&fit=crop&crop=face" alt="Carlos">
+                                    <div class="player-status waiting"></div>
+                                </div>
+                                <div class="player-info">
+                                    <span class="player-name">Carlos</span>
+                                    <span class="player-category">Matemática</span>
+                                    <span class="player-score">290</span>
+                                </div>
+                                <div class="player-streak">
+                                    <span class="streak-count">1</span>
+                                    <span class="streak-icon">⭐</span>
+                                </div>
+                            </div>
+                            <div class="player-card">
+                                <div class="player-avatar">
+                                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=60&h=60&fit=crop&crop=face" alt="Sofia">
+                                    <div class="player-status waiting"></div>
+                                </div>
+                                <div class="player-info">
+                                    <span class="player-name">Sofia</span>
+                                    <span class="player-category">Português</span>
+                                    <span class="player-score">310</span>
+                                </div>
+                                <div class="player-streak">
+                                    <span class="streak-count">2</span>
+                                    <span class="streak-icon">⚡</span>
+                                </div>
+                            </div>
+                            <div class="player-card">
+                                <div class="player-avatar">
+                                    <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=60&h=60&fit=crop&crop=face" alt="Lucas">
+                                    <div class="player-status waiting"></div>
+                                </div>
+                                <div class="player-info">
+                                    <span class="player-name">Lucas</span>
+                                    <span class="player-category">História</span>
+                                    <span class="player-score">300</span>
+                                </div>
+                                <div class="player-streak">
+                                    <span class="streak-count">1</span>
+                                    <span class="streak-icon">⭐</span>
+                                </div>
+                            </div>
+                            <div class="player-card">
+                                <div class="player-avatar">
+                                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=face" alt="Beatriz">
+                                    <div class="player-status waiting"></div>
+                                </div>
+                                <div class="player-info">
+                                    <span class="player-name">Beatriz</span>
+                                    <span class="player-category">Ciências</span>
+                                    <span class="player-score">280</span>
+                                </div>
+                                <div class="player-streak">
+                                    <span class="streak-count">0</span>
+                                    <span class="streak-icon">💫</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Game Chat -->
+            <section class="game-chat" id="gameChat">
+                <div class="chat-header">
+                    <h4 class="chat-title">Chat da Sala</h4>
+                    <button class="chat-toggle" id="chatToggle">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message system">
+                        <span class="message-text">João entrou na sala</span>
+                        <span class="message-time">14:30</span>
+                    </div>
+                    <div class="chat-message">
+                        <div class="message-avatar">
+                            <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=30&h=30&fit=crop&crop=face" alt="Maria">
+                        </div>
+                        <div class="message-content">
+                            <span class="message-author">Maria</span>
+                            <span class="message-text">Boa sorte pessoal! 🍀</span>
+                        </div>
+                        <span class="message-time">14:32</span>
+                    </div>
+                    <div class="chat-message">
+                        <div class="message-avatar">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=30&h=30&fit=crop&crop=face" alt="Pedro">
+                        </div>
+                        <div class="message-content">
+                            <span class="message-author">Pedro</span>
+                            <span class="message-text">Vamos que vamos! 💪</span>
+                        </div>
+                        <span class="message-time">14:33</span>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" placeholder="Digite sua mensagem..." id="chatInput">
+                    <button class="send-button" id="sendButton">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Game Overlay -->
+    <div class="game-overlay" id="gameOverlay">
+        <!-- Answer Result -->
+        <div class="answer-result" id="answerResult">
+            <div class="result-content">
+                <div class="result-icon correct">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20,6 9,17 4,12"></polyline>
+                    </svg>
+                </div>
+                <h3 class="result-title">Resposta Correta!</h3>
+                <p class="result-description">A resposta era: <strong>C) 136</strong></p>
+                <div class="result-points">+50 pontos</div>
+                <div class="result-stats">
+                    <div class="stat">
+                        <span class="stat-value">2.3s</span>
+                        <span class="stat-label">Tempo de resposta</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">4º</span>
+                        <span class="stat-label">Posição</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Round Summary -->
+        <div class="round-summary" id="roundSummary" style="display: none;">
+            <div class="summary-content">
+                <h3 class="summary-title">Resumo da Rodada</h3>
+                <div class="round-stats">
+                    <div class="team-summary">
+                        <h4 class="team-name">Equipe A</h4>
+                        <div class="team-points">+120 pontos</div>
+                        <div class="team-players-summary">
+                            <div class="player-summary correct">
+                                <span class="player-name">João</span>
+                                <span class="player-points">+50</span>
+                            </div>
+                            <div class="player-summary correct">
+                                <span class="player-name">Maria</span>
+                                <span class="player-points">+45</span>
+                            </div>
+                            <div class="player-summary incorrect">
+                                <span class="player-name">Pedro</span>
+                                <span class="player-points">+0</span>
+                            </div>
+                            <div class="player-summary correct">
+                                <span class="player-name">Ana</span>
+                                <span class="player-points">+25</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="team-summary">
+                        <h4 class="team-name">Equipe B</h4>
+                        <div class="team-points">+95 pontos</div>
+                        <div class="team-players-summary">
+                            <div class="player-summary incorrect">
+                                <span class="player-name">Carlos</span>
+                                <span class="player-points">+0</span>
+                            </div>
+                            <div class="player-summary correct">
+                                <span class="player-name">Sofia</span>
+                                <span class="player-points">+40</span>
+                            </div>
+                            <div class="player-summary correct">
+                                <span class="player-name">Lucas</span>
+                                <span class="player-points">+35</span>
+                            </div>
+                            <div class="player-summary correct">
+                                <span class="player-name">Beatriz</span>
+                                <span class="player-points">+20</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="nextRoundBtn">Próxima Pergunta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Controls -->
+    <div class="game-controls">
+        <button class="control-btn" id="pauseBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+        </button>
+        <button class="control-btn" id="settingsBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+        </button>
+        <button class="control-btn exit-btn" id="exitBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16,17 21,12 16,7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+        </button>
+    </div>
+
+    <script src="assets/js/main.js"></script>
+    <script src="assets/js/quiz-game.js"></script>
+</body>
+</html>
+
