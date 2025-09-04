@@ -24,6 +24,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
   bool _isStartingGame = false;
   bool _isDistributingTeams = false;
   bool _isDistributingCategories = false; // Nova variável para distribuição de disciplinas
+  bool _hasNavigatedToCountdown = false; // Evita navegação duplicada
   
   late AnimationController _pulseController;
   late AnimationController _slideController;
@@ -123,7 +124,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
             _currentRoom = newRoom;
           });
           
-          // Detecta quando o jogo foi iniciado - melhora na detecção
+          // Detecta quando o jogo foi iniciado e leva TODOS para o countdown
           if (previousStatus != RoomStatus.STARTING && 
               previousStatus != RoomStatus.IN_PROGRESS &&
               (newStatus == RoomStatus.STARTING || newStatus == RoomStatus.IN_PROGRESS)) {
@@ -138,13 +139,16 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
   }
   
   void _handleGameStarted() {
-    // Cancela o timer imediatamente para evitar múltiplas chamadas
-    _refreshTimer?.cancel();
+  if (_hasNavigatedToCountdown) return;
+  _hasNavigatedToCountdown = true;
+
+  // Cancela o timer imediatamente para evitar múltiplas chamadas
+  _refreshTimer?.cancel();
     
-    print('DEBUG: Redirecionando todos para countdown...');
+  print('DEBUG: Redirecionando para countdown...');
     
     // Redireciona IMEDIATAMENTE sem delay
-    if (mounted) {
+  if (mounted) {
       Navigator.pushReplacementNamed(
         context, 
         '/quiz-countdown',
@@ -156,6 +160,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           'questionTime': _currentRoom?.questionTime,
           'questionCount': _currentRoom?.questionCount,
           'assignmentType': _currentRoom?.assignmentType,
+          'startsAt': _currentRoom?.startsAt?.toIso8601String(),
         },
       );
     }
@@ -290,6 +295,8 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
     return currentPlayerInRoom?.isHost == true;
   }
 
+  // Removido: líder; usamos apenas host
+
   Future<void> _distributeTeamsRandomly() async {
     if (_isDistributingTeams || _currentRoom == null) return;
     
@@ -412,25 +419,8 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
 
       if (success) {
         print('DEBUG: Jogo iniciado com sucesso pelo host');
-        
-        // HOST: redireciona IMEDIATAMENTE após sucesso
-        _refreshTimer?.cancel();
-        
-        if (mounted) {
-          Navigator.pushReplacementNamed(
-            context, 
-            '/quiz-countdown',
-            arguments: {
-              'roomName': _currentRoom?.roomName,
-              'categories': _currentRoom?.categories,
-              'difficulty': _currentRoom?.difficulty.value,
-              'maxPlayers': _currentRoom?.maxPlayers,
-              'questionTime': _currentRoom?.questionTime,
-              'questionCount': _currentRoom?.questionCount,
-              'assignmentType': _currentRoom?.assignmentType,
-            },
-          );
-        }
+        // Somente o host navega; demais permanecem no lobby
+        _handleGameStarted();
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

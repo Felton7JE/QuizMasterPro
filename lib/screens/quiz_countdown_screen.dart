@@ -11,6 +11,7 @@ class QuizCountdownScreen extends StatefulWidget {
 class _QuizCountdownScreenState extends State<QuizCountdownScreen>
     with TickerProviderStateMixin {
   int _countdown = 3;
+  Timer? _timer; // NEW: hold reference to cancel on dispose
   late AnimationController _scaleController;
   late AnimationController _fadeController;
   late Animation<double> _scaleAnimation;
@@ -46,11 +47,26 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
       curve: Curves.easeOut,
     ));
 
-    _startCountdown();
+    // Try to align with startsAt if provided via route arguments
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final startsAtIso = args != null ? args['startsAt'] as String? : null;
+      if (startsAtIso != null) {
+        final startsAt = DateTime.tryParse(startsAtIso)?.toLocal();
+        if (startsAt != null) {
+          final diffSecs = startsAt.difference(DateTime.now()).inSeconds;
+          setState(() {
+            _countdown = diffSecs.clamp(0, 10);
+          });
+        }
+      }
+      _startCountdown();
+    });
   }
 
   void _startCountdown() {
-    Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown > 0) {
         _scaleController.reset();
         _scaleController.forward();
@@ -74,6 +90,7 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
 
   @override
   void dispose() {
+    _timer?.cancel();
     _scaleController.dispose();
     _fadeController.dispose();
     super.dispose();

@@ -79,12 +79,13 @@ class RoomService {
     await _apiService.post('/api/rooms/$roomCode/players/$playerId/ready');
   }
 
-  Future<RoomModel> startGame(String roomCode, String hostId) async {
+  Future<bool> startGame(String roomCode, String hostId) async {
     final body = {
       'hostId': hostId,
     };
-    final response = await _apiService.post('/api/rooms/$roomCode/start', body);
-    return RoomModel.fromJson(response);
+    await _apiService.post('/api/rooms/$roomCode/start', body);
+    // Backend retorna GameResponse; aqui só confirmamos sucesso HTTP
+    return true;
   }
 
   Future<void> leaveRoom(String roomCode, String userId) async {

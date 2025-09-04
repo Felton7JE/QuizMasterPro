@@ -269,9 +269,14 @@ class RoomProvider extends ChangeNotifier {
     
     _setLoading(true);
     try {
-      _currentRoom = await _roomService.startGame(_currentRoom!.roomCode, hostId);
-      notifyListeners();
-      return true;
+      final ok = await _roomService.startGame(_currentRoom!.roomCode, hostId);
+      if (ok) {
+        // Buscar status STARTING/startsAt do backend
+        await refreshRoomDetails();
+        notifyListeners();
+        return true;
+      }
+      return false;
     } catch (e) {
       _error = e.toString();
       notifyListeners();

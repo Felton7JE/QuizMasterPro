@@ -104,6 +104,7 @@ class RoomModel {
   final int? currentPlayers; // Novo campo
   final bool? isPrivate; // Novo campo
   final DateTime createdAt;
+  final DateTime? startsAt; // NEW: início sincronizado do countdown (opcional)
 
   RoomModel({
     required this.id,
@@ -130,9 +131,22 @@ class RoomModel {
     this.currentPlayers,
     this.isPrivate,
     required this.createdAt,
+  this.startsAt,
   });
 
   factory RoomModel.fromJson(Map<String, dynamic> json) {
+    DateTime? parseStartsAt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) {
+        // epoch millis
+        return DateTime.fromMillisecondsSinceEpoch(v, isUtc: true).toLocal();
+      }
+      if (v is String) {
+        return DateTime.tryParse(v);
+      }
+      return null;
+    }
+
     return RoomModel(
       id: json['id']?.toString() ?? '',
       roomCode: json['roomCode'] ?? '',
@@ -145,9 +159,10 @@ class RoomModel {
       questionCount: json['questionCount'] ?? 10,
       categories: json['categories'] != null 
         ? (json['categories'] as List).map((category) {
-            if (category is Map<String, dynamic>) {
-              // Se for um objeto de categoria, pega o nome
-              return category['name'] as String;
+            if (category is Map) {
+              // Se for um objeto de categoria, pega o nome com segurança
+              final name = (category['name'] ?? category['displayName'] ?? '').toString();
+              return name.isNotEmpty ? name : category.toString();
             } else {
               // Se já for uma string, mantém
               return category.toString();
@@ -170,6 +185,7 @@ class RoomModel {
       currentPlayers: json['currentPlayers'],
       isPrivate: json['isPrivate'],
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+  startsAt: parseStartsAt(json['startsAt']),
     );
   }
 
@@ -199,6 +215,7 @@ class RoomModel {
       'currentPlayers': currentPlayers,
       'isPrivate': isPrivate,
       'createdAt': createdAt.toIso8601String(),
+  'startsAt': startsAt?.toIso8601String(),
     };
   }
 }
@@ -281,13 +298,24 @@ class PlayerInRoom {
   });
 
   factory PlayerInRoom.fromJson(Map<String, dynamic> json) {
+    // assignedCategory pode vir como String ou como objeto { id, name, ... }
+    String? parseAssignedCategory(dynamic v) {
+      if (v == null) return null;
+      if (v is String) return v;
+      if (v is Map) {
+        final name = v['name'] ?? v['displayName'];
+        return name?.toString();
+      }
+      return v.toString();
+    }
+
     return PlayerInRoom(
       userId: json['userId']?.toString() ?? '',
       username: json['username'] ?? '',
       fullName: json['fullName'] ?? '',
       avatar: json['avatar'],
       team: json['team'] != null ? TeamColor.fromString(json['team']) : null,
-      assignedCategory: json['assignedCategory'], // Adicionar parsing
+      assignedCategory: parseAssignedCategory(json['assignedCategory']),
       isReady: json['isReady'] ?? false,
       isHost: json['isHost'] ?? false,
     );

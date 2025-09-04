@@ -60,7 +60,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
       final success = await roomProvider.joinRoom(roomCode, userId);
 
       if (success && mounted) {
-        // Navega para o lobby da sala
+        // Navega para o lobby da sala 
         Navigator.pushReplacementNamed(
           context,
           '/team-lobby',
