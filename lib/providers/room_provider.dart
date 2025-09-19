@@ -12,6 +12,10 @@ class RoomProvider extends ChangeNotifier {
   List<RoomModel> _publicRooms = [];
   bool _isLoading = false;
   String? _error;
+  int? _lastStartedGameId;
+  Map<String, dynamic>? _lastStartedGameResponse;
+  Map<String, dynamic>? get lastStartedGameResponse => _lastStartedGameResponse;
+  int? get lastStartedGameId => _lastStartedGameId;
 
   RoomProvider(this._roomService);
 
@@ -141,6 +145,7 @@ class RoomProvider extends ChangeNotifier {
     
     try {
       print('DEBUG RoomProvider: Atualizando detalhes da sala ${_currentRoom!.roomCode}');
+      print('DEBUG RoomProvider: GameId antes do refresh: ${_currentRoom!.gameId}');
       
       // Busca os detalhes atualizados da sala
       final rawResponse = await _roomService.getRoomDetails(_currentRoom!.roomCode);
@@ -150,6 +155,7 @@ class RoomProvider extends ChangeNotifier {
       _players = _currentRoom!.players;
       _error = null;
       
+      print('DEBUG RoomProvider: GameId após refresh: ${_currentRoom!.gameId}');
       print('DEBUG RoomProvider: assignmentType após parsing: ${_currentRoom!.assignmentType}');
       print('DEBUG RoomProvider: Sala atualizada - ${_players.length} jogadores');
       notifyListeners();
@@ -159,6 +165,40 @@ class RoomProvider extends ChangeNotifier {
       _error = e.toString();
       notifyListeners();
     }
+  }
+
+  // Método específico para buscar gameId com múltiplas tentativas
+  Future<String?> getGameId() async {
+    if (_currentRoom == null) return null;
+    
+    // If we have a cached gameId from a recent start, return it first
+    if (_lastStartedGameId != null) return _lastStartedGameId.toString();
+    
+    // Se já tem gameId, retorna
+    if (_currentRoom!.gameId != null) {
+      return _currentRoom!.gameId;
+    }
+    
+    // Tenta buscar com múltiplas tentativas
+    for (int i = 0; i < 5; i++) {
+      try {
+        print('DEBUG RoomProvider: getGameId tentativa ${i + 1}/5');
+        await refreshRoomDetails();
+        
+        if (_currentRoom?.gameId != null) {
+          print('DEBUG RoomProvider: GameId obtido na tentativa ${i + 1}: ${_currentRoom!.gameId}');
+          return _currentRoom!.gameId;
+        }
+        
+        // Aguarda um pouco antes da próxima tentativa
+        await Future.delayed(const Duration(milliseconds: 500));
+      } catch (e) {
+        print('DEBUG RoomProvider: Erro na tentativa ${i + 1}: $e');
+      }
+    }
+    
+    print('DEBUG RoomProvider: getGameId falhou após 5 tentativas');
+    return null;
   }
 
   Future<void> refreshPlayers() async {
@@ -269,14 +309,21 @@ class RoomProvider extends ChangeNotifier {
     
     _setLoading(true);
     try {
-      final ok = await _roomService.startGame(_currentRoom!.roomCode, hostId);
-      if (ok) {
-        // Buscar status STARTING/startsAt do backend
-        await refreshRoomDetails();
-        notifyListeners();
-        return true;
+      // Call service which now returns the backend JSON (including gameId)
+      final Map<String, dynamic> response = await _roomService.startGame(_currentRoom!.roomCode, hostId);
+
+      // Store returned gameId for immediate access (if present)
+      // Store full response and gameId for quick access in UI
+      _lastStartedGameResponse = response;
+      if (response.containsKey('gameId')) {
+        final dynamic gid = response['gameId'];
+        _lastStartedGameId = gid != null ? int.tryParse(gid.toString()) : null;
       }
-      return false;
+
+      // Buscar status STARTING/startsAt do backend e atualizar estado local
+      await refreshRoomDetails();
+      notifyListeners();
+      return true;
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -358,24 +405,29 @@ class RoomProvider extends ChangeNotifier {
         return false;
       }
 
+      // Evita pedir ao backend algo que já está atribuído localmente
+      final alreadyAssignedLocal = _currentRoom!.players.any((p) =>
+          p.userId == playerId.toString() &&
+          p.assignedCategory != null &&
+          p.assignedCategory!.isNotEmpty);
+      if (alreadyAssignedLocal) {
+        _error = 'Jogador já possui disciplina';
+        notifyListeners();
+        return false;
+      }
+
       final request = CategoryModels.AssignCategoryRequest(
         playerId: playerId,
         categoryId: categoryId,
       );
 
-      bool success = await _roomService.assignCategoryToPlayer(_currentRoom!.roomCode, request);
-      
-      if (success) {
-        await refreshRoomDetails();
-        return true;
-      } else {
-        _error = 'Erro ao atribuir disciplina';
-        notifyListeners();
-        return false;
-      }
+      await _roomService.assignCategoryToPlayer(_currentRoom!.roomCode, request);
+      await refreshRoomDetails();
+      _error = null;
+      return true;
     } catch (e) {
       print('ERROR RoomProvider: Erro ao atribuir categoria: $e');
-      _error = 'Erro de conexão ao atribuir disciplina: $e';
+      _error = e.toString();
       notifyListeners();
       return false;
     }
@@ -479,31 +531,30 @@ class RoomProvider extends ChangeNotifier {
   }
 
   // Método para obter disciplinas disponíveis para um jogador
-  List<String> getAvailableCategoriesForPlayer(String playerId) {
+  List<String> getAvailableCategoriesForPlayer(String userId) {
     if (_currentRoom == null) return [];
-    
+
     final currentPlayer = _currentRoom!.players.firstWhere(
-      (p) => p.userId == playerId,
-      orElse: () => PlayerInRoom(
-        userId: '', 
-        username: '', 
-        fullName: '',
-        isHost: false, 
-        isReady: false,
-      ),
+      (p) => p.userId == userId,
+      orElse: () => PlayerInRoom(userId: '', username: '', fullName: '', isHost: false, isReady: false),
     );
-    
-    if (currentPlayer.team == null) return [];
-    
-    // Obter disciplinas já ocupadas pelos jogadores da mesma equipe
-    final teamPlayers = _currentRoom!.players.where((p) => p.team == currentPlayer.team).toList();
-    final occupiedCategories = teamPlayers
-        .where((p) => p.assignedCategory != null)
+
+    // Se o jogador não for encontrado ou não tiver equipe, não há categorias disponíveis
+    if (currentPlayer.userId.isEmpty || currentPlayer.team == null) {
+      return [];
+    }
+
+    // Pega todas as categorias da sala
+    final allRoomCategories = Set<String>.from(_currentRoom!.categories);
+
+    // Pega as categorias já escolhidas por jogadores DA MESMA EQUIPE
+    final takenCategoriesByTeam = _currentRoom!.players
+        .where((p) => p.team == currentPlayer.team && p.assignedCategory != null)
         .map((p) => p.assignedCategory!)
         .toSet();
-    
-    // Retornar disciplinas disponíveis (não ocupadas pela equipe)
-    return _currentRoom!.categories.where((cat) => !occupiedCategories.contains(cat)).toList();
+
+    // Retorna a lista de categorias da sala que não foram escolhidas pela equipe do jogador
+    return allRoomCategories.difference(takenCategoriesByTeam).toList();
   }
 
   // Método para obter estatísticas de distribuição de disciplinas

@@ -55,9 +55,10 @@ class GameProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> loadCurrentQuestion(String gameId, int questionIndex) async {
+  /// Carrega questão por índice específico (usa endpoint /questions/{index}).
+  Future<bool> loadQuestionByIndex(String gameId, int questionIndex) async {
     try {
-      _currentQuestion = await _gameService.getCurrentQuestion(gameId, questionIndex);
+      _currentQuestion = await _gameService.getQuestionByIndex(gameId, questionIndex);
       _currentQuestionIndex = questionIndex;
       
       // Atualizar a questão na lista se necessário
@@ -154,8 +155,8 @@ class GameProvider extends ChangeNotifier {
   Future<bool> finishGame(String gameId, String hostId) async {
     _setLoading(true);
     try {
-      await _gameService.finishGame(gameId, hostId);
-      await loadGameResults(gameId);
+      final result = await _gameService.finishGame(gameId, hostId); // já retorna GameResultResponse
+      _gameResults = result;
       await loadFinalLeaderboard(gameId);
       await loadGameStats(gameId);
       _stopQuestionTimer();
@@ -170,14 +171,19 @@ class GameProvider extends ChangeNotifier {
     }
   }
 
+  /// Avança para a próxima questão via backend (retorna a questão nova).
   Future<bool> nextQuestion(String gameId, String hostId) async {
     try {
-      await _gameService.nextQuestion(gameId, hostId);
-      if (_currentQuestionIndex < _questions.length - 1) {
-        _currentQuestionIndex++;
-        _currentQuestion = _questions[_currentQuestionIndex];
-        notifyListeners();
+      final next = await _gameService.nextQuestion(gameId, hostId);
+      // Se lista local for menor, adiciona; senão substitui na posição +1
+      if (_currentQuestionIndex + 1 < _questions.length) {
+        _questions[_currentQuestionIndex + 1] = next;
+      } else {
+        _questions.add(next);
       }
+      _currentQuestionIndex++;
+      _currentQuestion = next;
+      notifyListeners();
       return true;
     } catch (e) {
       _error = e.toString();

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../widgets/custom_button_responsive.dart';
+import '../providers/game_provider.dart';
+import '../providers/auth_provider.dart';
+import '../models/game_model.dart';
 
 class QuizResultsScreen extends StatefulWidget {
   const QuizResultsScreen({super.key});
@@ -19,6 +23,11 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
   double _accuracy = 0.0;
   String _performance = '';
   Color _performanceColor = Colors.white;
+  bool _loadingLeaderboard = true;
+  bool _leaderboardError = false;
+  List<LeaderboardEntry> _finalLeaderboard = [];
+  LeaderboardEntry? _myEntry;
+  String? _gameId;
 
   @override
   void initState() {
@@ -66,6 +75,35 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
     if (args != null) {
       _results = args;
       _calculatePerformance();
+      _gameId = args['gameId']?.toString();
+      _loadFinalLeaderboard();
+    }
+  }
+
+  Future<void> _loadFinalLeaderboard() async {
+    if (_gameId == null) {
+      setState(() { _loadingLeaderboard = false; });
+      return;
+    }
+    try {
+      final gp = Provider.of<GameProvider>(context, listen: false);
+      await gp.loadFinalLeaderboard(_gameId!);
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final userId = auth.currentUser?.id;
+      final list = gp.leaderboard;
+      LeaderboardEntry? me;
+      if (userId != null) {
+        me = list.where((e) => e.userId == userId).isNotEmpty
+            ? list.firstWhere((e) => e.userId == userId)
+            : null;
+      }
+      setState(() {
+        _finalLeaderboard = list;
+        _myEntry = me;
+        _loadingLeaderboard = false;
+      });
+    } catch (e) {
+      setState(() { _leaderboardError = true; _loadingLeaderboard = false; });
     }
   }
 
@@ -196,6 +234,14 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                   position: _slideAnimation,
                   child: _buildAccuracyChart(isSmallScreen),
                 ),
+
+                SizedBox(height: isSmallScreen ? 24 : 32),
+
+                // Final Leaderboard
+                SlideTransition(
+                  position: _slideAnimation,
+                  child: _buildFinalLeaderboardSection(isSmallScreen),
+                ),
                 
                 SizedBox(height: isSmallScreen ? 32 : 48),
                 
@@ -208,6 +254,106 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
       ),
     );
   }
+
+  Widget _buildFinalLeaderboardSection(bool isSmallScreen) {
+    if (_loadingLeaderboard) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+        decoration: _cardDecoration(),
+        child: Row(
+          children: const [
+            SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6366F1))),
+            SizedBox(width: 12),
+            Text('Carregando ranking final...', style: TextStyle(color: Colors.white70)),
+          ],
+        ),
+      );
+    }
+    if (_leaderboardError) {
+      return _simpleInfoCard('Não foi possível carregar o ranking final.', Icons.error_outline, const Color(0xFFEF4444), isSmallScreen);
+    }
+    if (_finalLeaderboard.isEmpty) {
+      return _simpleInfoCard('Ranking indisponível.', Icons.info_outline, const Color(0xFF6366F1), isSmallScreen);
+    }
+
+  final top3 = _finalLeaderboard.take(3).toList();
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.leaderboard, color: Color(0xFF6366F1)),
+              SizedBox(width: 8),
+              Text('Ranking Final', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...top3.map((e) => _buildLeaderboardRow(e, isSmallScreen, highlight: _myEntry != null && _myEntry!.userId == e.userId)),
+          if (_myEntry != null && !top3.any((e) => e.userId == _myEntry!.userId)) ...[
+            const Divider(color: Color(0xFF334155), height: 18),
+            _buildLeaderboardRow(_myEntry!, isSmallScreen, highlight: true, isPlayerRow: true),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeaderboardRow(LeaderboardEntry entry, bool isSmallScreen, {bool highlight = false, bool isPlayerRow = false}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: isSmallScreen ? 8 : 10),
+      decoration: BoxDecoration(
+        color: highlight ? const Color(0xFF6366F1).withOpacity(0.15) : const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: highlight ? const Color(0xFF6366F1) : const Color(0xFF334155)),
+      ),
+      child: Row(
+        children: [
+          Text('#${entry.position}', style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 12 : 14, fontWeight: FontWeight.bold)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              isPlayerRow ? 'Você' : entry.username,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.white70, fontSize: isSmallScreen ? 12 : 14, fontWeight: FontWeight.w500),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text('${entry.score} pts', style: TextStyle(color: const Color(0xFF10B981), fontSize: isSmallScreen ? 12 : 14, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 10),
+          Text('${entry.correctAnswers}/${entry.totalAnswers}', style: TextStyle(color: Colors.grey, fontSize: isSmallScreen ? 11 : 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _simpleInfoCard(String text, IconData icon, Color color, bool isSmallScreen) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(isSmallScreen ? 14 : 18),
+      decoration: _cardDecoration(),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text, style: TextStyle(color: Colors.white70, fontSize: isSmallScreen ? 12 : 14)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  BoxDecoration _cardDecoration() => BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF334155)),
+      );
 
   Widget _buildMainResultsCard(bool isSmallScreen) {
     final correctAnswers = _results['correctAnswers'] ?? 0;

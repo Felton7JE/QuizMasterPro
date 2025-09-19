@@ -15,10 +15,12 @@ import 'services/auth_service.dart';
 import 'services/room_service.dart';
 import 'services/game_service.dart';
 import 'services/category_service.dart';
+import 'services/question_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/room_provider.dart';
 import 'providers/game_provider.dart';
 import 'providers/category_provider.dart';
+import 'providers/question_provider.dart';
 
 void main() {
   runApp(const QuizMasterApp());
@@ -48,6 +50,9 @@ class QuizMasterApp extends StatelessWidget {
         ProxyProvider<ApiService, CategoryService>(
           update: (_, apiService, __) => CategoryService(apiService),
         ),
+        ProxyProvider<ApiService, QuestionService>(
+          update: (_, apiService, __) => QuestionService(apiService),
+        ),
         
         // Providers
         ChangeNotifierProxyProvider<AuthService, AuthProvider>(
@@ -65,6 +70,10 @@ class QuizMasterApp extends StatelessWidget {
         ChangeNotifierProxyProvider<CategoryService, CategoryProvider>(
           create: (context) => CategoryProvider(context.read<CategoryService>()),
           update: (_, categoryService, __) => CategoryProvider(categoryService),
+        ),
+        ChangeNotifierProxyProvider<QuestionService, QuestionProvider>(
+          create: (context) => QuestionProvider(context.read<QuestionService>()),
+          update: (_, questionService, __) => QuestionProvider(questionService),
         ),
       ],
       child: MaterialApp(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../widgets/custom_button_responsive.dart';
 import '../providers/auth_provider.dart';
@@ -6,6 +7,7 @@ import '../providers/room_provider.dart';
 import '../providers/category_provider.dart';
 import '../models/room_model.dart';
 import '../utils/snackbar_utils.dart';
+import '../services/question_service.dart';
 
 class CreateRoomScreen extends StatefulWidget {
   const CreateRoomScreen({super.key});
@@ -1789,6 +1791,72 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                   child: const Text('Testar Conexão Backend'),
                 ),
               ),
+              // DEBUG: quick start-game button (visible only in debug mode)
+              if (kDebugMode)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                      onPressed: () async {
+                        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                        final roomProvider = Provider.of<RoomProvider>(context, listen: false);
+                        final questionService = Provider.of<QuestionService>(context, listen: false);
+                        final hostIdStr = authProvider.currentUser?.id;
+                        final hostId = hostIdStr != null ? int.tryParse(hostIdStr) : null;
+                        final roomCode = roomProvider.currentRoom?.roomCode ?? '';
+                        if (hostId == null || roomCode.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Usuário ou sala não encontrados')),
+                          );
+                          return;
+                        }
+                        try {
+                          // Call provider.startGame which stores the raw response in lastStartedGameResponse
+                          final ok = await roomProvider.startGame(hostIdStr!);
+                          final raw = roomProvider.lastStartedGameResponse;
+                          print('DEBUG CreateRoomScreen: startGame() returned: ok=$ok, raw=$raw');
+
+                          // Try to get gameId from raw response and fetch current-question for the host
+                          final int? gameId = raw != null && raw['gameId'] != null ? int.tryParse(raw['gameId'].toString()) : null;
+                          if (gameId != null) {
+                            try {
+                              final currentQ = await questionService.getCurrentQuestionForPlayer(gameId, hostId);
+                              print('DEBUG CreateRoomScreen: current-question = $currentQ');
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('DEBUG current-question: ${currentQ['id'] ?? currentQ}')),
+                                );
+                              }
+                            } catch (e) {
+                              print('DEBUG CreateRoomScreen: erro ao buscar current-question: $e');
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Erro ao buscar pergunta atual: $e')),
+                                );
+                              }
+                            }
+                          } else {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('DEBUG startGame response: ${raw ?? 'null'}')),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          print('DEBUG CreateRoomScreen: startGame exception: $e');
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Erro ao iniciar jogo: $e')),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('Iniciar Jogo (DEBUG)'),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
@@ -1845,6 +1913,67 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                 ),
                 child: const Text('Testar Conexão Backend'),
               ),
+              // DEBUG button for larger screens
+              if (kDebugMode)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                    onPressed: () async {
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      final roomProvider = Provider.of<RoomProvider>(context, listen: false);
+                        final questionService = Provider.of<QuestionService>(context, listen: false);
+                      final hostIdStr = authProvider.currentUser?.id;
+                      final hostId = hostIdStr != null ? int.tryParse(hostIdStr) : null;
+                      final roomCode = roomProvider.currentRoom?.roomCode ?? '';
+                      if (hostId == null || roomCode.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Usuário ou sala não encontrados')),
+                        );
+                        return;
+                      }
+                      try {
+                        final ok = await roomProvider.startGame(hostIdStr!);
+                        final raw = roomProvider.lastStartedGameResponse;
+                        print('DEBUG CreateRoomScreen: startGame() returned: ok=$ok, raw=$raw');
+
+                        final int? gameId = raw != null && raw['gameId'] != null ? int.tryParse(raw['gameId'].toString()) : null;
+                        if (gameId != null) {
+                          try {
+                            final currentQ = await questionService.getCurrentQuestionForPlayer(gameId, hostId);
+                            print('DEBUG CreateRoomScreen: current-question = $currentQ');
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('DEBUG current-question: ${currentQ['id'] ?? currentQ}')),
+                              );
+                            }
+                          } catch (e) {
+                            print('DEBUG CreateRoomScreen: erro ao buscar current-question: $e');
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Erro ao buscar pergunta atual: $e')),
+                              );
+                            }
+                          }
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('DEBUG startGame response: ${raw ?? 'null'}')),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        print('DEBUG CreateRoomScreen: startGame exception: $e');
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erro ao iniciar jogo: $e')),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Iniciar Jogo (DEBUG)'),
+                  ),
+                ),
             ],
           );
         }

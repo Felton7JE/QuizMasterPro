@@ -79,13 +79,36 @@ class RoomService {
     await _apiService.post('/api/rooms/$roomCode/players/$playerId/ready');
   }
 
-  Future<bool> startGame(String roomCode, String hostId) async {
+  /// Calls backend to start the game and returns the parsed JSON response
+  /// (e.g. contains `gameId`, `startTime`, etc.). Throws on failure.
+  Future<Map<String, dynamic>> startGame(String roomCode, String hostId) async {
     final body = {
       'hostId': hostId,
     };
-    await _apiService.post('/api/rooms/$roomCode/start', body);
-    // Backend retorna GameResponse; aqui só confirmamos sucesso HTTP
-    return true;
+
+    final response = await _apiService.post('/api/rooms/$roomCode/start', body);
+
+    // Cast response to Map<String, dynamic> (ApiService returns decoded JSON)
+    final Map<String, dynamic> parsed = Map<String, dynamic>.from(response);
+
+    // Print only when this function is explicitly called (debug builds).
+    // Use kDebugMode from foundation to avoid noisy logs in production.
+    // This single print helps you inspect the backend GameResponse when StartGame is
+    // invoked (e.g. from the UI debug button we'll add in CreateRoomScreen).
+    // Note: importing `foundation.dart` at top of file is acceptable in Flutter code.
+    try {
+      // Avoid adding heavy logging in production; guard with a debug-only check
+      // so it only shows when running in debug mode.
+      // (foundation import exists in this file scope)
+      if (const bool.fromEnvironment('dart.vm.product') == false) {
+        // Non-production: print the parsed response
+        print('DEBUG RoomService.startGame response: $parsed');
+      }
+    } catch (_) {
+      // ignore printing errors
+    }
+
+    return parsed;
   }
 
   Future<void> leaveRoom(String roomCode, String userId) async {
@@ -126,28 +149,17 @@ class RoomService {
 
   // ATUALIZADO: Método para atribuir categoria específica a um jogador usando DTO
   Future<bool> assignCategoryToPlayer(String roomCode, AssignCategoryRequest request) async {
-    try {
-      print('DEBUG RoomService: Atribuindo categoria ${request.categoryId} ao jogador ${request.playerId} na sala $roomCode');
-      
-      await _apiService.post('/api/rooms/$roomCode/assign-category', request.toJson());
-      return true;
-    } catch (e) {
-      print('DEBUG RoomService: Erro ao atribuir categoria: $e');
-      return false;
-    }
+  // Não engolir exceções: deixar ApiException subir para Provider capturar e mostrar mensagem real
+  print('DEBUG RoomService: Atribuindo categoria ${request.categoryId} ao jogador ${request.playerId} na sala $roomCode');
+  await _apiService.post('/api/rooms/$roomCode/assign-category', request.toJson());
+  return true;
   }
 
   // ATUALIZADO: Método para distribuir categorias automaticamente usando DTO
   Future<bool> distributeCategoriesAutomatically(String roomCode, DistributeCategoriesRequest request) async {
-    try {
-      print('DEBUG RoomService: Distribuindo categorias automaticamente na sala $roomCode pelo host ${request.hostId}');
-      
-      await _apiService.post('/api/rooms/$roomCode/distribute-categories', request.toJson());
-      return true;
-    } catch (e) {
-      print('DEBUG RoomService: Erro ao distribuir categorias: $e');
-      return false;
-    }
+  print('DEBUG RoomService: Distribuindo categorias automaticamente na sala $roomCode pelo host ${request.hostId}');
+  await _apiService.post('/api/rooms/$roomCode/distribute-categories', request.toJson());
+  return true;
   }
 
   // NOVO: Método para obter estatísticas de distribuição de categorias

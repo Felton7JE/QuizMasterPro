@@ -24,12 +24,11 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
   bool _isStartingGame = false;
   bool _isDistributingTeams = false;
   bool _isDistributingCategories = false; // Nova variável para distribuição de disciplinas
-  bool _hasNavigatedToCountdown = false; // Evita navegação duplicada
+  bool _isAssigningCategory = false; // Evita corrida na seleção manual
   
   late AnimationController _pulseController;
   late AnimationController _slideController;
-  late Animation<double> _pulseAnimation;
-  late Animation<Offset> _slideAnimation;
+  late Animation<Offset> _slideAnimation; // removido _pulseAnimation não utilizado
 
   @override
   void initState() {
@@ -46,13 +45,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       vsync: this,
     );
     
-    _pulseAnimation = Tween<double>(
-      begin: 0.95,
-      end: 1.05,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+  // (Removido _pulseAnimation não utilizado)
     
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.1),
@@ -63,6 +56,12 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
     ));
     
     _loadRoomData();
+    // Garante que categorias estejam carregadas antes de seleção manual
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        Provider.of<CategoryProvider>(context, listen: false).loadCategories();
+      } catch (_) {}
+    });
     _checkAutoAssignment();
     // Reduzir o intervalo para 1 segundo para detecção mais rápida
     _refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -105,50 +104,56 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
   }
 
   Future<void> _refreshRoomData() async {
+    // Não atualizar enquanto estiver atribuindo disciplina manualmente para não sobrescrever estado
+    if (_isAssigningCategory) return;
     if (_currentRoom != null) {
       try {
         final roomProvider = Provider.of<RoomProvider>(context, listen: false);
         final previousStatus = _currentRoom?.status;
         
-        print('DEBUG: Antes do refresh - assignmentType: ${_currentRoom?.assignmentType}');
+        
         
         await roomProvider.refreshRoomDetails();
         if (mounted) {
           final newRoom = roomProvider.currentRoom;
           final newStatus = newRoom?.status;
           
-          print('DEBUG: Após refresh - assignmentType: ${newRoom?.assignmentType}');
-          print('DEBUG: Room data completa: ${newRoom?.toJson()}');
+          
           
           setState(() {
             _currentRoom = newRoom;
           });
           
-          // Detecta quando o jogo foi iniciado e leva TODOS para o countdown
+          // Detecta quando o jogo foi iniciado - melhora na detecção
           if (previousStatus != RoomStatus.STARTING && 
               previousStatus != RoomStatus.IN_PROGRESS &&
               (newStatus == RoomStatus.STARTING || newStatus == RoomStatus.IN_PROGRESS)) {
-            print('DEBUG: Game started detected! Previous: $previousStatus, New: $newStatus');
             _handleGameStarted();
           }
         }
       } catch (e) {
-        print('Erro ao atualizar dados da sala: $e');
+        // Erro tratado silenciosamente (mensagem de erro exibida em UI quando aplicável)
       }
     }
   }
   
   void _handleGameStarted() {
-  if (_hasNavigatedToCountdown) return;
-  _hasNavigatedToCountdown = true;
-
-  // Cancela o timer imediatamente para evitar múltiplas chamadas
-  _refreshTimer?.cancel();
+    // Cancela o timer imediatamente para evitar múltiplas chamadas
+    _refreshTimer?.cancel();
     
-  print('DEBUG: Redirecionando para countdown...');
+    
     
     // Redireciona IMEDIATAMENTE sem delay
-  if (mounted) {
+    if (mounted) {
+      // Determina a categoria do jogador atual para passar adiante
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final currentUser = auth.currentUser;
+      final player = _currentRoom?.players.firstWhere(
+        (p) => p.userId == currentUser?.id,
+        orElse: () => PlayerInRoom(userId: '', username: '', fullName: '', isHost: false, isReady: false),
+      );
+  final playerCategory = (player != null && player.userId.isNotEmpty) ? player.assignedCategory : null;
+
       Navigator.pushReplacementNamed(
         context, 
         '/quiz-countdown',
@@ -160,7 +165,10 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           'questionTime': _currentRoom?.questionTime,
           'questionCount': _currentRoom?.questionCount,
           'assignmentType': _currentRoom?.assignmentType,
+          // adicionados para garantir dados suficientes
+          'gameId': _currentRoom?.gameId,
           'startsAt': _currentRoom?.startsAt?.toIso8601String(),
+          'playerCategory': playerCategory,
         },
       );
     }
@@ -207,7 +215,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           .where((player) => player.userId == currentUser.id)
           .firstOrNull;
 
-      if (currentPlayerInRoom != null && currentPlayerInRoom.team == null) {
+  if (currentPlayerInRoom != null && currentPlayerInRoom.team == null) {
         // Atribui o jogador atual para a equipe com menos membros
         TeamColor assignedTeam;
         if (teamACounts <= teamBCounts) {
@@ -223,7 +231,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         await Provider.of<RoomProvider>(context, listen: false)
             .setPlayerReady(currentUser.id);
             
-        print('DEBUG: Jogador ${currentUser.id} foi automaticamente atribuído à equipe $assignedTeam e está pronto');
+        
       }
     } catch (e) {
       if (mounted) {
@@ -253,15 +261,13 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         return;
       }
 
-      print('DEBUG: Selecionando equipe $team para jogador ${currentUser.id}');
-
       // Primeiro define a equipe
       await roomProvider.setPlayerTeam(currentUser.id, team);
       
       // Depois marca o jogador como pronto
       await roomProvider.setPlayerReady(currentUser.id);
       
-      print('DEBUG: Jogador ${currentUser.id} agora está na equipe $team e pronto');
+      
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -273,7 +279,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         );
       }
     } catch (e) {
-      print('ERROR ao selecionar equipe: $e');
+      // Erro ao selecionar equipe - mostra na UI
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao selecionar equipe: $e')),
@@ -294,8 +300,6 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         
     return currentPlayerInRoom?.isHost == true;
   }
-
-  // Removido: líder; usamos apenas host
 
   Future<void> _distributeTeamsRandomly() async {
     if (_isDistributingTeams || _currentRoom == null) return;
@@ -328,13 +332,12 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         return;
       }
 
-      print('DEBUG: Host distribuindo equipes randomicamente...');
+      
 
       // Chama o backend para distribuir as equipes
       bool success = await roomProvider.distributeTeamsRandomly(currentUser.id);
 
       if (success) {
-        print('DEBUG: Equipes distribuídas com sucesso pelo host');
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -353,7 +356,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         }
       }
     } catch (e) {
-      print('ERRO ao distribuir equipes: $e');
+      // Erro ao distribuir equipes (exibido via snackbar abaixo)
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao distribuir equipes: $e')),
@@ -412,15 +415,72 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         return;
       }
 
-      print('DEBUG: Host iniciando o jogo...');
+      
 
-      // Chama o backend para iniciar o jogo
-      bool success = await roomProvider.startGame(currentUser.id);
+      // Chama o backend para iniciar o jogo - O gameId deve vir da resposta
+      final startGameResult = await roomProvider.startGame(currentUser.id);
 
-      if (success) {
-        print('DEBUG: Jogo iniciado com sucesso pelo host');
-        // Somente o host navega; demais permanecem no lobby
-        _handleGameStarted();
+      if (startGameResult == true) {
+        
+        
+        // Aguardar alguns segundos para o backend processar e criar o gameId
+        await Future.delayed(const Duration(seconds: 2));
+        
+        // HOST: redireciona IMEDIATAMENTE após sucesso
+        _refreshTimer?.cancel();
+        
+        // Primeiro, tente obter gameId imediatamente do provider (cache)
+        String? gameId = roomProvider.lastStartedGameId?.toString() ?? _currentRoom?.gameId;
+
+        // Se ainda não temos, atualiza e tenta obter via provider/refresh
+        if (gameId == null) {
+          await roomProvider.refreshRoomDetails();
+          _currentRoom = roomProvider.currentRoom;
+          gameId = roomProvider.lastStartedGameId?.toString() ?? _currentRoom?.gameId;
+
+          // Se ainda null, usar método getGameId que faz tentativas
+          if (gameId == null) {
+            try {
+              gameId = await roomProvider.getGameId();
+            } catch (_) {
+              // ignore
+            }
+          }
+        }
+        
+        final player = _currentRoom?.players.firstWhere(
+          (p) => p.userId == currentUser.id,
+          orElse: () => PlayerInRoom(userId: '', username: '', fullName: '', isHost: false, isReady: false),
+        );
+        
+        
+        
+        if (mounted) {
+          // Preferir dados completos da resposta do provider (se disponível)
+          final startResp = roomProvider.lastStartedGameResponse;
+          final argStartTime = startResp != null && startResp['startTime'] != null
+              ? DateTime.fromMillisecondsSinceEpoch((startResp['startTime'] as num).toInt()).toIso8601String()
+              : _currentRoom?.startsAt?.toIso8601String();
+
+          Navigator.pushReplacementNamed(
+            context, 
+            '/quiz-countdown',
+            arguments: {
+              'roomName': _currentRoom?.roomName,
+              'categories': _currentRoom?.categories,
+              'difficulty': _currentRoom?.difficulty.value,
+              'maxPlayers': _currentRoom?.maxPlayers,
+              'questionTime': _currentRoom?.questionTime,
+              'questionCount': _currentRoom?.questionCount,
+              'assignmentType': _currentRoom?.assignmentType,
+              'gameId': startResp != null ? startResp['gameId']?.toString() : gameId,
+              'roomCode': _currentRoom?.roomCode,
+              'startsAt': argStartTime,
+              'playerCategory': player?.assignedCategory,
+              'rawGameResponse': startResp, // opcional: repassar todo o objeto
+            },
+          );
+        }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -429,7 +489,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         }
       }
     } catch (e) {
-      print('ERRO ao iniciar jogo: $e');
+      // Erro ao iniciar jogo (mostrado via snackbar abaixo)
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao iniciar o jogo: $e')),
@@ -445,111 +505,167 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
   }
 
   Future<void> _selectCategory(String category) async {
+    if (_isAssigningCategory) return; // debounce
     try {
+      setState(() => _isAssigningCategory = true);
+
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final roomProvider = Provider.of<RoomProvider>(context, listen: false);
+      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
       final currentUser = authProvider.currentUser;
       
       if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Usuário não identificado')),
-        );
+        _showSnack('Usuário não identificado');
+        return;
+      }
+      if (_currentRoom == null) {
+        _showSnack('Sala não carregada');
         return;
       }
 
-      print('DEBUG: Selecionando disciplina $category para jogador ${currentUser.id}');
+      final player = _currentRoom!.players.firstWhere(
+        (p) => p.userId == currentUser.id,
+        orElse: () => PlayerInRoom(userId: '', username: '', fullName: '', isHost: false, isReady: false),
+      );
+      if (player.userId.isEmpty) {
+        _showSnack('Jogador não encontrado na sala');
+        return;
+      }
+      if (player.team == null) {
+        _showSnack('Selecione uma equipe antes da disciplina');
+        return;
+      }
+      if (player.assignedCategory != null && player.assignedCategory!.isNotEmpty) {
+        _showSnack('Você já escolheu uma disciplina');
+        return;
+      }
 
-      // Converter o ID do usuário para int e usar um categoryId baseado no nome da categoria
-      int playerId = int.parse(currentUser.id);
-      int categoryId = _getCategoryIdFromName(category);
+      // Regra: uma categoria por equipe – verifica conflitos
+      final sameTeamPlayers = _currentRoom!.players.where((p) => p.team == player.team);
+      final alreadyTaken = sameTeamPlayers.any((p) => p.assignedCategory == category);
+      if (alreadyTaken) {
+        _showSnack('Sua equipe já escolheu esta disciplina');
+        return;
+      }
+
+      final categoryObj = categoryProvider.getCategoryByName(category);
+      if (categoryObj == null) {
+        _showSnack('Disciplinas ainda carregando. Tente novamente.');
+        return;
+      }
+
+      final playerId = int.tryParse(currentUser.id);
+      if (playerId == null) {
+        _showSnack('ID do jogador inválido');
+        return;
+      }
+
       
-      bool success = await roomProvider.assignCategoryToPlayer(playerId, categoryId);
-      
-      if (success) {
-        print('DEBUG: Disciplina $category atribuída com sucesso para jogador ${currentUser.id}');
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Disciplina selecionada: ${_getCategoryDisplayName(category)}'),
-              backgroundColor: const Color(0xFF10B981),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
+
+      final ok = await roomProvider.assignCategoryToPlayer(playerId, categoryObj.id);
+      if (ok) {
+        _showSnack('Disciplina selecionada: ${_getCategoryDisplayName(category)}', success: true);
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao selecionar disciplina: ${roomProvider.error}')),
-          );
-        }
+        _showSnack(roomProvider.error ?? 'Falha ao selecionar disciplina');
       }
     } catch (e) {
-      print('ERROR ao selecionar disciplina: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao selecionar disciplina: $e')),
-        );
-      }
+      // Erro na seleção de disciplina - notificar usuário
+      _showSnack('Erro ao selecionar disciplina: $e');
+    } finally {
+      if (mounted) setState(() => _isAssigningCategory = false);
     }
+  }
+
+  void _showSnack(String msg, {bool success = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _distributeCategoriesAutomatically() async {
     if (_isDistributingCategories || _currentRoom == null) return;
-    
+
+    setState(() {
+      _isDistributingCategories = true;
+    });
+
     try {
-      setState(() {
-        _isDistributingCategories = true;
-      });
-      
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final roomProvider = Provider.of<RoomProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final currentUser = authProvider.currentUser;
-      
-      if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Usuário não identificado')),
-        );
-        return;
+
+      if (currentUser == null || _currentRoom == null) {
+        throw Exception('Usuário ou sala não encontrados.');
       }
 
-      // Verifica se o usuário é o host
-      final currentPlayerInRoom = _currentRoom?.players
-          .where((player) => player.userId == currentUser.id)
-          .firstOrNull;
-      
-      if (currentPlayerInRoom?.isHost != true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Apenas o criador da sala pode distribuir as disciplinas')),
-        );
-        return;
+      final currentPlayerInRoom = _currentRoom!.players
+          .firstWhere((p) => p.userId == currentUser.id, orElse: () => throw Exception('Jogador atual não encontrado na sala.'));
+
+      if (!currentPlayerInRoom.isHost) {
+        throw Exception('Apenas o host pode distribuir as disciplinas.');
       }
 
-      print('DEBUG: Host distribuindo disciplinas automaticamente...');
+      
 
-      bool success = await roomProvider.distributeCategoriesAutomatically(int.parse(currentUser.id));
+      final players = _currentRoom!.players;
+      final roomCategories = List<String>.from(_currentRoom!.categories);
+      
+      final teamRedPlayers = players.where((p) => p.team == TeamColor.RED).toList();
+      final teamBluePlayers = players.where((p) => p.team == TeamColor.BLUE).toList();
 
-      if (success) {
-        print('DEBUG: Disciplinas distribuídas com sucesso pelo host');
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Disciplinas distribuídas automaticamente!'),
-              backgroundColor: Color(0xFF10B981),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao distribuir disciplinas: ${roomProvider.error}')),
+      // Cria listas de disciplinas disponíveis para cada equipe
+      var availableCategoriesForRed = List<String>.from(roomCategories);
+      var availableCategoriesForBlue = List<String>.from(roomCategories);
+      availableCategoriesForRed.shuffle();
+      availableCategoriesForBlue.shuffle();
+
+      List<Future> assignmentFutures = [];
+
+      // Atribui para a equipe vermelha
+      for (var player in teamRedPlayers) {
+        if (availableCategoriesForRed.isNotEmpty) {
+          final categoryToAssign = availableCategoriesForRed.removeAt(0);
+          final categoryId = _getCategoryIdFromName(categoryToAssign);
+          
+          assignmentFutures.add(
+            roomProvider.assignCategoryToPlayer(int.parse(player.userId), categoryId)
           );
         }
       }
+
+      // Atribui para a equipe azul
+      for (var player in teamBluePlayers) {
+        if (availableCategoriesForBlue.isNotEmpty) {
+          final categoryToAssign = availableCategoriesForBlue.removeAt(0);
+          final categoryId = _getCategoryIdFromName(categoryToAssign);
+          
+          assignmentFutures.add(
+            roomProvider.assignCategoryToPlayer(int.parse(player.userId), categoryId)
+          );
+        }
+      }
+
+      // Aguarda todas as atribuições serem concluídas
+      await Future.wait(assignmentFutures);
+
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Disciplinas distribuídas automaticamente!'),
+            backgroundColor: Color(0xFF10B981),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
     } catch (e) {
-      print('ERRO ao distribuir disciplinas: $e');
+      // Erro ao distribuir disciplinas (exibido via snackbar abaixo)
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao distribuir disciplinas: $e')),
@@ -2052,6 +2168,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       builder: (context) {
         final screenWidth = MediaQuery.of(context).size.width;
         final isSmallScreen = screenWidth < 600;
+        final disabled = _isAssigningCategory; // desabilita enquanto requisitando
         
         final categoryEmojis = {
           'MATH': '🔢',
@@ -2062,42 +2179,56 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           'ENGLISH': '🇺🇸',
           'MIXED': '🎯',
         };
-        
-        return GestureDetector(
-          onTap: () => _selectCategory(category),
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isSmallScreen ? 12 : 16, 
-              vertical: isSmallScreen ? 8 : 10
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFF8B5CF6),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF8B5CF6).withOpacity(0.4),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  categoryEmojis[category] ?? '📝',
-                  style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
-                ),
-                SizedBox(width: isSmallScreen ? 4 : 6),
-                Text(
-                  _getCategoryDisplayName(category),
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 14,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+
+        return Opacity(
+          opacity: disabled ? 0.6 : 1,
+          child: GestureDetector(
+            onTap: disabled ? null : () => _selectCategory(category),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmallScreen ? 12 : 16,
+                vertical: isSmallScreen ? 8 : 10,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B5CF6),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF8B5CF6).withOpacity(0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-              ],
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    categoryEmojis[category] ?? '📝',
+                    style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+                  ),
+                  SizedBox(width: isSmallScreen ? 4 : 6),
+                  Text(
+                    _getCategoryDisplayName(category),
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 14,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (_isAssigningCategory && !isSmallScreen) ...[
+                    const SizedBox(width: 6),
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         );
@@ -2269,90 +2400,47 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   ],
                 ),
               ),
-              // Status de conexão animado
-              AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _pulseAnimation.value,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF10B981).withOpacity(0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.wifi,
-                        color: Colors.white,
-                        size: isSmallScreen ? 20 : 24,
-                      ),
-                    ),
-                  );
-                },
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                '$playersCount/$maxPlayers',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 16 : 18,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          // Barra de progresso de jogadores
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Jogadores na Sala',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 14 : 16,
-                      color: Colors.white.withOpacity(0.9),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    '$playersCount/$maxPlayers',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 16 : 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Container(
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: (progressValue * 100).round(),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF10B981), Color(0xFF34D399)],
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+          const SizedBox(height: 8),
+          Container(
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: (progressValue * 100).round(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF10B981), Color(0xFF34D399)],
                       ),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    Expanded(
-                      flex: 100 - (progressValue * 100).round(),
-                      child: Container(),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                Expanded(
+                  flex: 100 - (progressValue * 100).round(),
+                  child: Container(),
+                ),
+              ],
+            ),
           ),
         ],
       ),

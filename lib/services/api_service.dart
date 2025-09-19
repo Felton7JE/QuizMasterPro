@@ -16,15 +16,35 @@ class ApiService {
   // GET request que retorna Map
   Future<Map<String, dynamic>> get(String endpoint) async {
     try {
+      // ignore: avoid_print
+      print('🟡 DEBUG ApiService: GET para $endpoint');
+      
       final uri = Uri.parse('$baseUrl$endpoint');
+      
+      // ignore: avoid_print
+      print('🟡 DEBUG ApiService: URI completa: $uri');
+      // ignore: avoid_print
+      print('🟡 DEBUG ApiService: Headers: $_headers');
+      
       final response = await _client.get(uri, headers: _headers);
       
+      // ignore: avoid_print
+      print('🟡 DEBUG ApiService: Status Code: ${response.statusCode}');
+      // ignore: avoid_print
+      print('🟡 DEBUG ApiService: Response Body: ${response.body}');
+      
       return _handleResponse(response);
-    } on SocketException {
+    } on SocketException catch (e) {
+      // ignore: avoid_print
+      print('❌ ERRO ApiService: SocketException - $e');
       throw ApiException('Sem conexão com a internet');
-    } on HttpException {
+    } on HttpException catch (e) {
+      // ignore: avoid_print
+      print('❌ ERRO ApiService: HttpException - $e');
       throw ApiException('Erro de comunicação com o servidor');
     } catch (e) {
+      // ignore: avoid_print
+      print('❌ ERRO ApiService: Erro inesperado - $e');
       throw ApiException('Erro inesperado: $e');
     }
   }
@@ -122,23 +142,48 @@ class ApiService {
   Map<String, dynamic> _handleResponse(http.Response response) {
     final statusCode = response.statusCode;
     
+    // ignore: avoid_print
+    print('🟡 DEBUG ApiService: _handleResponse - Status: $statusCode');
+    // ignore: avoid_print
+    print('🟡 DEBUG ApiService: _handleResponse - Body length: ${response.body.length}');
+    
     if (statusCode >= 200 && statusCode < 300) {
       if (response.body.isNotEmpty) {
         try {
-          return jsonDecode(response.body);
+          final decoded = jsonDecode(response.body);
+          // ignore: avoid_print
+          print('🟡 DEBUG ApiService: JSON decodificado com sucesso');
+          // ignore: avoid_print
+          print('🟡 DEBUG ApiService: Tipo da resposta: ${decoded.runtimeType}');
+          if (decoded is Map) {
+            // ignore: avoid_print
+            print('🟡 DEBUG ApiService: Chaves da resposta: ${decoded.keys.toList()}');
+          }
+          return decoded;
         } catch (e) {
+          // ignore: avoid_print
+          print('❌ ERRO ApiService: Erro ao decodificar JSON - $e');
           throw ApiException('Resposta inválida do servidor');
         }
       }
+      // ignore: avoid_print
+      print('🟡 DEBUG ApiService: Resposta vazia, retornando {}');
       return {};
     } else {
+      // ignore: avoid_print
+      print('❌ ERRO ApiService: Status code de erro: $statusCode');
+      
       String errorMessage = 'Erro $statusCode';
       
       try {
         final errorBody = jsonDecode(response.body);
         errorMessage = errorBody['message'] ?? errorMessage;
+        // ignore: avoid_print
+        print('❌ ERRO ApiService: Mensagem de erro: $errorMessage');
       } catch (e) {
         // Se não conseguir decodificar, usa a mensagem padrão
+        // ignore: avoid_print
+        print('❌ ERRO ApiService: Não foi possível decodificar erro: $e');
       }
       
       switch (statusCode) {
