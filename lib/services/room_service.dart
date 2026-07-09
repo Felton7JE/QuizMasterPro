@@ -83,7 +83,7 @@ class RoomService {
   /// (e.g. contains `gameId`, `startTime`, etc.). Throws on failure.
   Future<Map<String, dynamic>> startGame(String roomCode, String hostId) async {
     final body = {
-      'hostId': hostId,
+      'hostId': int.tryParse(hostId) ?? 0,
     };
 
     final response = await _apiService.post('/api/rooms/$roomCode/start', body);
@@ -109,6 +109,13 @@ class RoomService {
     }
 
     return parsed;
+  }
+
+  Future<void> playAgain(String roomCode, String hostId) async {
+    final body = {
+      'hostId': hostId,
+    };
+    await _apiService.post('/api/rooms/$roomCode/play-again', body);
   }
 
   Future<void> leaveRoom(String roomCode, String userId) async {
@@ -216,5 +223,13 @@ class RoomService {
   Future<bool> distributeCategoriesAutomaticallyByHost(String roomCode, int hostId) async {
     final request = DistributeCategoriesRequest(hostId: hostId);
     return distributeCategoriesAutomatically(roomCode, request);
+  }
+
+  Future<void> addBots(String roomCode, String hostId, {int count = 3}) async {
+    final body = {
+      'hostId': int.tryParse(hostId) ?? 0,
+      'count': count,
+    };
+    await _apiService.post('/api/rooms/$roomCode/add-bots', body);
   }
 }

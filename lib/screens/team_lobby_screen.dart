@@ -5,6 +5,7 @@ import 'dart:async';
 import '../providers/room_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/category_provider.dart';
+import '../providers/websocket_provider.dart';
 import '../models/room_model.dart';
 import '../widgets/custom_button.dart';
 
@@ -61,10 +62,18 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       try {
         Provider.of<CategoryProvider>(context, listen: false).loadCategories();
       } catch (_) {}
+
+      // Ligar ao WebSocket para receber GAME_STARTED em tempo real
+      _connectWebSocket();
     });
     _checkAutoAssignment();
-    // Reduzir o intervalo para 1 segundo para detecção mais rápida
-    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    // Manter polling lento (5s) apenas para atualizar lista de jogadores no lobby
+    // (jogadores a entrar/sair, estado ready). O início do jogo é feito via WebSocket.
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted) {
+        _refreshTimer?.cancel();
+        return;
+      }
       _refreshRoomData();
     });
     
@@ -77,6 +86,8 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
     _refreshTimer?.cancel();
     _pulseController.dispose();
     _slideController.dispose();
+    // NÃO desligar o WebSocket aqui — vai ser usado no countdown/game screen
+    // O WebSocketProvider gere o seu próprio ciclo de vida
     super.dispose();
   }
 
@@ -103,59 +114,36 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
     }
   }
 
-  Future<void> _refreshRoomData() async {
-    // Não atualizar enquanto estiver atribuindo disciplina manualmente para não sobrescrever estado
-    if (_isAssigningCategory) return;
-    if (_currentRoom != null) {
-      try {
-        final roomProvider = Provider.of<RoomProvider>(context, listen: false);
-        final previousStatus = _currentRoom?.status;
-        
-        
-        
-        await roomProvider.refreshRoomDetails();
-        if (mounted) {
-          final newRoom = roomProvider.currentRoom;
-          final newStatus = newRoom?.status;
-          
-          
-          
-          setState(() {
-            _currentRoom = newRoom;
-          });
-          
-          // Detecta quando o jogo foi iniciado - melhora na detecção
-          if (previousStatus != RoomStatus.STARTING && 
-              previousStatus != RoomStatus.IN_PROGRESS &&
-              (newStatus == RoomStatus.STARTING || newStatus == RoomStatus.IN_PROGRESS)) {
-            _handleGameStarted();
-          }
-        }
-      } catch (e) {
-        // Erro tratado silenciosamente (mensagem de erro exibida em UI quando aplicável)
-      }
-    }
-  }
-  
-  void _handleGameStarted() {
-    // Cancela o timer imediatamente para evitar múltiplas chamadas
-    _refreshTimer?.cancel();
-    
-    
-    
-    // Redireciona IMEDIATAMENTE sem delay
-    if (mounted) {
-      // Determina a categoria do jogador atual para passar adiante
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      final currentUser = auth.currentUser;
-      final player = _currentRoom?.players.firstWhere(
-        (p) => p.userId == currentUser?.id,
-        orElse: () => PlayerInRoom(userId: '', username: '', fullName: '', isHost: false, isReady: false),
-      );
-  final playerCategory = (player != null && player.userId.isNotEmpty) ? player.assignedCategory : null;
+  /// Liga ao WebSocket e subscreve os eventos da sala.
+  /// Quando o evento GAME_STARTED chegar, navega para o countdown com dados completos.
+  void _connectWebSocket() {
+    final roomCode = _currentRoom?.roomCode;
+    if (roomCode == null || roomCode.isEmpty) return;
 
+    final wsProv = Provider.of<WebSocketProvider>(context, listen: false);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    wsProv.connectToRoom(roomCode);
+
+    // Monitorizar o provider para detetar o evento GAME_STARTED
+    wsProv.addListener(() {
+      if (!mounted) return;
+      final event = wsProv.lastGameStartedEvent;
+      if (event == null) return;
+
+      final userId = auth.currentUser?.id ?? '';
+      final playerCategory = event.playerCategories[userId];
+      final gameId = event.gameId;
+
+      // Limpar o evento para não navegar duas vezes
+      wsProv.clearGameStartedEvent();
+
+      // Cancelar o polling do lobby
+      _refreshTimer?.cancel();
+
+      if (!mounted) return;
       Navigator.pushReplacementNamed(
-        context, 
+        context,
         '/quiz-countdown',
         arguments: {
           'roomName': _currentRoom?.roomName,
@@ -165,12 +153,32 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           'questionTime': _currentRoom?.questionTime,
           'questionCount': _currentRoom?.questionCount,
           'assignmentType': _currentRoom?.assignmentType,
-          // adicionados para garantir dados suficientes
-          'gameId': _currentRoom?.gameId,
-          'startsAt': _currentRoom?.startsAt?.toIso8601String(),
+          // ✅ Dados completos recebidos via WebSocket — sem race condition
+          'gameId': gameId,
+          'startsAt': event.startsAt.toIso8601String(),
           'playerCategory': playerCategory,
         },
       );
+    });
+  }
+
+  Future<void> _refreshRoomData() async {
+    // Não atualizar enquanto estiver atribuindo disciplina manualmente para não sobrescrever estado
+    if (_isAssigningCategory) return;
+    if (_currentRoom != null) {
+      try {
+        final roomProvider = Provider.of<RoomProvider>(context, listen: false);
+        await roomProvider.refreshRoomDetails();
+        if (mounted) {
+          final newRoom = roomProvider.currentRoom;
+          setState(() {
+            _currentRoom = newRoom;
+          });
+          // Nota: Não há mais deteção de estado aqui — o WebSocket trata disso
+        }
+      } catch (e) {
+        // Erro tratado silenciosamente
+      }
     }
   }
 
@@ -420,83 +428,21 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       // Chama o backend para iniciar o jogo - O gameId deve vir da resposta
       final startGameResult = await roomProvider.startGame(currentUser.id);
 
-      if (startGameResult == true) {
-        
-        
-        // Aguardar alguns segundos para o backend processar e criar o gameId
-        await Future.delayed(const Duration(seconds: 2));
-        
-        // HOST: redireciona IMEDIATAMENTE após sucesso
-        _refreshTimer?.cancel();
-        
-        // Primeiro, tente obter gameId imediatamente do provider (cache)
-        String? gameId = roomProvider.lastStartedGameId?.toString() ?? _currentRoom?.gameId;
-
-        // Se ainda não temos, atualiza e tenta obter via provider/refresh
-        if (gameId == null) {
-          await roomProvider.refreshRoomDetails();
-          _currentRoom = roomProvider.currentRoom;
-          gameId = roomProvider.lastStartedGameId?.toString() ?? _currentRoom?.gameId;
-
-          // Se ainda null, usar método getGameId que faz tentativas
-          if (gameId == null) {
-            try {
-              gameId = await roomProvider.getGameId();
-            } catch (_) {
-              // ignore
-            }
-          }
-        }
-        
-        final player = _currentRoom?.players.firstWhere(
-          (p) => p.userId == currentUser.id,
-          orElse: () => PlayerInRoom(userId: '', username: '', fullName: '', isHost: false, isReady: false),
-        );
-        
-        
-        
-        if (mounted) {
-          // Preferir dados completos da resposta do provider (se disponível)
-          final startResp = roomProvider.lastStartedGameResponse;
-          final argStartTime = startResp != null && startResp['startTime'] != null
-              ? DateTime.fromMillisecondsSinceEpoch((startResp['startTime'] as num).toInt()).toIso8601String()
-              : _currentRoom?.startsAt?.toIso8601String();
-
-          Navigator.pushReplacementNamed(
-            context, 
-            '/quiz-countdown',
-            arguments: {
-              'roomName': _currentRoom?.roomName,
-              'categories': _currentRoom?.categories,
-              'difficulty': _currentRoom?.difficulty.value,
-              'maxPlayers': _currentRoom?.maxPlayers,
-              'questionTime': _currentRoom?.questionTime,
-              'questionCount': _currentRoom?.questionCount,
-              'assignmentType': _currentRoom?.assignmentType,
-              'gameId': startResp != null ? startResp['gameId']?.toString() : gameId,
-              'roomCode': _currentRoom?.roomCode,
-              'startsAt': argStartTime,
-              'playerCategory': player?.assignedCategory,
-              'rawGameResponse': startResp, // opcional: repassar todo o objeto
-            },
-          );
-        }
-      } else {
+      if (startGameResult != true) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Erro ao iniciar o jogo. Tente novamente.')),
           );
+          setState(() {
+            _isStartingGame = false;
+          });
         }
       }
     } catch (e) {
-      // Erro ao iniciar jogo (mostrado via snackbar abaixo)
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao iniciar o jogo: $e')),
         );
-      }
-    } finally {
-      if (mounted) {
         setState(() {
           _isStartingGame = false;
         });
@@ -1715,6 +1661,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         final isSmallScreen = screenWidth < 600;
         
         bool canStart = (_currentRoom?.players.length ?? 0) >= 4; // Mínimo 2 por equipe
+        final isHost = _isHost();
         
         String buttonText;
         bool buttonEnabled;
@@ -1746,6 +1693,25 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   isLarge: true,
                 ),
               ),
+              if (isHost) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: CustomButton(
+                    text: 'Adicionar 3 Bots (Dev)',
+                    onPressed: () async {
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      final currentUser = authProvider.currentUser;
+                      if (currentUser != null) {
+                        await Provider.of<RoomProvider>(context, listen: false).addBots(currentUser.id, count: 3);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bots adicionados!')));
+                      }
+                    },
+                    isPrimary: false,
+                    isLarge: false,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -1771,38 +1737,60 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
             ],
           );
         } else {
-          return Row(
+          return Column(
             children: [
-              Expanded(
-                child: CustomButton(
-                  text: 'Configurações',
-                  onPressed: () => Navigator.pop(context),
-                  isPrimary: false,
-                  isLarge: true,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: CustomButton(
-                  text: 'Compartilhar Código',
-                  onPressed: _copyRoomCode,
-                  isPrimary: false,
-                  isLarge: true,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 2,
-                child: CustomButton(
-                  text: buttonText,
-                  onPressed: () {
-                    if (buttonEnabled) {
-                      _startGame();
-                    }
-                  },
-                  isPrimary: buttonEnabled,
-                  isLarge: true,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: CustomButton(
+                      text: 'Configurações',
+                      onPressed: () => Navigator.pop(context),
+                      isPrimary: false,
+                      isLarge: true,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: CustomButton(
+                      text: 'Compartilhar Código',
+                      onPressed: _copyRoomCode,
+                      isPrimary: false,
+                      isLarge: true,
+                    ),
+                  ),
+                  if (isHost) ...[
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: CustomButton(
+                        text: '+ 3 Bots',
+                        onPressed: () async {
+                          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                          final currentUser = authProvider.currentUser;
+                          if (currentUser != null) {
+                            await Provider.of<RoomProvider>(context, listen: false).addBots(currentUser.id, count: 3);
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bots adicionados!')));
+                          }
+                        },
+                        isPrimary: false,
+                        isLarge: true,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: CustomButton(
+                      text: buttonText,
+                      onPressed: () {
+                        if (buttonEnabled) {
+                          _startGame();
+                        }
+                      },
+                      isPrimary: buttonEnabled,
+                      isLarge: true,
+                    ),
+                  ),
+                ],
               ),
             ],
           );

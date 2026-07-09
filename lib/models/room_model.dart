@@ -1,13 +1,17 @@
 enum GameMode { 
-  INDIVIDUAL('INDIVIDUAL'), 
   TEAM('TEAM'),
-  CLASSIC('CLASSIC'); // ✅ Adicionado: CLASSIC como no Postman
+  DUEL('DUEL'),
+  CLASSIC('CLASSIC'),
+  KAHOOT('KAHOOT');
   
   const GameMode(this.value);
   final String value;
   
   static GameMode fromString(String value) {
-    return GameMode.values.firstWhere((e) => e.value == value);
+    return GameMode.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => GameMode.CLASSIC,
+    );
   }
 }
 

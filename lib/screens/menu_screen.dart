@@ -428,37 +428,48 @@ class MenuScreen extends StatelessWidget {
           _buildModeStats(players, duration, categories),
           const Spacer(),
           SizedBox(height: screenHeight * 0.008),
-          Row(
-            children: [
-              Expanded(
-                child: CustomButton(
-                  text: 'Criar Sala',
-                  onPressed: () {
-                    if (gameMode == 'solo') {
-                      Navigator.pushNamed(context, '/quiz-game');
-                    } else {
+          if (gameMode == 'solo')
+            Row(
+              children: [
+                Expanded(
+                  child: CustomButton(
+                    text: 'Jogar',
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/solo-setup');
+                    },
+                    isPrimary: true,
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: CustomButton(
+                    text: 'Criar Sala',
+                    onPressed: () {
                       Navigator.pushNamed(
                         context, 
                         '/create-room',
                         arguments: {'gameMode': gameMode},
                       );
-                    }
-                  },
-                  isPrimary: true,
+                    },
+                    isPrimary: true,
+                  ),
                 ),
-              ),
-              SizedBox(width: screenWidth * 0.02),
-              Expanded(
-                child: CustomButton(
-                  text: 'Entrar',
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/join-room');
-                  },
-                  isPrimary: false,
+                SizedBox(width: screenWidth * 0.02),
+                Expanded(
+                  child: CustomButton(
+                    text: 'Entrar',
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/join-room');
+                    },
+                    isPrimary: false,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );

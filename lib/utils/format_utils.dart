@@ -43,12 +43,14 @@ class FormatUtils {
 
   static String formatGameMode(GameMode gameMode) {
     switch (gameMode) {
-      case GameMode.INDIVIDUAL:
-        return 'Individual';
       case GameMode.TEAM:
         return 'Em Equipe';
       case GameMode.CLASSIC:
         return 'Clássico';
+      case GameMode.DUEL:
+        return 'Duelo';
+      case GameMode.KAHOOT:
+        return 'Kahoot';
     }
   }
 

@@ -18,14 +18,16 @@ class CategoryProvider extends ChangeNotifier {
   Future<void> loadCategories() async {
     if (_categories.isNotEmpty) return; // Já carregadas
 
+    await forceLoadCategories();
+  }
+
+  Future<void> forceLoadCategories() async {
     _setLoading(true);
     try {
       print('DEBUG CategoryProvider: Carregando categorias...');
       _categories = await _categoryService.getAllCategories();
       _error = null;
       print('DEBUG CategoryProvider: ${_categories.length} categorias carregadas');
-      
-      // Debug: mostrar as categorias carregadas
       for (var cat in _categories) {
         print('DEBUG CategoryProvider: ID=${cat.id}, Name=${cat.name}, DisplayName=${cat.displayName}');
       }

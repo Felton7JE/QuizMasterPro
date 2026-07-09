@@ -27,9 +27,10 @@ class GameService {
 
 
 
- Future<AnswerResponse> submitAnswer(String gameId, AnswerRequest answer) async {
+  Future<AnswerResponse> submitAnswer(String gameId, AnswerRequest answer) async {
     final body = {
       'userId': answer.userId,
+      'questionId': answer.questionId,
       'selectedAnswer': answer.selectedAnswer,
       'timeToAnswer': answer.timeSpent, // mapeando timeSpent -> timeToAnswer
     };

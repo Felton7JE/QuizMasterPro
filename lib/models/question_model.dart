@@ -29,10 +29,14 @@ class QuestionData {
     try {
       final question = QuestionData(
         id: json['id'],
-        question: json['question'] ?? json['text'] ?? '',
+        // Backend now returns questionText instead of question
+        question: json['questionText'] ?? json['question'] ?? json['text'] ?? '',
         options: List<String>.from(json['options'] ?? const []),
         correctAnswer: json['correctAnswer'] ?? json['correct_index'] ?? 0,
-        category: json['category'] ?? '',
+        // Backend returns Category object instead of just string
+        category: (json['category'] is Map) 
+            ? (json['category']['name'] ?? json['category']['displayName'] ?? '') 
+            : (json['category']?.toString() ?? ''),
         difficulty: Difficulty.fromString(json['difficulty'] ?? 'MEDIUM'),
         order: json['order'] ?? json['orderIndex'] ?? 0,
         explanation: json['explanation'],

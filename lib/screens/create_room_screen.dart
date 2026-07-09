@@ -122,7 +122,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
       final success = await roomProvider.createRoom(
         roomName: roomName,
         password: _passwordController.text.trim().isEmpty ? null : _passwordController.text.trim(),
-        gameMode: _selectedMode == 'team' ? GameMode.TEAM : GameMode.INDIVIDUAL,
+        gameMode: _selectedMode == 'team' ? GameMode.TEAM : (_selectedMode == 'duel' ? GameMode.DUEL : (_selectedMode == 'kahoot' ? GameMode.KAHOOT : GameMode.CLASSIC)),
         difficulty: _mapDifficultyToApi(_selectedDifficulty),
         maxPlayers: _maxPlayers,
         questionTime: _questionTime,
@@ -169,10 +169,35 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                 'isHost': true,
               },
             );
+          } else if (_selectedMode == 'duel') {
+            print('🔴 DEBUG CreateRoomScreen: Navegando para duel-lobby...');
+            Navigator.pushReplacementNamed(
+              context, 
+              '/duel-lobby',
+              arguments: {
+                'roomCode': roomProvider.currentRoom!.roomCode,
+                'roomName': roomProvider.currentRoom!.roomName,
+                'categories': roomProvider.currentRoom!.categories,
+                'difficulty': roomProvider.currentRoom!.difficulty.value.toLowerCase(),
+                'maxPlayers': roomProvider.currentRoom!.maxPlayers,
+                'questionTime': roomProvider.currentRoom!.questionTime,
+                'questionCount': roomProvider.currentRoom!.questionCount,
+                'assignmentType': roomProvider.currentRoom!.assignmentType ?? 'CHOOSE',
+                'hostName': roomProvider.currentRoom!.hostName,
+                'currentPlayers': roomProvider.currentRoom!.currentPlayers ?? 0,
+                'allowSpectators': roomProvider.currentRoom!.allowSpectators,
+                'enableChat': roomProvider.currentRoom!.enableChat,
+                'showRealTimeRanking': roomProvider.currentRoom!.showRealTimeRanking,
+                'allowReconnection': roomProvider.currentRoom!.allowReconnection,
+                'isHost': true,
+              },
+            );
+          } else if (_selectedMode == 'kahoot') {
+            print('🔴 DEBUG CreateRoomScreen: Navegando para kahoot-lobby...');
+            Navigator.pushReplacementNamed(context, '/kahoot-lobby');
           } else {
-            print('🔴 DEBUG CreateRoomScreen: Navegando para quiz-countdown...');
-            // Para outros modos, navegar para tela apropriada
-            Navigator.pushReplacementNamed(context, '/quiz-countdown');
+            print('🔴 DEBUG CreateRoomScreen: Navegando para team-lobby...');
+            Navigator.pushReplacementNamed(context, '/team-lobby');
           }
         } else {
           print('🔴 DEBUG CreateRoomScreen: FALHA - Erro ao criar sala: ${roomProvider.error}');

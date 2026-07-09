@@ -62,35 +62,53 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       final startsAtIso = args != null ? args['startsAt'] as String? : null;
-      _gameId = args?['gameId']?.toString() ?? Provider.of<RoomProvider>(context, listen: false).currentRoom?.gameId;
-      // Categoria: preferir a que veio por argumentos; se ausente, tenta derivar do player
+
+      // gameId e playerCategory chegam DIRETAMENTE do evento WebSocket via argumentos de navegação
+      _gameId = args?['gameId']?.toString();
+      final argCategory = (args?['playerCategory'] as String?)?.trim();
+
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final roomProv = Provider.of<RoomProvider>(context, listen: false);
       final userId = auth.currentUser?.id;
-      final player = roomProv.currentRoom?.players.firstWhere(
-        (p) => p.userId == userId,
-        orElse: () => PlayerInRoom(userId: '', username: '', fullName: '', isReady: false, isHost: false),
-      );
-      final argCategory = (args?['playerCategory'] as String?)?.trim();
+
       if (argCategory != null && argCategory.isNotEmpty) {
         _playerCategory = argCategory;
-      } else if (player != null && player.userId.isNotEmpty) {
-        _playerCategory = player.assignedCategory;
+      } else {
+        // Fallback: tentar obter do estado local da sala (para o host que veio via REST)
+        final player = roomProv.currentRoom?.players.firstWhere(
+          (p) => p.userId == userId,
+          orElse: () => PlayerInRoom(userId: '', username: '', fullName: '', isReady: false, isHost: false),
+        );
+        if (player != null && player.userId.isNotEmpty) {
+          _playerCategory = player.assignedCategory;
+        }
       }
 
+      if (kDebugMode) {
+        print('DEBUG QuizCountdown: gameId=$_gameId, category=$_playerCategory');
+      }
+
+      // Alinhar countdown com startsAt se disponível
       if (startsAtIso != null) {
         final startsAt = DateTime.tryParse(startsAtIso)?.toLocal();
         if (startsAt != null) {
           final diffSecs = startsAt.difference(DateTime.now()).inSeconds;
-          setState(() {
-            _countdown = diffSecs.clamp(0, 10);
-          });
+          if (mounted) {
+            setState(() {
+              _countdown = diffSecs.clamp(0, 10);
+            });
+          }
         }
       }
-      // Prefetch perguntas
-      if (_gameId != null && _playerCategory != null) {
-        _prefetchQuestions(_gameId!, _playerCategory!);
+
+      // Prefetch da pergunta (opcional, melhora performance)
+      if (_gameId != null && _gameId!.isNotEmpty && !_gameId!.startsWith('fallback')) {
+        final userIdStr = auth.currentUser?.id;
+        if (userIdStr != null && userIdStr.isNotEmpty) {
+          _prefetchQuestions(_gameId!, _playerCategory ?? '');
+        }
       }
+
       _startCountdown();
     });
   }
@@ -143,6 +161,10 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
   void _startCountdown() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_countdown > 0) {
         _scaleController.reset();
         _scaleController.forward();
@@ -152,16 +174,19 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
         });
       } else {
         timer.cancel();
-        _fadeController.forward().then((_) async {
-          // Aguardar gameId ser criado antes de navegar
-          await _waitForGameCreation();
-          
-          // Navegar para a tela do quiz
+        _fadeController.forward().then((_) {
+          if (!mounted) return;
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+          final gameMode = args['gameMode']?.toString() ?? '';
+
+          // Kahoot usa tela própria; todos os outros modos usam /quiz-game
+          final targetRoute = gameMode == 'KAHOOT' ? '/kahoot-game' : '/quiz-game';
+
           Navigator.pushReplacementNamed(
             context,
-            '/quiz-game',
+            targetRoute,
             arguments: {
-              ...(ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {}),
+              ...args,
               'gameId': _gameId,
               'playerCategory': _playerCategory,
               'prefetched': true,
@@ -174,103 +199,6 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
   }
 
 
-  Future<void> _waitForGameCreation() async {
-    // ignore: avoid_print
-    print('DEBUG QuizCountdown: Aguardando criação do jogo no backend...');
-    
-    // Se já temos gameId dos argumentos, usar ele
-    if (_gameId != null && _gameId!.isNotEmpty) {
-      print('DEBUG QuizCountdown: GameId já disponível: $_gameId');
-      return;
-    }
-    
-    final roomProvider = Provider.of<RoomProvider>(context, listen: false);
-    int attempts = 0;
-    const maxAttempts = 15; // 15 segundos de espera máxima
-    
-    while (attempts < maxAttempts) {
-      try {
-        // ignore: avoid_print
-        print('DEBUG QuizCountdown: Tentativa ${attempts + 1}/$maxAttempts');
-        
-        // Primeiro, tenta buscar via método específico do gameId
-        if (attempts > 2) {
-          try {
-            final gameId = await roomProvider.getGameId();
-            if (gameId != null && gameId.isNotEmpty) {
-              // ignore: avoid_print
-              print('DEBUG QuizCountdown: GameId obtido via método específico: $gameId');
-              if (mounted) {
-                setState(() {
-                  _gameId = gameId;
-                });
-              }
-              return;
-            }
-          } catch (e) {
-            // ignore: avoid_print
-            print('DEBUG QuizCountdown: Erro no método específico: $e');
-          }
-        }
-        
-        // Refresh dos dados da sala
-        await roomProvider.refreshRoomDetails();
-        final room = roomProvider.currentRoom;
-        
-        // ignore: avoid_print
-        print('DEBUG QuizCountdown: Room após refresh - gameId: ${room?.gameId}, status: ${room?.status}');
-        
-        if (room?.gameId != null && room!.gameId!.isNotEmpty) {
-          // ignore: avoid_print
-          print('DEBUG QuizCountdown: GameId obtido via refresh: ${room.gameId}');
-          if (mounted) {
-            setState(() {
-              _gameId = room.gameId;
-            });
-          }
-          return;
-        }
-        
-        // Se o status mudou para IN_PROGRESS mas ainda não temos gameId, aguardar mais
-        if (room?.status == 'IN_PROGRESS' || room?.status == 'STARTING') {
-          print('DEBUG QuizCountdown: Jogo em progresso, aguardando gameId...');
-          // Aguardar um pouco mais quando o jogo está em progresso
-          await Future.delayed(const Duration(milliseconds: 1500));
-          attempts++; // Contar como tentativa extra
-          continue;
-        }
-        
-      } catch (e) {
-        // ignore: avoid_print
-        print('DEBUG QuizCountdown: Erro ao buscar gameId: $e');
-      }
-      
-      attempts++;
-      await Future.delayed(const Duration(seconds: 1));
-    }
-    
-    // ignore: avoid_print
-    print('❌ ERRO QuizCountdown: Timeout aguardando criação do jogo');
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erro: Jogo não foi iniciado corretamente. Tentando continuar...'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      
-      // Mesmo sem gameId, tentar continuar com roomCode como fallback
-      final roomProvider = Provider.of<RoomProvider>(context, listen: false);
-      final roomCode = roomProvider.currentRoom?.roomCode;
-      if (roomCode != null) {
-        print('DEBUG QuizCountdown: Continuando com roomCode como fallback: $roomCode');
-        setState(() {
-          _gameId = 'fallback_$roomCode'; // Identificador temporário
-        });
-      }
-    }
-  }
 
   @override
   void dispose() {
@@ -487,11 +415,14 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
                           final mode = room?.gameMode;
                           String label;
                           switch (mode) {
-                            case GameMode.INDIVIDUAL:
-                              label = 'Individual';
-                              break;
                             case GameMode.CLASSIC:
                               label = 'Clássico';
+                              break;
+                            case GameMode.DUEL:
+                              label = 'Duelo';
+                              break;
+                            case GameMode.KAHOOT:
+                              label = 'Kahoot';
                               break;
                             case GameMode.TEAM:
                             default:

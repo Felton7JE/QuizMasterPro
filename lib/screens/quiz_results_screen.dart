@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 import '../widgets/custom_button_responsive.dart';
 import '../providers/game_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/room_provider.dart';
 import '../models/game_model.dart';
+import '../models/room_model.dart';
+import '../providers/websocket_provider.dart';
+import 'team_details_screen.dart';
 
 class QuizResultsScreen extends StatefulWidget {
   const QuizResultsScreen({super.key});
@@ -64,7 +68,43 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
     Future.delayed(const Duration(milliseconds: 200), () {
       _slideController.forward();
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final wsProv = Provider.of<WebSocketProvider>(context, listen: false);
+      wsProv.addListener(_onWebSocketEvent);
+    });
   }
+
+  void _onWebSocketEvent() {
+    if (!mounted) return;
+    final wsProv = Provider.of<WebSocketProvider>(context, listen: false);
+    if (wsProv.returnToLobbyEvent) {
+      wsProv.clearReturnToLobbyEvent();
+      _navigateBackToLobby();
+    }
+  }
+
+  void _navigateBackToLobby() {
+    final roomProv = Provider.of<RoomProvider>(context, listen: false);
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final isSolo = args?['isSolo'] == true || roomProv.currentRoom?.gameMode == GameMode.CLASSIC;
+    final isTeamMode = !isSolo && roomProv.currentRoom?.gameMode == GameMode.TEAM;
+    final isDuelMode = roomProv.currentRoom?.gameMode == GameMode.DUEL;
+    final isKahootMode = roomProv.currentRoom?.gameMode == GameMode.KAHOOT;
+
+    String route = '/menu';
+    if (isSolo) route = '/solo-setup';
+    else if (isTeamMode) route = '/team-lobby'; // Corrigido de /menu para /team-lobby se houver
+    else if (isDuelMode) route = '/duel-lobby';
+    else if (isKahootMode) route = '/kahoot-lobby';
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      route,
+      (route) => false,
+    );
+  }
+
 
   @override
   void didChangeDependencies() {
@@ -131,6 +171,8 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
   void dispose() {
     _scaleController.dispose();
     _slideController.dispose();
+    final wsProv = Provider.of<WebSocketProvider>(context, listen: false);
+    wsProv.removeListener(_onWebSocketEvent);
     super.dispose();
   }
 
@@ -138,6 +180,12 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
+    final roomProv = Provider.of<RoomProvider>(context, listen: false);
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final isSolo = args?['isSolo'] == true || roomProv.currentRoom?.gameMode == GameMode.CLASSIC;
+    final isTeamMode = !isSolo && roomProv.currentRoom?.gameMode == GameMode.TEAM;
+    final isDuelMode = roomProv.currentRoom?.gameMode == GameMode.DUEL;
+    final isKahootMode = roomProv.currentRoom?.gameMode == GameMode.KAHOOT;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
@@ -212,6 +260,30 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                 ),
                 
                 SizedBox(height: isSmallScreen ? 32 : 48),
+
+                if (isTeamMode) ...[
+                  SlideTransition(
+                    position: _slideAnimation,
+                    child: _buildTeamResultsCard(isSmallScreen),
+                  ),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                ],
+                
+                if (isDuelMode) ...[
+                  SlideTransition(
+                    position: _slideAnimation,
+                    child: _buildDuelResultsCard(isSmallScreen),
+                  ),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                ],
+                
+                if (isKahootMode) ...[
+                  SlideTransition(
+                    position: _slideAnimation,
+                    child: _buildFinalLeaderboardSection(isSmallScreen),
+                  ),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                ],
                 
                 // Card de resultados principais
                 SlideTransition(
@@ -237,20 +309,244 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
 
                 SizedBox(height: isSmallScreen ? 24 : 32),
 
-                // Final Leaderboard
-                SlideTransition(
-                  position: _slideAnimation,
-                  child: _buildFinalLeaderboardSection(isSmallScreen),
-                ),
+                if (!isKahootMode) ...[
+                  // Final Leaderboard (para modos não-Kahoot)
+                  SlideTransition(
+                    position: _slideAnimation,
+                    child: _buildFinalLeaderboardSection(isSmallScreen),
+                  ),
+                ],
                 
                 SizedBox(height: isSmallScreen ? 32 : 48),
                 
                 // Botões de ação
-                _buildActionButtons(isSmallScreen),
+                _buildActionButtons(isSmallScreen, isTeamMode, isSolo, isDuelMode, isKahootMode),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTeamResultsCard(bool isSmallScreen) {
+    if (_loadingLeaderboard) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(isSmallScreen ? 20 : 28),
+        decoration: _cardDecoration(),
+        child: const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1))),
+      );
+    }
+    
+    if (_leaderboardError || _finalLeaderboard.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    int redScore = 0;
+    int blueScore = 0;
+    for (var entry in _finalLeaderboard) {
+      if (entry.team == TeamColor.RED) {
+        redScore += entry.score;
+      } else if (entry.team == TeamColor.BLUE) {
+        blueScore += entry.score;
+      }
+    }
+
+    if (redScore == 0 && blueScore == 0) {
+      return const SizedBox.shrink();
+    }
+
+    String winnerText;
+    Color winnerColor;
+    if (redScore > blueScore) {
+      winnerText = 'Vitória da Equipa RED!';
+      winnerColor = Colors.redAccent;
+    } else if (blueScore > redScore) {
+      winnerText = 'Vitória da Equipa BLUE!';
+      winnerColor = Colors.blueAccent;
+    } else {
+      winnerText = 'Empate!';
+      winnerColor = Colors.amber;
+    }
+
+    double total = (redScore + blueScore).toDouble();
+    double redPercentage = total > 0 ? redScore / total : 0.5;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(isSmallScreen ? 20 : 28),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: winnerColor.withOpacity(0.5), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: winnerColor.withOpacity(0.2),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.emoji_events, color: winnerColor, size: isSmallScreen ? 28 : 36),
+              const SizedBox(width: 8),
+              Text(
+                winnerText,
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 20 : 24,
+                  fontWeight: FontWeight.bold,
+                  color: winnerColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('$redScore PTS', style: const TextStyle(color: Colors.redAccent, fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text('VS', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, fontStyle: FontStyle.italic)),
+              Text('$blueScore PTS', style: const TextStyle(color: Colors.blueAccent, fontSize: 20, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: SizedBox(
+              height: 20,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: (redPercentage * 100).toInt() == 0 ? 1 : (redPercentage * 100).toInt(),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(colors: [Colors.red, Colors.redAccent]),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: ((1 - redPercentage) * 100).toInt() == 0 ? 1 : ((1 - redPercentage) * 100).toInt(),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(colors: [Colors.blueAccent, Colors.blue]),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDuelResultsCard(bool isSmallScreen) {
+    if (_loadingLeaderboard) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(isSmallScreen ? 20 : 28),
+        decoration: _cardDecoration(),
+        child: const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1))),
+      );
+    }
+    
+    if (_leaderboardError || _finalLeaderboard.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Expecting 2 players for DUEL
+    final player1 = _finalLeaderboard.isNotEmpty ? _finalLeaderboard[0] : null;
+    final player2 = _finalLeaderboard.length > 1 ? _finalLeaderboard[1] : null;
+
+    if (player1 == null) return const SizedBox.shrink();
+
+    String winnerText;
+    Color winnerColor;
+    
+    if (player2 == null) {
+      winnerText = 'Vencedor: ${player1.username}';
+      winnerColor = const Color(0xFF10B981);
+    } else if (player1.score > player2.score) {
+      winnerText = 'Vencedor: ${player1.username}!';
+      winnerColor = const Color(0xFF10B981);
+    } else if (player2.score > player1.score) {
+      winnerText = 'Vencedor: ${player2.username}!';
+      winnerColor = const Color(0xFF10B981);
+    } else {
+      winnerText = 'Empate!';
+      winnerColor = Colors.amber;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(isSmallScreen ? 20 : 28),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: winnerColor.withOpacity(0.5), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: winnerColor.withOpacity(0.2),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.emoji_events, color: winnerColor, size: isSmallScreen ? 28 : 36),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  winnerText,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 20 : 24,
+                    fontWeight: FontWeight.bold,
+                    color: winnerColor,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          if (player2 != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(player1.username, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                      Text('${player1.score} PTS', style: TextStyle(color: player1.score >= player2.score ? const Color(0xFF10B981) : Colors.redAccent, fontSize: 20, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text('VS', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 18, fontWeight: FontWeight.w900, fontStyle: FontStyle.italic)),
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(player2.username, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                      Text('${player2.score} PTS', style: TextStyle(color: player2.score >= player1.score ? const Color(0xFF10B981) : Colors.redAccent, fontSize: 20, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
@@ -277,7 +573,6 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
       return _simpleInfoCard('Ranking indisponível.', Icons.info_outline, const Color(0xFF6366F1), isSmallScreen);
     }
 
-  final top3 = _finalLeaderboard.take(3).toList();
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
@@ -293,11 +588,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
             ],
           ),
           const SizedBox(height: 12),
-          ...top3.map((e) => _buildLeaderboardRow(e, isSmallScreen, highlight: _myEntry != null && _myEntry!.userId == e.userId)),
-          if (_myEntry != null && !top3.any((e) => e.userId == _myEntry!.userId)) ...[
-            const Divider(color: Color(0xFF334155), height: 18),
-            _buildLeaderboardRow(_myEntry!, isSmallScreen, highlight: true, isPlayerRow: true),
-          ],
+          ..._finalLeaderboard.map((e) => _buildLeaderboardRow(e, isSmallScreen, highlight: _myEntry != null && _myEntry!.userId == e.userId)),
         ],
       ),
     );
@@ -377,6 +668,15 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
       ),
       child: Column(
         children: [
+          Text(
+            'Desempenho Individual',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 16 : 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: isSmallScreen ? 16 : 24),
           // Pontuação principal
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -622,7 +922,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
     );
   }
 
-  Widget _buildActionButtons(bool isSmallScreen) {
+  Widget _buildActionButtons(bool isSmallScreen, bool isTeamMode, bool isSolo, bool isDuelMode, bool isKahootMode) {
     if (isSmallScreen) {
       // Layout vertical para telas pequenas
       return Column(
@@ -631,35 +931,61 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
             width: double.infinity,
             child: CustomButton(
               text: 'Jogar Novamente',
-              onPressed: () {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/menu',
-                  (route) => false,
-                );
+              onPressed: () async {
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                final roomProv = Provider.of<RoomProvider>(context, listen: false);
+                final isHost = roomProv.isPlayerHost(auth.currentUser?.id ?? '');
+                
+                if (isHost && !isSolo) {
+                  // O backend vai emitir RETURN_TO_LOBBY para todos
+                  await roomProv.playAgain(auth.currentUser?.id ?? '');
+                } else {
+                  // Se for solo, ou se for jogador normal (fallback), navega localmente
+                  _navigateBackToLobby();
+                }
               },
               isPrimary: true,
               isLarge: true,
             ),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: CustomButton(
-              text: 'Ver Detalhes',
-              onPressed: () {
-                _showDetailsDialog(context);
-              },
-              isPrimary: false,
-              isLarge: true,
+          if (isTeamMode) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: CustomButton(
+                text: 'Detalhes das Equipas',
+                onPressed: () {
+                  _showDetailsDialog(context);
+                },
+                isPrimary: false,
+                isLarge: true,
+              ),
             ),
-          ),
+          ],
+          if (isKahootMode) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: CustomButton(
+                text: 'Estatísticas',
+                onPressed: () {
+                  _showKahootStatsDialog(context, isSmallScreen);
+                },
+                isPrimary: false,
+                isLarge: true,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: CustomButton(
               text: 'Voltar ao Menu',
               onPressed: () {
+                final wsProv = Provider.of<WebSocketProvider>(context, listen: false);
+                final roomProv = Provider.of<RoomProvider>(context, listen: false);
+                wsProv.disconnect();
+                roomProv.clearRoom();
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   '/menu',
@@ -676,17 +1002,32 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
       // Layout horizontal para telas maiores
       return Row(
         children: [
-          Expanded(
-            child: CustomButton(
-              text: 'Ver Detalhes',
-              onPressed: () {
-                _showDetailsDialog(context);
-              },
-              isPrimary: false,
-              isLarge: true,
+          if (isTeamMode) ...[
+            Expanded(
+              child: CustomButton(
+                text: 'Detalhes Equipas',
+                onPressed: () {
+                  _showDetailsDialog(context);
+                },
+                isPrimary: false,
+                isLarge: true,
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
+            const SizedBox(width: 16),
+          ],
+          if (isKahootMode) ...[
+            Expanded(
+              child: CustomButton(
+                text: 'Estatísticas',
+                onPressed: () {
+                  _showKahootStatsDialog(context, isSmallScreen);
+                },
+                isPrimary: false,
+                isLarge: true,
+              ),
+            ),
+            const SizedBox(width: 16),
+          ],
           Expanded(
             child: CustomButton(
               text: 'Voltar ao Menu',
@@ -706,12 +1047,17 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
             flex: 2,
             child: CustomButton(
               text: 'Jogar Novamente',
-              onPressed: () {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/menu',
-                  (route) => false,
-                );
+              onPressed: () async {
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                final roomProv = Provider.of<RoomProvider>(context, listen: false);
+                final isHost = roomProv.isPlayerHost(auth.currentUser?.id ?? '');
+                
+                if (isHost && !isSolo) {
+                  // O backend vai emitir RETURN_TO_LOBBY para todos
+                  await roomProv.playAgain(auth.currentUser?.id ?? '');
+                } else {
+                  _navigateBackToLobby();
+                }
               },
               isPrimary: true,
               isLarge: true,
@@ -723,47 +1069,53 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
   }
 
   void _showDetailsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text(
-          'Detalhes do Quiz',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Total de Perguntas: ${_results['totalQuestions'] ?? 0}',
-              style: const TextStyle(color: Colors.white),
-            ),
-            Text(
-              'Respostas Corretas: ${_results['correctAnswers'] ?? 0}',
-              style: const TextStyle(color: Color(0xFF10B981)),
-            ),
-            Text(
-              'Pontos Totais: ${_results['totalPoints'] ?? 0}',
-              style: const TextStyle(color: Color(0xFF6366F1)),
-            ),
-            Text(
-              'Maior Sequência: ${_results['bestStreak'] ?? 0}',
-              style: const TextStyle(color: Color(0xFFEF4444)),
-            ),
-            Text(
-              'Acurácia: ${_accuracy.toStringAsFixed(1)}%',
-              style: TextStyle(color: _performanceColor),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fechar'),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TeamDetailsScreen(leaderboard: _finalLeaderboard),
       ),
     );
   }
+
+  void _showKahootStatsDialog(BuildContext context, bool isSmallScreen) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: const Color(0xFF0F172A),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'As Tuas Estatísticas',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildDetailedStats(isSmallScreen),
+                  const SizedBox(height: 16),
+                  _buildAccuracyChart(isSmallScreen),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
+

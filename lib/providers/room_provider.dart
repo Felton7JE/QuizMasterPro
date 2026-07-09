@@ -333,6 +333,22 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> playAgain(String hostId) async {
+    if (_currentRoom == null) return false;
+    
+    _setLoading(true);
+    try {
+      await _roomService.playAgain(_currentRoom!.roomCode, hostId);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<void> loadPublicRooms({int page = 0, int size = 10}) async {
     try {
       _publicRooms = await _roomService.getPublicRooms(page: page, size: size);
@@ -579,5 +595,23 @@ class RoomProvider extends ChangeNotifier {
     }
     
     return stats;
+  }
+
+  Future<bool> addBots(String hostId, {int count = 3}) async {
+    if (_currentRoom == null) return false;
+    _setLoading(true);
+    try {
+      await _roomService.addBots(_currentRoom!.roomCode, hostId, count: count);
+      // Wait a moment for backend WS to broadcast, then refresh
+      await Future.delayed(const Duration(milliseconds: 500));
+      await refreshRoomDetails();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 }

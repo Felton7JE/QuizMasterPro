@@ -11,11 +11,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:quizmaster_pro/main.dart';
 
 void main() {
-  testWidgets('QuizMaster app should start', (WidgetTester tester) async {
+  testWidgets('QuizMaster app should start and render HomeScreen buttons', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const QuizMasterApp());
 
+    // Wait for initial animations or future builders
+    await tester.pumpAndSettle();
+
     // Verify that the app starts
     expect(find.byType(MaterialApp), findsOneWidget);
+
+    // Verify if "Jogar Agora" text is present on the screen
+    expect(find.text('Jogar Agora'), findsWidgets);
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/room_provider.dart';
 import '../providers/auth_provider.dart';
+import '../models/room_model.dart';
 import '../widgets/custom_button_responsive.dart';
 
 class JoinRoomScreen extends StatefulWidget {
@@ -60,11 +61,16 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
       final success = await roomProvider.joinRoom(roomCode, userId);
 
       if (success && mounted) {
-        // Navega para o lobby da sala 
-        Navigator.pushReplacementNamed(
-          context,
-          '/team-lobby',
-        );
+        final gameMode = roomProvider.currentRoom?.gameMode;
+        
+        if (gameMode == GameMode.DUEL) {
+          Navigator.pushReplacementNamed(context, '/duel-lobby');
+        } else if (gameMode == GameMode.KAHOOT) {
+          Navigator.pushReplacementNamed(context, '/kahoot-lobby');
+        } else {
+          // Navega para o lobby da sala de equipe
+          Navigator.pushReplacementNamed(context, '/team-lobby');
+        }
       }
     } catch (e) {
       if (mounted) {

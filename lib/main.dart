@@ -4,12 +4,16 @@ import 'package:quizmaster_pro/screens/create_room_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/menu_screen.dart';
 import 'screens/team_lobby_screen.dart';
+import 'screens/duel_lobby_screen.dart';
+import 'screens/kahoot_lobby_screen.dart';
+import 'screens/kahoot_game_screen.dart';
 import 'screens/quiz_countdown_screen.dart';
 import 'screens/quiz_game_screen.dart';
 import 'screens/quiz_results_screen.dart';
 import 'screens/ranking_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/join_room_screen.dart';
+import 'screens/solo_setup_screen.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/room_service.dart';
@@ -21,6 +25,7 @@ import 'providers/room_provider.dart';
 import 'providers/game_provider.dart';
 import 'providers/category_provider.dart';
 import 'providers/question_provider.dart';
+import 'providers/websocket_provider.dart';
 
 void main() {
   runApp(const QuizMasterApp());
@@ -75,6 +80,10 @@ class QuizMasterApp extends StatelessWidget {
           create: (context) => QuestionProvider(context.read<QuestionService>()),
           update: (_, questionService, __) => QuestionProvider(questionService),
         ),
+        // WebSocket: ligação STOMP em tempo real
+        ChangeNotifierProvider<WebSocketProvider>(
+          create: (_) => WebSocketProvider(),
+        ),
       ],
       child: MaterialApp(
         title: 'QuizMaster Pro',
@@ -96,11 +105,15 @@ class QuizMasterApp extends StatelessWidget {
           '/create-room': (context) => const CreateRoomScreen(),
           '/join-room': (context) => const JoinRoomScreen(),
           '/team-lobby': (context) => const TeamLobbyScreen(),
+          '/duel-lobby': (context) => const DuelLobbyScreen(),
+          '/kahoot-lobby': (context) => const KahootLobbyScreen(),
+          '/kahoot-game': (context) => const KahootGameScreen(),
           '/quiz-countdown': (context) => const QuizCountdownScreen(),
           '/quiz-game': (context) => const QuizGameScreen(),
           '/quiz-results': (context) => const QuizResultsScreen(),
           '/ranking': (context) => const RankingScreen(),
           '/login': (context) => const LoginScreen(),
+          '/solo-setup': (context) => const SoloSetupScreen(),
         },
       ),
     );

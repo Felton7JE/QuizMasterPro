@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/question_provider.dart';
 import '../providers/auth_provider.dart';
-import '../providers/room_provider.dart';
 import '../providers/game_provider.dart';
+import '../providers/websocket_provider.dart';
+import '../providers/room_provider.dart';
 import '../models/question_model.dart';
 import '../models/room_model.dart';
 import '../models/game_model.dart';
@@ -43,16 +44,47 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   int _streak = 0;
   int _bestStreak = 0;
   int _totalPoints = 0;
-  // Live leaderboard additions
-  Timer? _leaderboardTimer;
-  bool _loadingLeaderboard = false;
+  // Live leaderboard
   List<LeaderboardEntry> _liveLeaderboard = [];
+  bool _loadingLeaderboard = false;
 
   @override
   void initState() {
     super.initState();
     _initControllers();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadQuestions());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<WebSocketProvider>(context, listen: false).addListener(_onWebSocketEvent);
+      _loadQuestions();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _progressController.dispose();
+    _questionController.dispose();
+    try {
+      Provider.of<WebSocketProvider>(context, listen: false).removeListener(_onWebSocketEvent);
+    } catch (_) {}
+    super.dispose();
+  }
+
+  void _onWebSocketEvent() {
+    if (!mounted) return;
+    final wsProv = Provider.of<WebSocketProvider>(context, listen: false);
+    final event = wsProv.lastLeaderboardUpdateEvent;
+    if (event != null) {
+      try {
+        final list = event.payload as List<dynamic>;
+        final parsed = list.map((e) => LeaderboardEntry.fromJson(e)).toList();
+        setState(() {
+          _liveLeaderboard = parsed;
+        });
+      } catch (e) {
+        if (kDebugMode) print('Erro ao parsear leaderboard via WS: $e');
+      }
+      wsProv.clearLeaderboardUpdateEvent();
+    }
   }
 
   void _initControllers() {
@@ -72,206 +104,88 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   }
 
   Future<void> _loadQuestions() async {
-    // ignore: avoid_print
-    print('=== DEBUG QUIZ GAME - INICIANDO CARREGAMENTO ===');
+    if (kDebugMode) print('=== DEBUG QUIZ GAME - CARREGANDO TODAS AS PERGUNTAS ===');
     
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final roomProv = Provider.of<RoomProvider>(context, listen: false);
     
-    // ignore: avoid_print
-    print('DEBUG: args recebidos = $args');
-    // ignore: avoid_print
-    print('DEBUG: currentRoom = ${roomProv.currentRoom?.toJson()}');
-    // ignore: avoid_print
-    print('DEBUG: currentUser = ${auth.currentUser?.toJson()}');
-    
-    // Tentar obter gameId de múltiplas fontes
+    // Obter gameId e categoria dos argumentos (vindos do WebSocket)
     _gameId = args?['gameId']?.toString();
+    _category = args?['playerCategory'];
+    
     if (_gameId == null || _gameId!.isEmpty) {
       _gameId = roomProv.currentRoom?.gameId;
     }
     
-    // Se gameId ainda é null/vazio, tentar buscar via roomCode
-    if (_gameId == null || _gameId!.isEmpty) {
-      final roomCode = args?['roomCode']?.toString() ?? roomProv.currentRoom?.roomCode;
-      if (roomCode != null) {
-        print('DEBUG: GameId vazio, usando roomCode como fallback: $roomCode');
-        _gameId = 'room_$roomCode'; // Identificador temporário baseado no roomCode
-      }
+    if (kDebugMode) {
+      print('DEBUG: gameId=$_gameId, category=$_category, userId=${auth.currentUser?.id}');
     }
     
-    _category = args?['playerCategory'];
-  final bool wasPrefetched = args?['prefetched'] == true; // Indica se countdown fez prefetch
-  final Map<String, dynamic>? prefetchedQuestionMap = args?['prefetchedQuestion'] as Map<String, dynamic>?;
-    
-    // ignore: avoid_print
-    print('DEBUG: gameId inicial = $_gameId');
-    // ignore: avoid_print
-    print('DEBUG: category inicial = $_category');
-    // ignore: avoid_print
-    print('DEBUG: wasPrefetched = $wasPrefetched');
-    
-    if (_category == null) {
-      final userId = auth.currentUser?.id;
-      final players = roomProv.currentRoom?.players ?? [];
-      
-      // ignore: avoid_print
-      print('DEBUG: tentando buscar categoria do userId = $userId');
-      // ignore: avoid_print
-      print('DEBUG: players na sala = ${players.map((p) => p.toJson()).toList()}');
-      
-      final player = players.firstWhere(
-        (p) => p.userId == userId,
-        orElse: () => PlayerInRoom(userId: '', username: '', fullName: '', isReady: false, isHost: false),
-      );
-      
-      // ignore: avoid_print
-      print('DEBUG: player encontrado = ${player.toJson()}');
-      
-      if (player.userId.isNotEmpty) {
-        _category = player.assignedCategory;
-        // ignore: avoid_print
-        print('DEBUG: categoria atribuída ao player = $_category');
-      }
+    // Validar gameId
+    if (_gameId == null || _gameId!.isEmpty || _gameId!.startsWith('room_') || _gameId!.startsWith('fallback')) {
+      setState(() {
+        _error = 'Erro: ID do jogo não encontrado.';
+        _loading = false;
+      });
+      return;
     }
     
-    // ignore: avoid_print
-    print('DEBUG: gameId final = $_gameId');
-    // ignore: avoid_print
-    print('DEBUG: category final = $_category');
-    
-    // Validação final - só falha se realmente não temos dados mínimos
-    if ((_gameId == null || _gameId!.isEmpty) && _category == null) {
-      // Tentar buscar gameId uma última vez
-      // ignore: avoid_print
-      print('DEBUG: Última tentativa de buscar gameId...');
+    final userId = auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) {
+      setState(() {
+        _error = 'Erro: Utilizador não autenticado.';
+        _loading = false;
+      });
+      return;
+    }
+
+    try {
+      // Buscar TODAS as perguntas de uma vez via GET /api/games/{id}/questions?userId=X
+      final gp = Provider.of<GameProvider>(context, listen: false);
+      final success = await gp.loadGameQuestions(_gameId!, userId);
       
-      try {
-        await roomProv.refreshRoomDetails();
-        final room = roomProv.currentRoom;
-        
-        if (room?.gameId != null && room!.gameId!.isNotEmpty) {
-          _gameId = room.gameId;
-          print('DEBUG: GameId obtido após refresh: $_gameId');
-        } else {
-          // Tentar método específico do provider
-          final gameId = await roomProv.getGameId();
-          if (gameId != null && gameId.isNotEmpty) {
-            _gameId = gameId;
-            print('DEBUG: GameId obtido via método específico: $_gameId');
-          }
-        }
-        
-        // Tentar obter categoria do player atualizado
-        if (_category == null) {
-          final userId = auth.currentUser?.id;
-          final player = room?.players.firstWhere(
-            (p) => p.userId == userId,
-            orElse: () => PlayerInRoom(userId: '', username: '', fullName: '', isReady: false, isHost: false),
-          );
-          if (player != null && player.userId.isNotEmpty) {
-            _category = player.assignedCategory;
-            print('DEBUG: Categoria obtida após refresh: $_category');
-          }
-        }
-        
-      } catch (e) {
-        // ignore: avoid_print
-        print('❌ ERRO: Falha ao buscar dados atualizados: $e');
-      }
+      if (!mounted) return;
       
-      // Se ainda não temos dados mínimos, mostrar erro
-      if ((_gameId == null || _gameId!.isEmpty) || _category == null) {
-        // Debug: loga valores recebidos para diagnóstico rápido
-        // ignore: avoid_print
-        print('❌ ERRO: Dados insuficientes após todas as tentativas - gameId=$_gameId, category=$_category');
+      if (!success || gp.questions.isEmpty) {
         setState(() {
-          _error = 'Erro: Dados do jogo não encontrados. Verifique sua conexão e tente novamente.';
+          _error = gp.error ?? 'Nenhuma pergunta encontrada para a sua categoria.';
           _loading = false;
         });
         return;
       }
-    }
-    try {
-      final qp = Provider.of<QuestionProvider>(context, listen: false);
-      List<QuestionData> list = [];
       
-      // ignore: avoid_print
-      print('DEBUG: Iniciando busca de questões...');
+      // Converter QuestionModel → QuestionData para compatibilidade com a UI existente
+      final allQuestions = gp.questions.map((qm) => QuestionData(
+        id: qm.id,
+        question: qm.question,
+        options: qm.options,
+        correctAnswer: qm.correctAnswer,
+        category: qm.category,
+        difficulty: Difficulty.fromString(qm.difficulty.value),
+        order: 0,
+        explanation: qm.explanation,
+      )).toList();
       
-      // Se veio da tela de countdown com prefetch, tentar usar cache primeiro
-      if (wasPrefetched) {
-        // ignore: avoid_print
-        print('DEBUG: Tentando buscar do cache (prefetched=true)');
-        final userIdStr = auth.currentUser?.id;
-        final cached = qp.getQuestions(_gameId!, _category!, userIdStr);
-        // ignore: avoid_print
-        print('DEBUG: Questões em cache = ${cached.length}');
-        if (cached.isNotEmpty) {
-          list = cached;
-          // ignore: avoid_print
-          print('DEBUG: Usando questões do cache');
-        }
-        // If nothing in cache but we received a prefetched question map, try to use it
-        if (list.isEmpty && prefetchedQuestionMap != null) {
-          try {
-            final q = QuestionData.fromJson(prefetchedQuestionMap);
-            list = [q];
-            if (kDebugMode) print('DEBUG QuizGame: Usando pergunta prefetched passada via argumentos');
-          } catch (e) {
-            if (kDebugMode) print('DEBUG QuizGame: falha ao converter prefetchedQuestion -> $e');
-          }
+      if (kDebugMode) {
+        print('✅ SUCESSO: ${allQuestions.length} perguntas carregadas de uma vez!');
+        for (var i = 0; i < allQuestions.length; i++) {
+          print('   Pergunta ${i + 1}: ${allQuestions[i].question.substring(0, allQuestions[i].question.length.clamp(0, 50))}...');
         }
       }
-      
-      // Se não há cache (ou navegação direta), buscar do backend
-      if (list.isEmpty) {
-        // ignore: avoid_print
-        print('DEBUG: Cache vazio, buscando do backend...');
-        // ignore: avoid_print
-        print('DEBUG: Chamando fetchQuestions com gameId=$_gameId, category=$_category');
-        final userIdStr = auth.currentUser?.id;
-        list = await qp.fetchQuestions(_gameId!, _category!, userIdStr);
-        
-        // ignore: avoid_print
-        print('DEBUG: Questões retornadas do backend = ${list.length}');
-        if (list.isNotEmpty) {
-          // ignore: avoid_print
-          print('DEBUG: Primeira questão = ${list.first.toJson()}');
-        }
-      }
-      
-      if (!mounted) return;
-      
-      // ignore: avoid_print
-      print('DEBUG: Definindo questões no estado (${list.length} questões)');
       
       setState(() {
-        _questions = list;
+        _questions = allQuestions;
+        _currentQuestion = 0;
         _loading = false;
         if (roomProv.currentRoom != null) {
           _timeLeft = roomProv.currentRoom!.questionTime;
-          // ignore: avoid_print
-          print('DEBUG: Tempo definido para ${_timeLeft}s');
         }
       });
       
-      if (_questions.isEmpty) {
-        // ignore: avoid_print
-        print('❌ AVISO: Lista de questões está vazia após carregamento');
-      } else {
-        // ignore: avoid_print
-        print('✅ SUCESSO: ${_questions.length} questões carregadas');
-      }
-      
       _startQuestion();
     } catch (e) {
-      // ignore: avoid_print
-      print('❌ ERRO ao carregar perguntas: $e');
-      // ignore: avoid_print
-      print('❌ Stack trace: ${StackTrace.current}');
-      
+      if (kDebugMode) print('❌ ERRO ao carregar perguntas: $e');
       setState(() {
         _error = 'Erro ao carregar perguntas: $e';
         _loading = false;
@@ -318,6 +232,10 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     _progressController.forward();
     _questionController.forward(from: 0);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_timeLeft > 0 && !_isAnswered) {
         setState(() => _timeLeft--);
       } else {
@@ -325,7 +243,6 @@ class _QuizGameScreenState extends State<QuizGameScreen>
         if (!_isAnswered) _handleTimeUp();
       }
     });
-    _scheduleLeaderboardUpdates();
     
     // ignore: avoid_print
     print('DEBUG: _startQuestion finalizado com sucesso');
@@ -367,7 +284,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
       final gp = Provider.of<GameProvider>(context, listen: false);
 
       final selectedIndex = currentQ.options.indexOf(selectedText);
-      final timeSpent = (Provider.of<RoomProvider>(context, listen: false).currentRoom?.questionTime ?? _timeLeft) - _timeLeft;
+      final timeSpent = ((Provider.of<RoomProvider>(context, listen: false).currentRoom?.questionTime ?? _timeLeft) - _timeLeft) * 1000;
 
       final success = await gp.submitAnswer(
         gameId: gameId,
@@ -392,78 +309,24 @@ class _QuizGameScreenState extends State<QuizGameScreen>
           }
           _totalPoints += resp.points; // Usa pontuação oficial agregada
         } else {
-          // fallback se resposta não retornou (mantém lógica local mínima)
+          // fallback se resposta não retornou na lista (mas sucesso foi true)
           if (isCorrectLocal) {
             _correctAnswers++;
             _streak++;
             if (_streak > _bestStreak) _bestStreak = _streak;
-            final timeBonus = _timeLeft * 10;
-            final streakBonus = _streak > 1 ? (_streak * 50) : 0;
-            final questionPoints = 100 + timeBonus + streakBonus;
-            _totalPoints += questionPoints;
           } else {
             _streak = 0;
           }
         }
       } else {
-        // Em caso de falha, aplica fallback local (para evitar UX quebrada)
-        if (isCorrectLocal) {
-          _correctAnswers++;
-          _streak++;
-          if (_streak > _bestStreak) _bestStreak = _streak;
-          final timeBonus = _timeLeft * 10;
-          final streakBonus = _streak > 1 ? (_streak * 50) : 0;
-          final questionPoints = 100 + timeBonus + streakBonus;
-          _totalPoints += questionPoints;
-        } else {
-          _streak = 0;
-        }
+        // Falha no servidor. Não dá pontos locais para evitar cheating.
+        if (kDebugMode) print('Falha no servidor ao submeter resposta.');
       }
       if (mounted) setState(() {});
-      _fetchLeaderboardOnce();
     } catch (e) {
-      // Fallback silencioso + print para debug (poderia mostrar snackbar)
-      // ignore: avoid_print
-      print('Falha ao enviar resposta: $e');
-      if (isCorrectLocal) {
-        _correctAnswers++;
-        _streak++;
-        if (_streak > _bestStreak) _bestStreak = _streak;
-        final timeBonus = _timeLeft * 10;
-        final streakBonus = _streak > 1 ? (_streak * 50) : 0;
-        final questionPoints = 100 + timeBonus + streakBonus;
-        _totalPoints += questionPoints;
-      } else {
-        _streak = 0;
-      }
+      if (kDebugMode) print('Falha ao enviar resposta: $e');
+      // Sem pontos locais para evitar cheating
       if (mounted) setState(() {});
-    }
-  }
-
-  // Leaderboard helpers
-  void _scheduleLeaderboardUpdates() {
-    _leaderboardTimer?.cancel();
-    final gameId = _gameId;
-    if (gameId == null) return;
-    _leaderboardTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!_isAnswered) {
-        _fetchLeaderboardOnce();
-      }
-    });
-  }
-  Future<void> _fetchLeaderboardOnce() async {
-    final gameId = _gameId;
-    if (gameId == null || _loadingLeaderboard) return;
-    try {
-      _loadingLeaderboard = true;
-      final gp = Provider.of<GameProvider>(context, listen: false);
-      await gp.loadLiveLeaderboard(gameId);
-      if (!mounted) return;
-      setState(() {
-        _liveLeaderboard = gp.leaderboard;
-      });
-    } catch (_) {} finally {
-      _loadingLeaderboard = false;
     }
   }
 
@@ -477,28 +340,25 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   }
 
   void _finishQuiz() {
+    final routeArgs = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final isSolo = routeArgs?['isSolo'] == true;
     Navigator.pushReplacementNamed(
       context,
       '/quiz-results',
       arguments: {
+        'gameId': _gameId,
         'correctAnswers': _correctAnswers,
         'totalQuestions': _questions.length,
         'totalPoints': _totalPoints,
         'bestStreak': _bestStreak,
         'questions': _questions.map((q) => q.toJson()).toList(),
         'category': _category,
+        'isSolo': isSolo,
       },
     );
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _leaderboardTimer?.cancel();
-    _progressController.dispose();
-    _questionController.dispose();
-    super.dispose();
-  }
+
 
   @override
   Widget build(BuildContext context) {

@@ -5,7 +5,9 @@ import 'package:http/http.dart' as http;
 class ApiService {
   static const String baseUrl = 'http://localhost:8080';
   
-  final http.Client _client = http.Client();
+  final http.Client _client;
+  
+  ApiService({http.Client? client}) : _client = client ?? http.Client();
 
   // Headers padrão
   Map<String, String> get _headers => {

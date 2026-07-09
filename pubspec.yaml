@@ -41,6 +41,9 @@ dependencies:
   # State management
   provider: ^6.1.1
 
+  # WebSocket STOMP (para comunicação em tempo real com o backend Spring)
+  stomp_dart_client: ^3.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

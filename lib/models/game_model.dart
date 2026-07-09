@@ -89,13 +89,21 @@ class QuestionModel {
   });
 
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
+    // Backend envia 'questionText', fallback para 'question' e 'text'
+    final questionText = json['questionText'] ?? json['question'] ?? json['text'] ?? '';
+    // Backend envia category como objeto {id, name, displayName}, extrair o nome
+    final rawCategory = json['category'];
+    final categoryStr = (rawCategory is Map)
+        ? (rawCategory['name'] ?? rawCategory['displayName'] ?? '')
+        : (rawCategory?.toString() ?? '');
+
     return QuestionModel(
       id: json['id'],
-      question: json['question'],
-      options: List<String>.from(json['options']),
-      correctAnswer: json['correctAnswer'],
-      category: json['category'],
-      difficulty: Difficulty.fromString(json['difficulty']),
+      question: questionText,
+      options: List<String>.from(json['options'] ?? []),
+      correctAnswer: json['correctAnswer'] ?? 0,
+      category: categoryStr,
+      difficulty: Difficulty.fromString(json['difficulty'] ?? 'MEDIUM'),
       explanation: json['explanation'],
     );
   }
@@ -210,17 +218,24 @@ class LeaderboardEntry {
   });
 
   factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
+    double avgTime = 0.0;
+    if (json['totalTime'] != null && json['totalQuestions'] != null && json['totalQuestions'] > 0) {
+      avgTime = (json['totalTime'] as num).toDouble() / 1000.0 / (json['totalQuestions'] as num).toDouble();
+    } else if (json['averageTime'] != null) {
+      avgTime = (json['averageTime'] as num).toDouble();
+    }
+
     return LeaderboardEntry(
       userId: json['userId'].toString(),
-      username: json['username'],
-      fullName: json['fullName'],
+      username: json['username'] ?? 'Unknown',
+      fullName: json['fullName'] ?? json['username'] ?? 'Unknown',
       avatar: json['avatar'],
       team: json['team'] != null ? TeamColor.fromString(json['team']) : null,
-      score: json['score'],
-      correctAnswers: json['correctAnswers'],
-      totalAnswers: json['totalAnswers'],
-      averageTime: (json['averageTime'] ?? 0).toDouble(),
-      position: json['position'],
+      score: json['totalPoints'] ?? json['score'] ?? 0,
+      correctAnswers: json['correctAnswers'] ?? 0,
+      totalAnswers: json['totalQuestions'] ?? json['totalAnswers'] ?? 0,
+      averageTime: avgTime,
+      position: json['position'] ?? 0,
     );
   }
 
