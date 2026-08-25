@@ -24,15 +24,15 @@ class CategoryProvider extends ChangeNotifier {
   Future<void> forceLoadCategories() async {
     _setLoading(true);
     try {
-      print('DEBUG CategoryProvider: Carregando categorias...');
+      debugPrint('DEBUG CategoryProvider: Carregando categorias...');
       _categories = await _categoryService.getAllCategories();
       _error = null;
-      print('DEBUG CategoryProvider: ${_categories.length} categorias carregadas');
+      debugPrint('DEBUG CategoryProvider: ${_categories.length} categorias carregadas');
       for (var cat in _categories) {
-        print('DEBUG CategoryProvider: ID=${cat.id}, Name=${cat.name}, DisplayName=${cat.displayName}');
+        debugPrint('DEBUG CategoryProvider: ID=${cat.id}, Name=${cat.name}, DisplayName=${cat.displayName}');
       }
     } catch (e) {
-      print('ERROR CategoryProvider: Erro ao carregar categorias: $e');
+      debugPrint('ERROR CategoryProvider: Erro ao carregar categorias: $e');
       _error = e.toString();
     } finally {
       _setLoading(false);
@@ -53,7 +53,7 @@ class CategoryProvider extends ChangeNotifier {
         (cat) => cat.name.toUpperCase() == name.toUpperCase()
       );
     } catch (e) {
-      print('DEBUG CategoryProvider: Categoria não encontrada para name=$name');
+      debugPrint('DEBUG CategoryProvider: Categoria não encontrada para name=$name');
       return null;
     }
   }
@@ -65,7 +65,7 @@ class CategoryProvider extends ChangeNotifier {
         (cat) => cat.displayName.toLowerCase() == displayName.toLowerCase()
       );
     } catch (e) {
-      print('DEBUG CategoryProvider: Categoria não encontrada para displayName=$displayName');
+      debugPrint('DEBUG CategoryProvider: Categoria não encontrada para displayName=$displayName');
       return null;
     }
   }

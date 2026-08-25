@@ -1,13 +1,21 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../providers/room_provider.dart';
+import '../services/api_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
 import '../providers/category_provider.dart';
 import '../providers/websocket_provider.dart';
 import '../models/room_model.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/cosmetic_avatar.dart';
+import '../widgets/vip_badge_widget.dart';
+import '../config/api_config.dart';
+import '../providers/store_provider.dart';
+import '../utils/snackbar_utils.dart';
 
 class TeamLobbyScreen extends StatefulWidget {
   const TeamLobbyScreen({super.key});
@@ -26,6 +34,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
   bool _isDistributingTeams = false;
   bool _isDistributingCategories = false; // Nova variável para distribuição de disciplinas
   bool _isAssigningCategory = false; // Evita corrida na seleção manual
+  bool _showGameSettings = false; // Controle de visibilidade das configurações do jogo
   
   late AnimationController _pulseController;
   late AnimationController _slideController;
@@ -243,9 +252,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao atribuir equipe automaticamente: $e')),
-        );
+        AppSnackBar.showError(context, 'Erro ao atribuir equipe automaticamente: $e');
       }
     } finally {
       if (mounted) {
@@ -263,9 +270,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       final currentUser = authProvider.currentUser;
       
       if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Usuário não identificado')),
-        );
+        AppSnackBar.showError(context, 'Usuário não identificado');
         return;
       }
 
@@ -289,9 +294,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
     } catch (e) {
       // Erro ao selecionar equipe - mostra na UI
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao selecionar equipe: $e')),
-        );
+        AppSnackBar.showError(context, 'Erro ao selecionar equipe: $e');
       }
     }
   }
@@ -322,9 +325,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       final currentUser = authProvider.currentUser;
       
       if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Usuário não identificado')),
-        );
+        AppSnackBar.showError(context, 'Usuário não identificado');
         return;
       }
 
@@ -334,9 +335,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           .firstOrNull;
       
       if (currentPlayerInRoom?.isHost != true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Apenas o criador da sala pode distribuir as equipes')),
-        );
+        AppSnackBar.showError(context, 'Apenas o criador da sala pode distribuir as equipes');
         return;
       }
 
@@ -358,17 +357,13 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao distribuir equipes: ${roomProvider.error}')),
-          );
+          AppSnackBar.showError(context, 'Erro ao distribuir equipes: ${roomProvider.error}');
         }
       }
     } catch (e) {
       // Erro ao distribuir equipes (exibido via snackbar abaixo)
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao distribuir equipes: $e')),
-        );
+        AppSnackBar.showError(context, 'Erro ao distribuir equipes: $e');
       }
     } finally {
       if (mounted) {
@@ -405,9 +400,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       final currentUser = authProvider.currentUser;
       
       if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Usuário não identificado')),
-        );
+        AppSnackBar.showError(context, 'Usuário não identificado');
         return;
       }
 
@@ -417,9 +410,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           .firstOrNull;
       
       if (currentPlayerInRoom?.isHost != true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Apenas o criador da sala pode iniciar o jogo')),
-        );
+        AppSnackBar.showError(context, 'Apenas o criador da sala pode iniciar o jogo');
         return;
       }
 
@@ -430,9 +421,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
 
       if (startGameResult != true) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Erro ao iniciar o jogo. Tente novamente.')),
-          );
+          AppSnackBar.showError(context, 'Erro ao iniciar o jogo. Tente novamente.');
           setState(() {
             _isStartingGame = false;
           });
@@ -440,9 +429,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao iniciar o jogo: $e')),
-        );
+        AppSnackBar.showError(context, 'Erro ao iniciar o jogo: $e');
         setState(() {
           _isStartingGame = false;
         });
@@ -613,9 +600,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
     } catch (e) {
       // Erro ao distribuir disciplinas (exibido via snackbar abaixo)
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao distribuir disciplinas: $e')),
-        );
+        AppSnackBar.showError(context, 'Erro ao distribuir disciplinas: $e');
       }
     } finally {
       if (mounted) {
@@ -946,7 +931,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 4,
+                      childAspectRatio: 2.8,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 8,
                     ),
@@ -1010,6 +995,10 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           borderColor = const Color(0xFF6366F1);
         }
         
+        final storeProvider = context.read<StoreProvider>();
+        final bannerUrl = storeProvider.getBannerUrl(player.activeBannerId);
+        final resolvedBanner = ApiConfig.resolveAssetUrl(bannerUrl);
+
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
@@ -1020,19 +1009,36 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
               color: borderColor,
               width: isCurrentUser ? 2 : 1,
             ),
+            image: resolvedBanner != null
+                ? DecorationImage(
+                    image: CachedNetworkImageProvider(
+                      resolvedBanner,
+                      headers: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
+                    ),
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withOpacity(0.6),
+                      BlendMode.darken,
+                    ),
+                  )
+                : null,
           ),
           child: Row(
             children: [
               // Avatar
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: teamIndicatorColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
+                  shape: BoxShape.circle,
                 ),
-                child: Text(
-                  player.avatar ?? '👤',
-                  style: TextStyle(fontSize: isSmallScreen ? 18 : 20),
+                child: CosmeticAvatar(
+                  radius: isSmallScreen ? 18 : 20,
+                  avatarUrl: player.avatar,
+                  username: player.username,
+                  activeAvatarId: player.activeAvatarId,
+                  activeFrameId: player.activeFrameId,
+                  isVip: player.isVip,
                 ),
               ),
               SizedBox(width: 12),
@@ -1045,14 +1051,14 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            player.username,
+                          child: VipUsernameText(
+                            username: player.username,
+                            isVip: player.isVip,
                             style: TextStyle(
                               fontSize: isSmallScreen ? 14 : 16,
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (isCurrentUser) ...[
@@ -1178,8 +1184,8 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         final isChooseMode = _currentRoom?.assignmentType == 'CHOOSE';
         
         // Debug: verificar o valor real do assignmentType
-        print('DEBUG TeamSelection: assignmentType = ${_currentRoom?.assignmentType}');
-        print('DEBUG TeamSelection: isChooseMode = $isChooseMode');
+        debugPrint('DEBUG TeamSelection: assignmentType = ${_currentRoom?.assignmentType}');
+        debugPrint('DEBUG TeamSelection: isChooseMode = $isChooseMode');
         
         // Separa jogadores por equipe e não atribuídos
         List<PlayerInRoom> unassignedPlayers = players.where((p) => p.team == null).toList();
@@ -1356,10 +1362,10 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         final isUserInThisTeam = currentPlayerInRoom?.team == team;
         
         // Debug: vamos ver o que está acontecendo
-        print('DEBUG TeamSection: assignmentType=${_currentRoom?.assignmentType}');
-        print('DEBUG TeamSection: currentPlayerInRoom?.team=${currentPlayerInRoom?.team}');
-        print('DEBUG TeamSection: players.length=${players.length}, maxPerTeam=${(_currentRoom?.maxPlayers ?? 4) ~/ 2}');
-        print('DEBUG TeamSection: canJoinTeam=$canJoinTeam, isUserInThisTeam=$isUserInThisTeam');
+        debugPrint('DEBUG TeamSection: assignmentType=${_currentRoom?.assignmentType}');
+        debugPrint('DEBUG TeamSection: currentPlayerInRoom?.team=${currentPlayerInRoom?.team}');
+        debugPrint('DEBUG TeamSection: players.length=${players.length}, maxPerTeam=${(_currentRoom?.maxPlayers ?? 4) ~/ 2}');
+        debugPrint('DEBUG TeamSection: canJoinTeam=$canJoinTeam, isUserInThisTeam=$isUserInThisTeam');
         
         return MouseRegion(
           cursor: canJoinTeam ? SystemMouseCursors.click : SystemMouseCursors.basic,
@@ -1367,7 +1373,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
             color: Colors.transparent,
             child: InkWell(
               onTap: canJoinTeam ? () {
-                print('DEBUG: Tentando entrar na equipe $team');
+                debugPrint('DEBUG: Tentando entrar na equipe $team');
                 _selectTeam(team);
               } : null,
               borderRadius: BorderRadius.circular(12),
@@ -1527,6 +1533,10 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         final currentUser = authProvider.currentUser;
         final isCurrentUser = player.userId == currentUser?.id;
         
+        final storeProvider = context.read<StoreProvider>();
+        final bannerUrl = storeProvider.getBannerUrl(player.activeBannerId);
+        final resolvedBanner = ApiConfig.resolveAssetUrl(bannerUrl);
+
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
@@ -1537,20 +1547,37 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
               color: isCurrentUser ? const Color(0xFF6366F1) : const Color(0xFF334155),
               width: isCurrentUser ? 2 : 1,
             ),
+            image: resolvedBanner != null
+                ? DecorationImage(
+                    image: CachedNetworkImageProvider(
+                      resolvedBanner,
+                      headers: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
+                    ),
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withOpacity(0.6),
+                      BlendMode.darken,
+                    ),
+                  )
+                : null,
           ),
           child: Column(
             children: [
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: teamColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
+                      shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      player.avatar ?? '👤',
-                      style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+                    child: CosmeticAvatar(
+                      radius: isSmallScreen ? 16 : 18,
+                      avatarUrl: player.avatar,
+                      username: player.username,
+                      activeAvatarId: player.activeAvatarId,
+                      activeFrameId: player.activeFrameId,
+                      isVip: player.isVip,
                     ),
                   ),
                   SizedBox(width: 12),
@@ -1558,8 +1585,9 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          player.username,
+                        VipUsernameText(
+                          username: player.username,
+                          isVip: player.isVip,
                           style: TextStyle(
                             fontSize: isSmallScreen ? 14 : 16,
                             color: Colors.white,
@@ -1704,7 +1732,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                       final currentUser = authProvider.currentUser;
                       if (currentUser != null) {
                         await Provider.of<RoomProvider>(context, listen: false).addBots(currentUser.id, count: 3);
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bots adicionados!')));
+                        AppSnackBar.showSuccess(context, 'Bots adicionados!');
                       }
                     },
                     isPrimary: false,
@@ -1712,28 +1740,6 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   ),
                 ),
               ],
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomButton(
-                      text: 'Configurações',
-                      onPressed: () => Navigator.pop(context),
-                      isPrimary: false,
-                      isLarge: false,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomButton(
-                      text: 'Compartilhar',
-                      onPressed: _copyRoomCode,
-                      isPrimary: false,
-                      isLarge: false,
-                    ),
-                  ),
-                ],
-              ),
             ],
           );
         } else {
@@ -1741,25 +1747,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
             children: [
               Row(
                 children: [
-                  Expanded(
-                    child: CustomButton(
-                      text: 'Configurações',
-                      onPressed: () => Navigator.pop(context),
-                      isPrimary: false,
-                      isLarge: true,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: CustomButton(
-                      text: 'Compartilhar Código',
-                      onPressed: _copyRoomCode,
-                      isPrimary: false,
-                      isLarge: true,
-                    ),
-                  ),
                   if (isHost) ...[
-                    const SizedBox(width: 16),
                     Expanded(
                       child: CustomButton(
                         text: '+ 3 Bots',
@@ -1768,15 +1756,16 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                           final currentUser = authProvider.currentUser;
                           if (currentUser != null) {
                             await Provider.of<RoomProvider>(context, listen: false).addBots(currentUser.id, count: 3);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bots adicionados!')));
+                            if (!context.mounted) return;
+                            AppSnackBar.showSuccess(context, 'Bots adicionados!');
                           }
                         },
                         isPrimary: false,
                         isLarge: true,
                       ),
                     ),
+                    const SizedBox(width: 16),
                   ],
-                  const SizedBox(width: 16),
                   Expanded(
                     flex: 2,
                     child: CustomButton(
@@ -1946,7 +1935,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 4,
+                    childAspectRatio: 2.8,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 8,
                   ),
@@ -2158,14 +2147,14 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         final isSmallScreen = screenWidth < 600;
         final disabled = _isAssigningCategory; // desabilita enquanto requisitando
         
-        final categoryEmojis = {
-          'MATH': '🔢',
-          'PORTUGUESE': '📚',
-          'HISTORY': '🏛️',
-          'GEOGRAPHY': '🌍',
-          'SCIENCE': '🔬',
-          'ENGLISH': '🇺🇸',
-          'MIXED': '🎯',
+        final categoryIcons = {
+          'MATH': Icons.calculate,
+          'PORTUGUESE': Icons.language,
+          'HISTORY': Icons.history_edu,
+          'GEOGRAPHY': Icons.public,
+          'SCIENCE': Icons.science,
+          'ENGLISH': Icons.chat,
+          'MIXED': Icons.category,
         };
 
         return Opacity(
@@ -2191,9 +2180,10 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    categoryEmojis[category] ?? '📝',
-                    style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+                  Icon(
+                    categoryIcons[category] ?? Icons.category,
+                    color: Colors.white,
+                    size: isSmallScreen ? 16 : 18,
                   ),
                   SizedBox(width: isSmallScreen ? 4 : 6),
                   Text(
@@ -2248,29 +2238,14 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           ),
           const SizedBox(width: 12),
           Text(
-            'QuizMaster',
+            'Meu Quiz +',
             style: TextStyle(
               fontSize: isSmallScreen ? 18 : 20,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF6366F1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'Pro',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 10 : 12,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+
         ],
       ),
       actions: [
@@ -2646,54 +2621,71 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
+          InkWell(
+            onTap: () {
+              setState(() {
+                _showGameSettings = !_showGameSettings;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.settings,
+                    color: const Color(0xFF10B981),
+                    size: isSmallScreen ? 20 : 24,
+                  ),
                 ),
-                child: Icon(
-                  Icons.settings,
-                  color: const Color(0xFF10B981),
-                  size: isSmallScreen ? 20 : 24,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Configurações do Jogo',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 18 : 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Configurações do Jogo',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 18 : 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                Icon(
+                  _showGameSettings ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  color: Colors.grey[400],
+                  size: isSmallScreen ? 24 : 28,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 20),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: isSmallScreen ? 1 : 2,
-            childAspectRatio: isSmallScreen ? 6 : 4,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            children: [
-              _buildSummaryCard('🎯', 'Disciplinas', categoriesText, isSmallScreen),
-              _buildSummaryCard('⚙️', 'Atribuição', assignmentText, isSmallScreen),
-              _buildSummaryCard('😐', 'Dificuldade', difficultyText, isSmallScreen),
-              _buildSummaryCard('⏱️', 'Tempo', '${_currentRoom?.questionTime ?? 30}s', isSmallScreen),
-              _buildSummaryCard('📝', 'Perguntas', '${_currentRoom?.questionCount ?? 10}', isSmallScreen),
-              _buildSummaryCard('👥', 'Jogadores', '${(_currentRoom?.maxPlayers ?? 4) ~/ 2} por equipe', isSmallScreen),
-            ],
-          ),
+          if (_showGameSettings) ...[
+            const SizedBox(height: 20),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: isSmallScreen ? 1 : 2,
+              childAspectRatio: isSmallScreen ? 4 : 2.5,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              children: [
+                _buildSummaryCard(Icons.category, 'Disciplinas', categoriesText, isSmallScreen),
+                _buildSummaryCard(Icons.settings, 'Atribuição', assignmentText, isSmallScreen),
+                _buildSummaryCard(Icons.speed, 'Dificuldade', difficultyText, isSmallScreen),
+                _buildSummaryCard(Icons.timer, 'Tempo', '${_currentRoom?.questionTime ?? 30}s', isSmallScreen),
+                _buildSummaryCard(Icons.quiz, 'Perguntas', '${_currentRoom?.questionCount ?? 10}', isSmallScreen),
+                _buildSummaryCard(Icons.group, 'Jogadores', '${(_currentRoom?.maxPlayers ?? 4) ~/ 2} por equipe', isSmallScreen),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildSummaryCard(String emoji, String label, String value, bool isSmallScreen) {
+  Widget _buildSummaryCard(IconData icon, String label, String value, bool isSmallScreen) {
     return Container(
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
@@ -2703,7 +2695,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       ),
       child: Row(
         children: [
-          Text(emoji, style: TextStyle(fontSize: isSmallScreen ? 20 : 24)),
+          Icon(icon, color: Colors.white, size: isSmallScreen ? 20 : 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

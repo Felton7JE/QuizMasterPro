@@ -1,4 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../services/solo_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/cosmetic_avatar.dart';
+import '../widgets/vip_badge_widget.dart';
+import '../config/api_config.dart';
+import '../services/api_service.dart';
+import '../providers/store_provider.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -8,94 +18,93 @@ class RankingScreen extends StatefulWidget {
 }
 
 class _RankingScreenState extends State<RankingScreen> {
+  String _selectedGameMode = 'standard';
   String _selectedFilter = 'global';
   String _selectedCategory = 'all';
 
-  final List<Map<String, dynamic>> _topPlayers = [
-    {
-      'rank': 1,
-      'name': 'João Santos',
-      'points': 3420,
-      'accuracy': 94,
-      'avatar': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-      'badges': ['👑 Campeão', '⚡ Velocista', '🎯 Preciso'],
-    },
-    {
-      'rank': 2,
-      'name': 'Maria Silva',
-      'points': 2850,
-      'accuracy': 89,
-      'avatar': 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-      'badges': ['🏆 Mestre', '🔥 Sequência'],
-    },
-    {
-      'rank': 3,
-      'name': 'Pedro Costa',
-      'points': 2640,
-      'accuracy': 85,
-      'avatar': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-      'badges': ['📚 Estudioso', '🎲 Sortudo'],
-    },
-  ];
+  List<Map<String, dynamic>> _topPlayers = [];
+  List<Map<String, dynamic>> _allPlayers = [];
+  bool _isLoading = true;
 
-  final List<Map<String, dynamic>> _allPlayers = [
-    {
-      'rank': 4,
-      'name': 'Ana Oliveira',
-      'points': 2480,
-      'accuracy': 91,
-      'games': 45,
-      'streak': 7,
-      'level': 18,
-      'avatar': 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face',
-      'change': 0,
-    },
-    {
-      'rank': 5,
-      'name': 'Carlos Lima',
-      'points': 2350,
-      'accuracy': 88,
-      'games': 38,
-      'streak': 2,
-      'level': 16,
-      'avatar': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop&crop=face',
-      'change': -1,
-    },
-    {
-      'rank': 6,
-      'name': 'Sofia Mendes',
-      'points': 2290,
-      'accuracy': 86,
-      'games': 41,
-      'streak': 5,
-      'level': 15,
-      'avatar': 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=40&h=40&fit=crop&crop=face',
-      'change': 2,
-    },
-    {
-      'rank': 7,
-      'name': 'Lucas Ferreira',
-      'points': 2180,
-      'accuracy': 83,
-      'games': 35,
-      'streak': 1,
-      'level': 14,
-      'avatar': 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=40&h=40&fit=crop&crop=face',
-      'change': 0,
-    },
-    {
-      'rank': 42,
-      'name': 'Você',
-      'points': 1250,
-      'accuracy': 87,
-      'games': 23,
-      'streak': 3,
-      'level': 12,
-      'avatar': 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop&crop=face',
-      'change': 3,
-      'isCurrentUser': true,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchRanking();
+  }
+
+  Future<void> _fetchRanking() async {
+    setState(() => _isLoading = true);
+    try {
+      final authProvider = context.read<AuthProvider>();
+      List<dynamic> data;
+      
+      if (_selectedGameMode == 'standard') {
+        data = await authProvider.getRanking(
+          period: _selectedFilter,
+          category: _selectedCategory,
+        );
+      } else {
+        final soloService = context.read<SoloService>();
+        data = await soloService.getFreeModeLeaderboard(_selectedGameMode);
+      }
+      
+      final mappedData = data.asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+        
+        if (_selectedGameMode == 'standard') {
+          return {
+            'rank': item['position'] ?? (index + 1),
+            'name': item['username'] ?? 'User',
+            'points': item['totalPoints'] ?? 0,
+            'accuracy': item['accuracy']?.toInt() ?? 0,
+            'games': item['gamesPlayed'] ?? 0,
+            'streak': item['streak'] ?? 0,
+            'level': item['level'] ?? 1,
+            'avatar': item['avatar'] ?? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop&crop=face',
+            'change': 0,
+            'badges': item['activeTitleName'] != null ? [item['activeTitleName']] : [],
+            'bannerUrl': item['activeBannerUrl'],
+            'activeFrameId': item['activeFrameId'],
+            'activeAvatarId': item['activeAvatarId'],
+            'isVip': item['isVip'] ?? false,
+            'isCurrentUser': item['userId'] == authProvider.currentUser?.id,
+          };
+        } else {
+          // Free mode structure
+          return {
+            'rank': index + 1,
+            'name': item['username'] ?? 'User',
+            'points': item['score'] ?? 0,
+            'accuracy': 0,
+            'games': 0,
+            'streak': item['highestStreak'] ?? 0,
+            'level': 1,
+            'avatar': 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop&crop=face',
+            'change': 0,
+            'badges': [],
+            'bannerUrl': null,
+            'activeFrameId': null,
+            'activeAvatarId': null,
+            'isCurrentUser': item['username'] == authProvider.currentUser?.username,
+          };
+        }
+      }).toList();
+
+      setState(() {
+        _topPlayers = mappedData.take(3).toList();
+        if (mappedData.length > 3) {
+          _allPlayers = mappedData.skip(3).toList();
+        } else {
+          _allPlayers = [];
+        }
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Erro ao carregar ranking: $e');
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,32 +118,14 @@ class _RankingScreenState extends State<RankingScreen> {
         title: Row(
           children: [
             Text(
-              'QuizMaster',
+              'Meu Quiz +',
               style: TextStyle(
                 fontSize: isSmallScreen ? 18 : 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-            SizedBox(width: isSmallScreen ? 6 : 8),
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: isSmallScreen ? 4 : 6, 
-                vertical: 2
-              ),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6366F1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Pro',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 8 : 10,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+
           ],
         ),
         actions: [
@@ -157,7 +148,9 @@ class _RankingScreenState extends State<RankingScreen> {
           SizedBox(width: isSmallScreen ? 8 : 16),
         ],
       ),
-      body: SingleChildScrollView(
+      body: _isLoading 
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)))
+          : SingleChildScrollView(
         padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +166,7 @@ class _RankingScreenState extends State<RankingScreen> {
             ),
             SizedBox(height: isSmallScreen ? 6 : 8),
             Text(
-              'Veja os melhores jogadores do QuizMaster',
+              'Veja os melhores jogadores do Meu Quiz +',
               style: TextStyle(
                 fontSize: isSmallScreen ? 14 : 16,
                 color: Colors.grey,
@@ -205,88 +198,128 @@ class _RankingScreenState extends State<RankingScreen> {
         
         return Column(
           children: [
-            if (isSmallScreen) ...[
-              // Em telas pequenas, empilha verticalmente
-              Row(
-                children: [
-                  Expanded(child: _buildFilterTab('global', 'Global', Icons.public)),
-                  const SizedBox(width: 6),
-                  Expanded(child: _buildFilterTab('weekly', 'Semanal', Icons.calendar_today)),
-                  const SizedBox(width: 6),
-                  Expanded(child: _buildFilterTab('monthly', 'Mensal', Icons.calendar_month)),
-                ],
+            // Game Mode Filter
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF334155)),
               ),
-              const SizedBox(height: 12),
-              // Category Filter em linha separada
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF334155)),
-                ),
-                child: DropdownButton<String>(
-                  value: _selectedCategory,
-                  style: const TextStyle(color: Colors.white),
-                  dropdownColor: const Color(0xFF1E293B),
-                  underline: Container(),
-                  isExpanded: true,
-                  items: const [
-                    DropdownMenuItem(value: 'all', child: Text('Todas as Categorias')),
-                    DropdownMenuItem(value: 'math', child: Text('Matemática')),
-                    DropdownMenuItem(value: 'portuguese', child: Text('Português')),
-                    DropdownMenuItem(value: 'history', child: Text('História')),
-                    DropdownMenuItem(value: 'geography', child: Text('Geografia')),
-                    DropdownMenuItem(value: 'science', child: Text('Ciências')),
-                  ],
-                  onChanged: (String? newValue) {
+              child: DropdownButton<String>(
+                value: _selectedGameMode,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                dropdownColor: const Color(0xFF1E293B),
+                underline: Container(),
+                isExpanded: true,
+                items: const [
+                  DropdownMenuItem(value: 'standard', child: Text('Modo Padrão')),
+                  DropdownMenuItem(value: 'SURVIVAL', child: Text('Modo Sobrevivência')),
+                  DropdownMenuItem(value: 'TIME_ATTACK', child: Text('Modo Contra o Tempo')),
+                ],
+                onChanged: (String? newValue) {
+                  if (newValue != null && newValue != _selectedGameMode) {
                     setState(() {
-                      _selectedCategory = newValue!;
+                      _selectedGameMode = newValue;
                     });
-                  },
+                    _fetchRanking();
+                  }
+                },
+              ),
+            ),
+            
+            if (_selectedGameMode == 'standard') ...[
+              if (isSmallScreen) ...[
+                // Em telas pequenas, empilha verticalmente
+                Row(
+                  children: [
+                    Expanded(child: _buildFilterTab('global', 'Global', Icons.public)),
+                    const SizedBox(width: 6),
+                    Expanded(child: _buildFilterTab('weekly', 'Semanal', Icons.calendar_today)),
+                    const SizedBox(width: 6),
+                    Expanded(child: _buildFilterTab('monthly', 'Mensal', Icons.calendar_month)),
+                  ],
                 ),
-              ),
-            ] else ...[
-              // Em telas maiores, mantém layout horizontal
-              Row(
-                children: [
-                  _buildFilterTab('global', 'Global', Icons.public),
-                  const SizedBox(width: 8),
-                  _buildFilterTab('weekly', 'Semanal', Icons.calendar_today),
-                  const SizedBox(width: 8),
-                  _buildFilterTab('monthly', 'Mensal', Icons.calendar_month),
-                  const Spacer(),
-                  // Category Filter
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF334155)),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _selectedCategory,
-                      style: const TextStyle(color: Colors.white),
-                      dropdownColor: const Color(0xFF1E293B),
-                      underline: Container(),
-                      items: const [
-                        DropdownMenuItem(value: 'all', child: Text('Todas as Categorias')),
-                        DropdownMenuItem(value: 'math', child: Text('Matemática')),
-                        DropdownMenuItem(value: 'portuguese', child: Text('Português')),
-                        DropdownMenuItem(value: 'history', child: Text('História')),
-                        DropdownMenuItem(value: 'geography', child: Text('Geografia')),
-                        DropdownMenuItem(value: 'science', child: Text('Ciências')),
-                      ],
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedCategory = newValue!;
-                        });
-                      },
-                    ),
+                const SizedBox(height: 12),
+                // Category Filter em linha separada
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF334155)),
                   ),
-                ],
-              ),
+                  child: DropdownButton<String>(
+                    value: _selectedCategory,
+                    style: const TextStyle(color: Colors.white),
+                    dropdownColor: const Color(0xFF1E293B),
+                    underline: Container(),
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(value: 'all', child: Text('Todas as Categorias')),
+                      DropdownMenuItem(value: 'math', child: Text('Matemática')),
+                      DropdownMenuItem(value: 'portuguese', child: Text('Português')),
+                      DropdownMenuItem(value: 'history', child: Text('História')),
+                      DropdownMenuItem(value: 'geography', child: Text('Geografia')),
+                      DropdownMenuItem(value: 'science', child: Text('Ciências')),
+                    ],
+                    onChanged: (String? newValue) {
+                      if (newValue != null && newValue != _selectedCategory) {
+                        setState(() {
+                          _selectedCategory = newValue;
+                        });
+                        _fetchRanking();
+                      }
+                    },
+                  ),
+                ),
+              ] else ...[
+                // Em telas maiores, mantém layout horizontal
+                Row(
+                  children: [
+                    _buildFilterTab('global', 'Global', Icons.public),
+                    const SizedBox(width: 8),
+                    _buildFilterTab('weekly', 'Semanal', Icons.calendar_today),
+                    const SizedBox(width: 8),
+                    _buildFilterTab('monthly', 'Mensal', Icons.calendar_month),
+                    const Spacer(),
+                    // Category Filter
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF334155)),
+                      ),
+                      child: DropdownButton<String>(
+                        value: _selectedCategory,
+                        style: const TextStyle(color: Colors.white),
+                        dropdownColor: const Color(0xFF1E293B),
+                        underline: Container(),
+                        items: const [
+                          DropdownMenuItem(value: 'all', child: Text('Todas as Categorias')),
+                          DropdownMenuItem(value: 'math', child: Text('Matemática')),
+                          DropdownMenuItem(value: 'portuguese', child: Text('Português')),
+                          DropdownMenuItem(value: 'history', child: Text('História')),
+                          DropdownMenuItem(value: 'geography', child: Text('Geografia')),
+                          DropdownMenuItem(value: 'science', child: Text('Ciências')),
+                        ],
+                        onChanged: (String? newValue) {
+                          if (newValue != null && newValue != _selectedCategory) {
+                            setState(() {
+                              _selectedCategory = newValue;
+                            });
+                            _fetchRanking();
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ],
         );
@@ -303,9 +336,12 @@ class _RankingScreenState extends State<RankingScreen> {
         
         return GestureDetector(
           onTap: () {
-            setState(() {
-              _selectedFilter = filter;
-            });
+            if (_selectedFilter != filter) {
+              setState(() {
+                _selectedFilter = filter;
+              });
+              _fetchRanking();
+            }
           },
           child: Container(
             padding: EdgeInsets.symmetric(
@@ -372,38 +408,38 @@ class _RankingScreenState extends State<RankingScreen> {
         final isSmallScreen = screenWidth < 600;
         
         return Container(
-          height: isSmallScreen ? 200 : 300,
+          padding: const EdgeInsets.only(top: 24),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               // 2nd Place
               Expanded(
-                child: _buildPodiumPlace(
+                child: _topPlayers.length > 1 ? _buildPodiumPlace(
                   _topPlayers[1], 
                   2, 
                   isSmallScreen ? 120 : 200, 
                   Colors.grey
-                ),
+                ) : const SizedBox(),
               ),
               SizedBox(width: isSmallScreen ? 8 : 16),
               // 1st Place
               Expanded(
-                child: _buildPodiumPlace(
+                child: _topPlayers.isNotEmpty ? _buildPodiumPlace(
                   _topPlayers[0], 
                   1, 
                   isSmallScreen ? 150 : 250, 
                   const Color(0xFFFFD700)
-                ),
+                ) : const SizedBox(),
               ),
               SizedBox(width: isSmallScreen ? 8 : 16),
               // 3rd Place
               Expanded(
-                child: _buildPodiumPlace(
+                child: _topPlayers.length > 2 ? _buildPodiumPlace(
                   _topPlayers[2], 
                   3, 
                   isSmallScreen ? 90 : 150, 
                   const Color(0xFFCD7F32)
-                ),
+                ) : const SizedBox(),
               ),
             ],
           ),
@@ -418,146 +454,179 @@ class _RankingScreenState extends State<RankingScreen> {
         final screenWidth = MediaQuery.of(context).size.width;
         final isSmallScreen = screenWidth < 600;
         
+        final storeProvider = context.read<StoreProvider>();
+        final bannerUrl = storeProvider.getBannerUrl(player['activeBannerId']);
+        final resolvedBanner = ApiConfig.resolveAssetUrl(bannerUrl);
+        
         return Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             // Player Info
             Container(
-              padding: EdgeInsets.all(isSmallScreen ? 8 : 16),
               decoration: BoxDecoration(
                 color: const Color(0xFF1E293B),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: color),
               ),
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: place == 1 
-                          ? (isSmallScreen ? 25 : 40) 
-                          : (isSmallScreen ? 18 : 30),
-                        backgroundImage: NetworkImage(player['avatar']),
-                      ),
-                      if (place == 1)
-                        Positioned(
-                          top: -5,
-                          left: 0,
-                          right: 0,
-                          child: Text(
-                            '👑',
-                            style: TextStyle(fontSize: isSmallScreen ? 16 : 24),
-                            textAlign: TextAlign.center,
-                          ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(11),
+                child: Stack(
+                  children: [
+                    if (resolvedBanner != null)
+                      Positioned.fill(
+                        child: CachedNetworkImage(
+                          imageUrl: resolvedBanner,
+                          httpHeaders: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
+                          fit: BoxFit.cover,
+                          color: Colors.black.withOpacity(0.6),
+                          colorBlendMode: BlendMode.darken,
+                          placeholder: (context, url) => Container(color: const Color(0xFF1E293B)),
+                          errorWidget: (context, url, error) => const SizedBox.shrink(),
                         ),
-                      Positioned(
-                        bottom: -5,
-                        right: -5,
-                        child: Container(
-                          padding: EdgeInsets.all(isSmallScreen ? 2 : 4),
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
+                      ),
+                    Padding(
+                      padding: EdgeInsets.all(isSmallScreen ? 8 : 16),
+                      child: Column(
+                        children: [
+                          Stack(
+                            children: [
+                              CosmeticAvatar(
+                                radius: place == 1 
+                                  ? (isSmallScreen ? 25 : 40) 
+                                  : (isSmallScreen ? 18 : 30),
+                                avatarUrl: player['avatar']?.toString(),
+                                username: player['name'] ?? 'U',
+                                activeAvatarId: player['activeAvatarId'],
+                                activeFrameId: player['activeFrameId'],
+                                isVip: player['isVip'] ?? false,
+                              ),
+                              if (place <= 3)
+                                Positioned(
+                                  top: -5,
+                                  left: 0,
+                                  right: 0,
+                                  child: Text(
+                                    '👑',
+                                    style: TextStyle(
+                                      fontSize: place == 1 
+                                          ? (isSmallScreen ? 16 : 24)
+                                          : (isSmallScreen ? 12 : 18),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              Positioned(
+                                bottom: -5,
+                                right: -5,
+                                child: Container(
+                                  padding: EdgeInsets.all(isSmallScreen ? 2 : 4),
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    '${place}º',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 8 : 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          child: Text(
-                            '${place}º',
+                          SizedBox(height: isSmallScreen ? 6 : 12),
+                          VipUsernameText(
+                            username: player['name'],
+                            isVip: player['isVip'] ?? false,
                             style: TextStyle(
-                              fontSize: isSmallScreen ? 8 : 12,
+                              fontSize: isSmallScreen ? 12 : 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
+                            showBadge: false,
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: isSmallScreen ? 6 : 12),
-                  Text(
-                    player['name'],
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 12 : 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: isSmallScreen ? 4 : 8),
-                  if (!isSmallScreen) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Column(
-                          children: [
-                            Text(
-                              '${player['points']}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                          SizedBox(height: isSmallScreen ? 4 : 8),
+                          if (!isSmallScreen) ...[
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                Column(
+                                  children: [
+                                    Text(
+                                      '${player['points']}',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const Text(
+                                      'Pontos',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Column(
+                                  children: [
+                                    Text(
+                                      '${player['accuracy']}%',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const Text(
+                                      'Precisão',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                            const Text(
-                              'Pontos',
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 4,
+                              children: player['badges'].map<Widget>((badge) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: color.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  badge,
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    color: color,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )).toList(),
+                            ),
+                          ] else ...[
+                            // Em telas pequenas, mostra apenas os pontos
+                            Text(
+                              '${player['points']} pts',
                               style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.grey,
+                                fontWeight: FontWeight.bold,
+                                color: color,
                               ),
                             ),
                           ],
-                        ),
-                        Column(
-                          children: [
-                            Text(
-                              '${player['accuracy']}%',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const Text(
-                              'Precisão',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 4,
-                      children: player['badges'].map<Widget>((badge) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          badge,
-                          style: TextStyle(
-                            fontSize: 8,
-                            color: color,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      )).toList(),
-                    ),
-                  ] else ...[
-                    // Em telas pequenas, mostra apenas os pontos
-                    Text(
-                      '${player['points']} pts',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: color,
+                        ],
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
             SizedBox(height: isSmallScreen ? 4 : 8),
@@ -675,21 +744,41 @@ class _RankingScreenState extends State<RankingScreen> {
       builder: (context) {
         final screenWidth = MediaQuery.of(context).size.width;
         final isSmallScreen = screenWidth < 600;
-        
+        final resolvedBanner = ApiConfig.resolveAssetUrl(player['bannerUrl']);
         return Container(
           margin: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
-          padding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 12 : 16, 
-            vertical: isSmallScreen ? 8 : 12
-          ),
           decoration: BoxDecoration(
             color: isCurrentUser ? const Color(0xFF6366F1).withOpacity(0.1) : const Color(0xFF1E293B),
             borderRadius: BorderRadius.circular(8),
             border: isCurrentUser ? Border.all(color: const Color(0xFF6366F1)) : null,
           ),
-          child: isSmallScreen 
-            ? _buildMobilePlayerRow(player, isCurrentUser)
-            : _buildDesktopPlayerRow(player, isCurrentUser),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(7),
+            child: Stack(
+              children: [
+                if (resolvedBanner != null)
+                  Positioned.fill(
+                    child: CachedNetworkImage(
+                      imageUrl: resolvedBanner,
+                      httpHeaders: ApiService.token != null
+                          ? {'Authorization': 'Bearer ${ApiService.token}'}
+                          : null,
+                      fit: BoxFit.cover,
+                      color: Colors.black.withOpacity(0.6),
+                      colorBlendMode: BlendMode.darken,
+                      placeholder: (context, url) => Container(color: const Color(0xFF1E293B)),
+                      errorWidget: (context, url, error) => const SizedBox.shrink(),
+                    ),
+                  ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 8 : 12),
+                  child: isSmallScreen
+                    ? _buildMobilePlayerRow(player, isCurrentUser)
+                    : _buildDesktopPlayerRow(player, isCurrentUser),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -723,9 +812,13 @@ class _RankingScreenState extends State<RankingScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            CircleAvatar(
-              radius: 16,
-              backgroundImage: NetworkImage(player['avatar']),
+            CosmeticAvatar(
+              radius: 20,
+              avatarUrl: player['avatar']?.toString(),
+              username: player['name'] ?? 'U',
+              activeAvatarId: player['activeAvatarId'],
+              activeFrameId: player['activeFrameId'],
+              isVip: player['isVip'] ?? false,
             ),
           ],
         ),
@@ -735,8 +828,9 @@ class _RankingScreenState extends State<RankingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                player['name'],
+              VipUsernameText(
+                username: player['name'],
+                isVip: player['isVip'] ?? false,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -827,16 +921,21 @@ class _RankingScreenState extends State<RankingScreen> {
           flex: 3,
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundImage: NetworkImage(player['avatar']),
+              CosmeticAvatar(
+                radius: 24,
+                avatarUrl: player['avatar']?.toString(),
+                username: player['name'] ?? 'U',
+                activeAvatarId: player['activeAvatarId'],
+                activeFrameId: player['activeFrameId'],
+                isVip: player['isVip'] ?? false,
               ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    player['name'],
+                  VipUsernameText(
+                    username: player['name'],
+                    isVip: player['isVip'] ?? false,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,

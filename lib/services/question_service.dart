@@ -11,14 +11,14 @@ class QuestionService {
   /// Retorna o JSON decodificado como Map para inspeção ou processamento.
   Future<Map<String, dynamic>> getCurrentQuestionForPlayer(int gameId, int userId) async {
     final path = '/api/games/$gameId/players/$userId/current-question';
-    if (kDebugMode) print('DEBUG QuestionService: GET $path');
+    if (kDebugMode) debugPrint('DEBUG QuestionService: GET $path');
     try {
       final resp = await _api.get(path);
-      if (kDebugMode) print('DEBUG QuestionService: current-question response: $resp');
+      if (kDebugMode) debugPrint('DEBUG QuestionService: current-question response: $resp');
       return Map<String, dynamic>.from(resp);
     } catch (e) {
       if (kDebugMode) {
-        print('DEBUG QuestionService: erro ao buscar current-question -> $e');
+        debugPrint('DEBUG QuestionService: erro ao buscar current-question -> $e');
       }
       rethrow;
     }

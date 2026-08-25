@@ -191,11 +191,14 @@ class GameModeCard extends StatelessWidget {
       children: [
         Text(emoji, style: TextStyle(fontSize: isSmallScreen ? 10 : 12)),
         SizedBox(width: isSmallScreen ? 6 : 8),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: isSmallScreen ? 10 : 12,
-            color: Colors.grey,
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: isSmallScreen ? 10 : 12,
+              color: Colors.grey,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

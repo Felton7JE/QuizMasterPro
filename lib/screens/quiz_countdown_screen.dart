@@ -85,7 +85,7 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
       }
 
       if (kDebugMode) {
-        print('DEBUG QuizCountdown: gameId=$_gameId, category=$_playerCategory');
+        debugPrint('DEBUG QuizCountdown: gameId=$_gameId, category=$_playerCategory');
       }
 
       // Alinhar countdown com startsAt se disponível
@@ -140,11 +140,11 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
         _prefetchedQuestion = Map<String, dynamic>.from(resp);
       });
       if (kDebugMode) {
-        print('DEBUG QuizCountdown: Pergunta prefetched armazenada: $_prefetchedQuestion');
+        debugPrint('DEBUG QuizCountdown: Pergunta prefetched armazenada: $_prefetchedQuestion');
       }
     } catch (e, st) {
       if (kDebugMode) {
-        print('DEBUG QuizCountdown: Falha no prefetch: $e\n$st');
+        debugPrint('DEBUG QuizCountdown: Falha no prefetch: $e\n$st');
       }
       setState(() {
         _prefetchError = e.toString();
@@ -179,8 +179,16 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
           final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
           final gameMode = args['gameMode']?.toString() ?? '';
 
-          // Kahoot usa tela própria; todos os outros modos usam /quiz-game
-          final targetRoute = gameMode == 'KAHOOT' ? '/kahoot-game' : '/quiz-game';
+          String targetRoute;
+          if (gameMode == 'KAHOOT') {
+            targetRoute = '/kahoot-game';
+          } else if (gameMode == 'SURVIVAL') {
+            targetRoute = '/survival-game';
+          } else if (gameMode == 'TIME_ATTACK') {
+            targetRoute = '/time-attack-game';
+          } else {
+            targetRoute = '/quiz-game';
+          }
 
           Navigator.pushReplacementNamed(
             context,
@@ -212,6 +220,8 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+    final gameModeArg = args['gameMode']?.toString() ?? '';
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
@@ -229,9 +239,10 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
             ),
           ),
           child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
                 // Ícone do quiz
                 Container(
                   padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
@@ -387,6 +398,11 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
                     children: [
                       Builder(
                         builder: (context) {
+                          if (gameModeArg == 'SURVIVAL') {
+                            return _buildInfoItem(Icons.timer_off, 'Tempo', 'Infinito', isSmallScreen);
+                          } else if (gameModeArg == 'TIME_ATTACK') {
+                            return _buildInfoItem(Icons.timer, 'Tempo', '45s Iniciais', isSmallScreen);
+                          }
                           final room = Provider.of<RoomProvider>(context, listen: false).currentRoom;
                           final questionTime = room?.questionTime ?? 15;
                           return _buildInfoItem(
@@ -399,6 +415,9 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
                       ),
                       Builder(
                         builder: (context) {
+                          if (gameModeArg == 'SURVIVAL' || gameModeArg == 'TIME_ATTACK') {
+                            return _buildInfoItem(Icons.all_inclusive, 'Perguntas', 'Infinitas', isSmallScreen);
+                          }
                           final room = Provider.of<RoomProvider>(context, listen: false).currentRoom;
                           final qCount = room?.questionCount ?? 10;
                           return _buildInfoItem(
@@ -411,6 +430,11 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
                       ),
                       Builder(
                         builder: (context) {
+                          if (gameModeArg == 'SURVIVAL') {
+                            return _buildInfoItem(Icons.favorite, 'Modo', 'Sobrevivência', isSmallScreen);
+                          } else if (gameModeArg == 'TIME_ATTACK') {
+                            return _buildInfoItem(Icons.speed, 'Modo', 'Contra o Tempo', isSmallScreen);
+                          }
                           final room = Provider.of<RoomProvider>(context, listen: false).currentRoom;
                           final mode = room?.gameMode;
                           String label;
@@ -439,7 +463,8 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
                     ],
                   ),
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

@@ -153,28 +153,44 @@ class AnswerResponse {
   final int timeSpent;
   final int points;
   final DateTime answeredAt;
+  final int? correctAnswer;
+  final String? explanation;
+  final int? totalPoints;
 
   AnswerResponse({
-    required this.id,
-    required this.userId,
+    this.id = '0',
+    this.userId = '0',
     required this.questionId,
-    required this.selectedAnswer,
+    this.selectedAnswer = 0,
     required this.isCorrect,
-    required this.timeSpent,
+    this.timeSpent = 0,
     required this.points,
-    required this.answeredAt,
-  });
+    DateTime? answeredAt,
+    this.correctAnswer,
+    this.explanation,
+    this.totalPoints,
+  }) : answeredAt = answeredAt ?? DateTime.now();
 
   factory AnswerResponse.fromJson(Map<String, dynamic> json) {
+    int? parsedCorrectAnswer;
+    if (json['correctAnswer'] is num) {
+      parsedCorrectAnswer = (json['correctAnswer'] as num).toInt();
+    } else if (json['correctAnswer'] != null) {
+      parsedCorrectAnswer = int.tryParse(json['correctAnswer'].toString());
+    }
+
     return AnswerResponse(
-      id: json['id'].toString(),
-      userId: json['userId'].toString(),
-      questionId: json['questionId'],
-      selectedAnswer: json['selectedAnswer'],
-      isCorrect: json['isCorrect'],
-      timeSpent: json['timeSpent'],
-      points: json['points'],
-      answeredAt: DateTime.parse(json['answeredAt']),
+      id: json['id']?.toString() ?? '0',
+      userId: json['userId']?.toString() ?? json['playerId']?.toString() ?? '0',
+      questionId: (json['questionId'] as num?)?.toInt() ?? 0,
+      selectedAnswer: (json['selectedAnswer'] as num?)?.toInt() ?? 0,
+      isCorrect: json['isCorrect'] ?? false,
+      timeSpent: (json['timeSpent'] ?? json['timeToAnswer'] as num?)?.toInt() ?? 0,
+      points: (json['points'] ?? json['pointsEarned'] as num?)?.toInt() ?? 0,
+      answeredAt: json['answeredAt'] != null ? DateTime.parse(json['answeredAt']) : null,
+      correctAnswer: parsedCorrectAnswer,
+      explanation: json['explanation'] as String?,
+      totalPoints: (json['totalPoints'] as num?)?.toInt(),
     );
   }
 
@@ -188,6 +204,9 @@ class AnswerResponse {
       'timeSpent': timeSpent,
       'points': points,
       'answeredAt': answeredAt.toIso8601String(),
+      if (correctAnswer != null) 'correctAnswer': correctAnswer,
+      if (explanation != null) 'explanation': explanation,
+      if (totalPoints != null) 'totalPoints': totalPoints,
     };
   }
 }
@@ -203,6 +222,13 @@ class LeaderboardEntry {
   final int totalAnswers;
   final double averageTime;
   final int position;
+  final int coinsEarned;
+  final int xpEarned;
+  final int? activeBannerId;
+  final int? activePhraseId;
+  final int? activeAvatarId;
+  final int? activeFrameId;
+  final bool isVip;
 
   LeaderboardEntry({
     required this.userId,
@@ -215,6 +241,13 @@ class LeaderboardEntry {
     required this.totalAnswers,
     required this.averageTime,
     required this.position,
+    this.coinsEarned = 0,
+    this.xpEarned = 0,
+    this.activeBannerId,
+    this.activePhraseId,
+    this.activeAvatarId,
+    this.activeFrameId,
+    this.isVip = false,
   });
 
   factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
@@ -236,6 +269,13 @@ class LeaderboardEntry {
       totalAnswers: json['totalQuestions'] ?? json['totalAnswers'] ?? 0,
       averageTime: avgTime,
       position: json['position'] ?? 0,
+      coinsEarned: json['coinsEarned'] ?? 0,
+      xpEarned: json['xpEarned'] ?? 0,
+      activeBannerId: json['activeBannerId'],
+      activePhraseId: json['activePhraseId'],
+      activeAvatarId: json['activeAvatarId'],
+      activeFrameId: json['activeFrameId'],
+      isVip: json['isVip'] ?? false,
     );
   }
 
@@ -251,6 +291,13 @@ class LeaderboardEntry {
       'totalAnswers': totalAnswers,
       'averageTime': averageTime,
       'position': position,
+      'coinsEarned': coinsEarned,
+      'xpEarned': xpEarned,
+      'activeBannerId': activeBannerId,
+      'activePhraseId': activePhraseId,
+      'activeAvatarId': activeAvatarId,
+      'activeFrameId': activeFrameId,
+      'isVip': isVip,
     };
   }
 }

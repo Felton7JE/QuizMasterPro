@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../providers/question_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/game_provider.dart';
 import '../providers/websocket_provider.dart';
@@ -9,6 +9,12 @@ import '../providers/room_provider.dart';
 import '../models/question_model.dart';
 import '../models/room_model.dart';
 import '../models/game_model.dart';
+import '../services/websocket_service.dart';
+import '../widgets/in_game_chat_bubble.dart';
+import '../widgets/in_game_chat_sheet.dart';
+import '../widgets/in_game_chat_button.dart';
+import '../widgets/cosmetic_avatar.dart';
+import '../widgets/vip_badge_widget.dart';
 import 'package:flutter/foundation.dart';
 
 class QuizGameScreen extends StatefulWidget {
@@ -48,6 +54,11 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   List<LeaderboardEntry> _liveLeaderboard = [];
   bool _loadingLeaderboard = false;
 
+  // In-Game Chat
+  InGameChatMessageEvent? _latestChatMessage;
+  Timer? _chatCooldownTimer;
+  int _chatCooldownSeconds = 0;
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +72,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   @override
   void dispose() {
     _timer?.cancel();
+    _chatCooldownTimer?.cancel();
     _progressController.dispose();
     _questionController.dispose();
     try {
@@ -81,10 +93,81 @@ class _QuizGameScreenState extends State<QuizGameScreen>
           _liveLeaderboard = parsed;
         });
       } catch (e) {
-        if (kDebugMode) print('Erro ao parsear leaderboard via WS: $e');
+        if (kDebugMode) debugPrint('Erro ao parsear leaderboard via WS: $e');
       }
       wsProv.clearLeaderboardUpdateEvent();
     }
+
+    final chatEvent = wsProv.lastChatMessageEvent;
+    if (chatEvent != null) {
+      setState(() {
+        _latestChatMessage = chatEvent;
+      });
+      wsProv.clearChatMessageEvent();
+    }
+  }
+
+  void _startChatCooldown() {
+    _chatCooldownTimer?.cancel();
+    setState(() {
+      _chatCooldownSeconds = 8;
+    });
+
+    _chatCooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_chatCooldownSeconds <= 1) {
+        timer.cancel();
+        setState(() {
+          _chatCooldownSeconds = 0;
+        });
+      } else {
+        setState(() {
+          _chatCooldownSeconds--;
+        });
+      }
+    });
+  }
+
+  void _sendChatMessage(String phrase, int? phraseId) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final roomProv = Provider.of<RoomProvider>(context, listen: false);
+    final wsProv = Provider.of<WebSocketProvider>(context, listen: false);
+    final user = auth.currentUser;
+    final roomCode = roomProv.currentRoom?.roomCode ?? '';
+
+    if (user == null) return;
+
+    final chatMessage = InGameChatMessageEvent(
+      roomCode: roomCode,
+      userId: user.id,
+      username: user.username,
+      phraseText: phrase,
+      avatar: user.avatar,
+      isVip: user.isVip,
+      activeFrameId: user.activeFrameId,
+      activePhraseId: phraseId ?? user.activePhraseId,
+      timestamp: DateTime.now(),
+    );
+
+    wsProv.sendChatMessage(roomCode, chatMessage);
+    _startChatCooldown();
+  }
+
+  void _openChatSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => InGameChatSheet(
+        cooldownSecondsRemaining: _chatCooldownSeconds,
+        onSelectPhrase: (phrase, phraseId) {
+          _sendChatMessage(phrase, phraseId);
+        },
+      ),
+    );
   }
 
   void _initControllers() {
@@ -104,7 +187,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   }
 
   Future<void> _loadQuestions() async {
-    if (kDebugMode) print('=== DEBUG QUIZ GAME - CARREGANDO TODAS AS PERGUNTAS ===');
+    if (kDebugMode) debugPrint('=== DEBUG QUIZ GAME - CARREGANDO TODAS AS PERGUNTAS ===');
     
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -119,7 +202,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     }
     
     if (kDebugMode) {
-      print('DEBUG: gameId=$_gameId, category=$_category, userId=${auth.currentUser?.id}');
+      debugPrint('DEBUG: gameId=$_gameId, category=$_category, userId=${auth.currentUser?.id}');
     }
     
     // Validar gameId
@@ -168,9 +251,9 @@ class _QuizGameScreenState extends State<QuizGameScreen>
       )).toList();
       
       if (kDebugMode) {
-        print('✅ SUCESSO: ${allQuestions.length} perguntas carregadas de uma vez!');
+        debugPrint('✅ SUCESSO: ${allQuestions.length} perguntas carregadas de uma vez!');
         for (var i = 0; i < allQuestions.length; i++) {
-          print('   Pergunta ${i + 1}: ${allQuestions[i].question.substring(0, allQuestions[i].question.length.clamp(0, 50))}...');
+          debugPrint('   Pergunta ${i + 1}: ${allQuestions[i].question.substring(0, allQuestions[i].question.length.clamp(0, 50))}...');
         }
       }
       
@@ -185,7 +268,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
       
       _startQuestion();
     } catch (e) {
-      if (kDebugMode) print('❌ ERRO ao carregar perguntas: $e');
+      if (kDebugMode) debugPrint('❌ ERRO ao carregar perguntas: $e');
       setState(() {
         _error = 'Erro ao carregar perguntas: $e';
         _loading = false;
@@ -195,22 +278,22 @@ class _QuizGameScreenState extends State<QuizGameScreen>
 
   void _startQuestion() {
     // ignore: avoid_print
-    print('=== DEBUG _startQuestion ===');
+    debugPrint('=== DEBUG _startQuestion ===');
     // ignore: avoid_print
-    print('DEBUG: _questions.length = ${_questions.length}');
+    debugPrint('DEBUG: _questions.length = ${_questions.length}');
     // ignore: avoid_print
-    print('DEBUG: _currentQuestion = $_currentQuestion');
+    debugPrint('DEBUG: _currentQuestion = $_currentQuestion');
     
     if (_questions.isEmpty) {
       // ignore: avoid_print
-      print('❌ AVISO: _startQuestion chamado mas _questions está vazio!');
+      debugPrint('❌ AVISO: _startQuestion chamado mas _questions está vazio!');
       return;
     }
     
     // ignore: avoid_print
-    print('DEBUG: Iniciando questão ${_currentQuestion + 1}/${_questions.length}');
+    debugPrint('DEBUG: Iniciando questão ${_currentQuestion + 1}/${_questions.length}');
     // ignore: avoid_print
-    print('DEBUG: Questão atual: ${_questions[_currentQuestion].toJson()}');
+    debugPrint('DEBUG: Questão atual: ${_questions[_currentQuestion].toJson()}');
     
     _timer?.cancel();
     setState(() {
@@ -221,7 +304,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     });
     
     // ignore: avoid_print
-    print('DEBUG: Tempo configurado: $_timeLeft segundos');
+    debugPrint('DEBUG: Tempo configurado: $_timeLeft segundos');
     
     // Ajusta duração do progresso dinamicamente ao tempo configurado da sala
     final newDuration = Duration(seconds: _timeLeft);
@@ -245,7 +328,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     });
     
     // ignore: avoid_print
-    print('DEBUG: _startQuestion finalizado com sucesso');
+    debugPrint('DEBUG: _startQuestion finalizado com sucesso');
   }
 
   void _handleTimeUp() {
@@ -269,6 +352,14 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     final currentQ = _questions[_currentQuestion];
     final correctText = currentQ.options[currentQ.correctAnswer];
     final isCorrect = answer == correctText;
+
+    // Feedback háptico nativo
+    if (isCorrect) {
+      HapticFeedback.lightImpact();
+    } else {
+      HapticFeedback.mediumImpact();
+    }
+
     // Envia resposta ao backend para pontuação oficial
     _submitAnswerToServer(isCorrect, currentQ, answer);
     Future.delayed(const Duration(seconds: 2), _nextQuestion);
@@ -320,11 +411,11 @@ class _QuizGameScreenState extends State<QuizGameScreen>
         }
       } else {
         // Falha no servidor. Não dá pontos locais para evitar cheating.
-        if (kDebugMode) print('Falha no servidor ao submeter resposta.');
+        if (kDebugMode) debugPrint('Falha no servidor ao submeter resposta.');
       }
       if (mounted) setState(() {});
     } catch (e) {
-      if (kDebugMode) print('Falha ao enviar resposta: $e');
+      if (kDebugMode) debugPrint('Falha ao enviar resposta: $e');
       // Sem pontos locais para evitar cheating
       if (mounted) setState(() {});
     }
@@ -339,9 +430,30 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     }
   }
 
-  void _finishQuiz() {
+  Future<void> _finishQuiz() async {
     final routeArgs = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final isSolo = routeArgs?['isSolo'] == true;
+    final isSeason = routeArgs?['isSeason'] == true;
+
+    setState(() => _loading = true);
+
+    // Finalizar o jogo no backend se for host ou solo para contar missões de fim de jogo
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final roomProv = Provider.of<RoomProvider>(context, listen: false);
+    final gameProv = Provider.of<GameProvider>(context, listen: false);
+
+    final isHost = roomProv.isPlayerHost(auth.currentUser?.id ?? '');
+
+    if ((isSolo || isHost) && _gameId != null) {
+      try {
+        await gameProv.finishGame(_gameId!, auth.currentUser?.id ?? '');
+      } catch (e) {
+        if (kDebugMode) debugPrint('Erro ao finalizar o jogo: $e');
+      }
+    }
+
+    if (!mounted) return;
+
     Navigator.pushReplacementNamed(
       context,
       '/quiz-results',
@@ -354,6 +466,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
         'questions': _questions.map((q) => q.toJson()).toList(),
         'category': _category,
         'isSolo': isSolo,
+        'isSeason': isSeason,
       },
     );
   }
@@ -363,17 +476,17 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   @override
   Widget build(BuildContext context) {
     // ignore: avoid_print
-    print('=== DEBUG build() ===');
+    debugPrint('=== DEBUG build() ===');
     // ignore: avoid_print
-    print('DEBUG: _loading = $_loading');
+    debugPrint('DEBUG: _loading = $_loading');
     // ignore: avoid_print
-    print('DEBUG: _error = $_error');
+    debugPrint('DEBUG: _error = $_error');
     // ignore: avoid_print
-    print('DEBUG: _questions.length = ${_questions.length}');
+    debugPrint('DEBUG: _questions.length = ${_questions.length}');
     
     if (_loading) {
       // ignore: avoid_print
-      print('DEBUG: Mostrando loading');
+      debugPrint('DEBUG: Mostrando loading');
       return const Scaffold(
         backgroundColor: Color(0xFF0F172A),
         body: Center(child: CircularProgressIndicator(color: Color(0xFF6366F1))),
@@ -381,7 +494,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     }
     if (_error != null) {
       // ignore: avoid_print
-      print('DEBUG: Mostrando erro: $_error');
+      debugPrint('DEBUG: Mostrando erro: $_error');
       return Scaffold(
         backgroundColor: const Color(0xFF0F172A),
         body: Center(
@@ -398,7 +511,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     }
     if (_questions.isEmpty) {
       // ignore: avoid_print
-      print('DEBUG: Mostrando "Sem perguntas"');
+      debugPrint('DEBUG: Mostrando "Sem perguntas"');
       return const Scaffold(
         backgroundColor: Color(0xFF0F172A),
         body: Center(child: Text('Sem perguntas', style: TextStyle(color: Colors.white))),
@@ -406,55 +519,86 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     }
 
     // ignore: avoid_print
-    print('DEBUG: Construindo interface principal do quiz');
+    debugPrint('DEBUG: Construindo interface principal do quiz');
     
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
     final currentQ = _questions[_currentQuestion];
     
     // ignore: avoid_print
-    print('DEBUG: currentQuestion = $_currentQuestion, currentQ = ${currentQ.toJson()}');
+    debugPrint('DEBUG: currentQuestion = $_currentQuestion, currentQ = ${currentQ.toJson()}');
+
+    final roomProv = Provider.of<RoomProvider>(context, listen: false);
+    final isChatEnabled = roomProv.currentRoom?.enableChat ?? true;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            _buildHeader(isSmallScreen, currentQ.category),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-                child: Column(
-                  children: [
-                    SlideTransition(
-                      position: _slideAnimation,
-                      child: _buildQuestionCard(currentQ, isSmallScreen),
-                    ),
-                    SizedBox(height: isSmallScreen ? 24 : 32),
-                    ...currentQ.options.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final option = entry.value;
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
-                        child: _buildAnswerOption(
-                          option,
-                          String.fromCharCode(65 + index),
-                          currentQ.correctAnswer,
-                          isSmallScreen,
+            Column(
+              children: [
+                _buildHeader(isSmallScreen, currentQ.category),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                    child: Column(
+                      children: [
+                        SlideTransition(
+                          position: _slideAnimation,
+                          child: _buildQuestionCard(currentQ, isSmallScreen),
                         ),
-                      );
-                    }).toList(),
-                    if (_showCorrectAnswer) ...[
-                      SizedBox(height: isSmallScreen ? 16 : 24),
-                      _buildExplanation(currentQ.explanation ?? '', isSmallScreen),
-                    ],
-                    const SizedBox(height: 32),
-                    _buildMiniLeaderboard(isSmallScreen),
-                  ],
+                        SizedBox(height: isSmallScreen ? 24 : 32),
+                        ...currentQ.options.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final option = entry.value;
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+                            child: _buildAnswerOption(
+                              option,
+                              String.fromCharCode(65 + index),
+                              currentQ.correctAnswer,
+                              isSmallScreen,
+                            ),
+                          );
+                        }).toList(),
+                        if (_showCorrectAnswer) ...[
+                          SizedBox(height: isSmallScreen ? 16 : 24),
+                          _buildExplanation(currentQ.explanation ?? '', isSmallScreen),
+                        ],
+                        const SizedBox(height: 32),
+                        _buildMiniLeaderboard(isSmallScreen),
+                      ],
+                    ),
+                  ),
                 ),
+                _buildFooter(isSmallScreen),
+              ],
+            ),
+
+            // In-Game Chat Overlay (bolha animada)
+            Positioned(
+              top: 90,
+              left: 20,
+              right: 20,
+              child: InGameChatOverlay(
+                latestMessage: _latestChatMessage,
+                onDismiss: () {
+                  if (mounted) setState(() => _latestChatMessage = null);
+                },
               ),
             ),
-            _buildFooter(isSmallScreen),
+
+            // Botão flutuante de Chat / Reações
+            if (isChatEnabled)
+              Positioned(
+                bottom: isSmallScreen ? 16 : 24,
+                right: isSmallScreen ? 16 : 24,
+                child: InGameChatButton(
+                  cooldownSecondsRemaining: _chatCooldownSeconds,
+                  onTap: _openChatSheet,
+                ),
+              ),
           ],
         ),
       ),
@@ -807,25 +951,96 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     );
   }
   Widget _buildLeaderboardRow(LeaderboardEntry e, bool isSmall, {bool highlight = false, bool isPlayerRow = false}) {
+    Widget rankWidget;
+
+    if (e.position == 1) {
+      rankWidget = const Text('🥇', style: TextStyle(fontSize: 16));
+    } else if (e.position == 2) {
+      rankWidget = const Text('🥈', style: TextStyle(fontSize: 16));
+    } else if (e.position == 3) {
+      rankWidget = const Text('🥉', style: TextStyle(fontSize: 16));
+    } else {
+      rankWidget = Text(
+        '#${e.position}',
+        style: TextStyle(
+          color: Colors.white70,
+          fontSize: isSmall ? 12 : 13,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: isSmall ? 10 : 12, vertical: isSmall ? 6 : 8),
       decoration: BoxDecoration(
-        color: highlight ? const Color(0xFF6366F1).withOpacity(0.15) : const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: highlight ? const Color(0xFF6366F1) : const Color(0xFF334155)),
+        color: highlight ? const Color(0xFF6366F1).withOpacity(0.2) : const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: highlight ? const Color(0xFF818CF8) : const Color(0xFF334155),
+          width: highlight ? 1.5 : 1.0,
+        ),
       ),
       child: Row(
         children: [
-          Text('#${e.position}', style: TextStyle(color: Colors.white, fontSize: isSmall ? 11 : 12, fontWeight: FontWeight.bold)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(isPlayerRow ? 'Você' : e.username, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white70, fontSize: isSmall ? 11 : 12, fontWeight: FontWeight.w500)),
+          SizedBox(
+            width: 28,
+            child: Center(child: rankWidget),
           ),
           const SizedBox(width: 8),
-          Text('${e.score} pts', style: TextStyle(color: const Color(0xFF10B981), fontSize: isSmall ? 11 : 12, fontWeight: FontWeight.w600)),
+          CosmeticAvatar(
+            radius: isSmall ? 14 : 16,
+            avatarUrl: e.avatar,
+            username: e.username,
+            activeAvatarId: e.activeAvatarId,
+            activeFrameId: e.activeFrameId,
+            isVip: e.isVip,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: VipUsernameText(
+                    username: e.username,
+                    isVip: e.isVip,
+                    style: TextStyle(
+                      color: highlight ? Colors.white : Colors.white70,
+                      fontSize: isSmall ? 12 : 13,
+                      fontWeight: highlight ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (isPlayerRow) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'VOCÊ',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
           const SizedBox(width: 8),
-          Text('${e.correctAnswers}/${e.totalAnswers}', style: TextStyle(color: Colors.grey, fontSize: isSmall ? 10 : 11)),
+          Text(
+            '${e.score} pts',
+            style: TextStyle(
+              color: const Color(0xFF10B981),
+              fontSize: isSmall ? 12 : 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );

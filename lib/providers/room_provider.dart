@@ -41,21 +41,22 @@ class RoomProvider extends ChangeNotifier {
     required bool enableChat,
     required bool showRealTimeRanking,
     required bool allowReconnection,
-    required String hostId,
+    int? entryFee,
+    required int hostId, // Changed to int
   }) async {
-    print('DEBUG RoomProvider: ===== INÍCIO createRoom =====');
-    print('DEBUG RoomProvider: hostId = $hostId');
-    print('DEBUG RoomProvider: roomNamzze = $roomName');
-    print('DEBUG RoomProvider: categoryIds = $categoryIds'); // MUDANÇA
+    debugPrint('DEBUG RoomProvider: ===== INÍCIO createRoom =====');
+    debugPrint('DEBUG RoomProvider: hostId = $hostId');
+    debugPrint('DEBUG RoomProvider: roomNamzze = $roomName');
+    debugPrint('DEBUG RoomProvider: categoryIds = $categoryIds'); // MUDANÇA
     
     // Teste 1: setLoading
-    print('DEBUG RoomProvider: Teste 1 - setLoading(true)...');
+    debugPrint('DEBUG RoomProvider: Teste 1 - setLoading(true)...');
     _setLoading(true);
-    print('DEBUG RoomProvider: SUCESSO - _isLoading agora é: $_isLoading');
+    debugPrint('DEBUG RoomProvider: SUCESSO - _isLoading agora é: $_isLoading');
     
     try {
       // Teste 2: Criar request
-      print('DEBUG RoomProvider: Teste 2 - Criando CreateRoomRequest...');
+      debugPrint('DEBUG RoomProvider: Teste 2 - Criando CreateRoomRequest...');
       final request = CreateRoomRequest(
         roomName: roomName,
         password: password,
@@ -71,67 +72,79 @@ class RoomProvider extends ChangeNotifier {
         enableChat: enableChat,
         showRealTimeRanking: showRealTimeRanking,
         allowReconnection: allowReconnection,
+        entryFee: entryFee,
         hostId: hostId,
       );
       
-      print('DEBUG RoomProvider: SUCESSO - Request criado');
-      print('DEBUG RoomProvider: Request JSON: ${request.toJson()}');
+      debugPrint('DEBUG RoomProvider: SUCESSO - Request criado');
+      debugPrint('DEBUG RoomProvider: Request JSON: ${request.toJson()}');
       
       // Teste 3: Chamar roomService
-      print('DEBUG RoomProvider: Teste 3 - Chamando _roomService.createRoom...');
-      print('DEBUG RoomProvider: _roomService = $_roomService');
+      debugPrint('DEBUG RoomProvider: Teste 3 - Chamando _roomService.createRoom...');
+      debugPrint('DEBUG RoomProvider: _roomService = $_roomService');
       
       _currentRoom = await _roomService.createRoom(request);
       
-      print('DEBUG RoomProvider: SUCESSO - roomService retornou');
-      print('DEBUG RoomProvider: _currentRoom = $_currentRoom');
+      debugPrint('DEBUG RoomProvider: SUCESSO - roomService retornou');
+      debugPrint('DEBUG RoomProvider: _currentRoom = $_currentRoom');
       
       // Teste 4: Processar resultado
-      print('DEBUG RoomProvider: Teste 4 - Processando resultado...');
+      debugPrint('DEBUG RoomProvider: Teste 4 - Processando resultado...');
       _players = _currentRoom!.players;
       _error = null;
-      print('DEBUG RoomProvider: SUCESSO - Resultado processado');
+      debugPrint('DEBUG RoomProvider: SUCESSO - Resultado processado');
       
       notifyListeners();
       return true;
     } catch (e, stackTrace) {
-      print('DEBUG RoomProvider: ERRO CAPTURADO: $e');
-      print('DEBUG RoomProvider: Stack trace: $stackTrace');
+      debugPrint('DEBUG RoomProvider: ERRO CAPTURADO: $e');
+      debugPrint('DEBUG RoomProvider: Stack trace: $stackTrace');
       _error = e.toString();
       notifyListeners();
       return false;
     } finally {
-      print('DEBUG RoomProvider: Finally - setLoading(false)...');
+      debugPrint('DEBUG RoomProvider: Finally - setLoading(false)...');
       _setLoading(false);
-      print('DEBUG RoomProvider: ===== FIM createRoom =====');
+      debugPrint('DEBUG RoomProvider: ===== FIM createRoom =====');
     }
   }
 
   // Método de teste para verificar conexão
   Future<void> testConnection() async {
-    print('DEBUG RoomProvider: Testando conexão...');
+    debugPrint('DEBUG RoomProvider: Testando conexão...');
     try {
       // Faz uma chamada simples para verificar a conexão
       await _roomService.testConnection();
-      print('DEBUG RoomProvider: Conexão OK');
+      debugPrint('DEBUG RoomProvider: Conexão OK');
     } catch (e) {
-      print('DEBUG RoomProvider: Erro de conexão: $e');
+      debugPrint('DEBUG RoomProvider: Erro de conexão: $e');
       throw e;
     }
   }
 
-  Future<bool> joinRoom(String roomCode, String userId) async {
-    print('DEBUG RoomProvider: Tentando entrar na sala $roomCode com userId $userId');
+  Future<RoomModel?> getRoomPreview(String roomCode) async {
+    debugPrint('DEBUG RoomProvider: Buscando preview da sala $roomCode');
+    try {
+      final roomPreview = await _roomService.getRoomDetails(roomCode);
+      return roomPreview;
+    } catch (e) {
+      debugPrint('DEBUG RoomProvider: Erro ao buscar preview da sala: $e');
+      throw e;
+    }
+  }
+
+  Future<bool> joinRoom(String roomCode, String userId, {String? password}) async {
+    debugPrint('DEBUG RoomProvider: Tentando entrar na sala $roomCode com userId $userId');
     _setLoading(true);
     try {
-      _currentRoom = await _roomService.joinRoom(roomCode, userId);
+      _currentRoom = await _roomService.joinRoom(roomCode, userId, password: password);
       _players = _currentRoom!.players;
       _error = null;
-      print('DEBUG RoomProvider: Sucesso ao entrar na sala - ${_players.length} jogadores');
+      debugPrint('DEBUG RoomProvider: Sucesso ao entrar na sala - ${_players.length} jogadores');
       notifyListeners();
       return true;
     } catch (e) {
-      print('DEBUG RoomProvider: Erro ao entrar na sala: $e');
+      debugPrint('DEBUG RoomProvider: Erro ao entrar na sala: $e');
       _error = e.toString();
       notifyListeners();
       return false;
@@ -144,25 +157,29 @@ class RoomProvider extends ChangeNotifier {
     if (_currentRoom == null) return;
     
     try {
-      print('DEBUG RoomProvider: Atualizando detalhes da sala ${_currentRoom!.roomCode}');
-      print('DEBUG RoomProvider: GameId antes do refresh: ${_currentRoom!.gameId}');
+      debugPrint('DEBUG RoomProvider: Atualizando detalhes da sala ${_currentRoom!.roomCode}');
+      debugPrint('DEBUG RoomProvider: GameId antes do refresh: ${_currentRoom!.gameId}');
       
       // Busca os detalhes atualizados da sala
       final rawResponse = await _roomService.getRoomDetails(_currentRoom!.roomCode);
-      print('DEBUG RoomProvider: Response getRoomDetails RAW: $rawResponse');
+      debugPrint('DEBUG RoomProvider: Response getRoomDetails RAW: $rawResponse');
       
       _currentRoom = rawResponse;
       _players = _currentRoom!.players;
       _error = null;
       
-      print('DEBUG RoomProvider: GameId após refresh: ${_currentRoom!.gameId}');
-      print('DEBUG RoomProvider: assignmentType após parsing: ${_currentRoom!.assignmentType}');
-      print('DEBUG RoomProvider: Sala atualizada - ${_players.length} jogadores');
+      debugPrint('DEBUG RoomProvider: GameId após refresh: ${_currentRoom!.gameId}');
+      debugPrint('DEBUG RoomProvider: assignmentType após parsing: ${_currentRoom!.assignmentType}');
+      debugPrint('DEBUG RoomProvider: Sala atualizada - ${_players.length} jogadores');
       notifyListeners();
     } catch (e, stackTrace) {
-      print('DEBUG RoomProvider: Erro ao atualizar sala: $e');
-      print('DEBUG RoomProvider: Stack trace: $stackTrace');
-      _error = e.toString();
+      debugPrint('DEBUG RoomProvider: Erro ao atualizar sala: $e');
+      debugPrint('DEBUG RoomProvider: Stack trace: $stackTrace');
+      if (e.toString().contains('Recurso não encontrado')) {
+        _error = 'O anfitrião encerrou a sala.';
+      } else {
+        _error = e.toString();
+      }
       notifyListeners();
     }
   }
@@ -182,22 +199,22 @@ class RoomProvider extends ChangeNotifier {
     // Tenta buscar com múltiplas tentativas
     for (int i = 0; i < 5; i++) {
       try {
-        print('DEBUG RoomProvider: getGameId tentativa ${i + 1}/5');
+        debugPrint('DEBUG RoomProvider: getGameId tentativa ${i + 1}/5');
         await refreshRoomDetails();
         
         if (_currentRoom?.gameId != null) {
-          print('DEBUG RoomProvider: GameId obtido na tentativa ${i + 1}: ${_currentRoom!.gameId}');
+          debugPrint('DEBUG RoomProvider: GameId obtido na tentativa ${i + 1}: ${_currentRoom!.gameId}');
           return _currentRoom!.gameId;
         }
         
         // Aguarda um pouco antes da próxima tentativa
         await Future.delayed(const Duration(milliseconds: 500));
       } catch (e) {
-        print('DEBUG RoomProvider: Erro na tentativa ${i + 1}: $e');
+        debugPrint('DEBUG RoomProvider: Erro na tentativa ${i + 1}: $e');
       }
     }
     
-    print('DEBUG RoomProvider: getGameId falhou após 5 tentativas');
+    debugPrint('DEBUG RoomProvider: getGameId falhou após 5 tentativas');
     return null;
   }
 
@@ -252,7 +269,7 @@ class RoomProvider extends ChangeNotifier {
           .toList();
 
       if (unassignedPlayers.isEmpty) {
-        print('DEBUG: Não há jogadores para distribuir');
+        debugPrint('DEBUG: Não há jogadores para distribuir');
         return true;
       }
 
@@ -264,8 +281,8 @@ class RoomProvider extends ChangeNotifier {
       int redCount = _currentRoom!.players.where((p) => p.team == TeamColor.RED).length;
       int blueCount = _currentRoom!.players.where((p) => p.team == TeamColor.BLUE).length;
 
-      print('DEBUG: Distribuindo ${unassignedPlayers.length} jogadores');
-      print('DEBUG: Equipe Vermelha atual: $redCount, Equipe Azul atual: $blueCount');
+      debugPrint('DEBUG: Distribuindo ${unassignedPlayers.length} jogadores');
+      debugPrint('DEBUG: Equipe Vermelha atual: $redCount, Equipe Azul atual: $blueCount');
 
       // Distribuir jogadores de forma equilibrada
       for (int i = 0; i < unassignedPlayers.length; i++) {
@@ -287,7 +304,7 @@ class RoomProvider extends ChangeNotifier {
         // Marcar jogador como pronto
         await _roomService.setPlayerReady(_currentRoom!.roomCode, player.userId);
         
-        print('DEBUG: Jogador ${player.userId} atribuído à ${assignedTeam == TeamColor.RED ? "Equipe Vermelha" : "Equipe Azul"} e marcado como pronto');
+        debugPrint('DEBUG: Jogador ${player.userId} atribuído à ${assignedTeam == TeamColor.RED ? "Equipe Vermelha" : "Equipe Azul"} e marcado como pronto');
       }
 
       // Atualizar dados da sala
@@ -295,7 +312,7 @@ class RoomProvider extends ChangeNotifier {
       
       return true;
     } catch (e) {
-      print('DEBUG: Erro ao distribuir equipes: $e');
+      debugPrint('DEBUG: Erro ao distribuir equipes: $e');
       _error = e.toString();
       notifyListeners();
       return false;
@@ -333,12 +350,12 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> playAgain(String hostId) async {
+  Future<bool> playAgain(String userId) async {
     if (_currentRoom == null) return false;
     
     _setLoading(true);
     try {
-      await _roomService.playAgain(_currentRoom!.roomCode, hostId);
+      await _roomService.playAgain(_currentRoom!.roomCode, userId);
       return true;
     } catch (e) {
       _error = e.toString();
@@ -346,6 +363,19 @@ class RoomProvider extends ChangeNotifier {
       return false;
     } finally {
       _setLoading(false);
+    }
+  }
+
+  Future<bool> sendRematchRequest(String userId) async {
+    if (_currentRoom == null) return false;
+    
+    try {
+      await _roomService.sendRematchRequest(_currentRoom!.roomCode, userId);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
     }
   }
 
@@ -413,7 +443,7 @@ class RoomProvider extends ChangeNotifier {
   // ATUALIZADO: Método para atribuir disciplina específica a um jogador usando DTO
   Future<bool> assignCategoryToPlayer(int playerId, int categoryId) async {
     try {
-      print('DEBUG RoomProvider: Atribuindo categoria $categoryId ao jogador $playerId');
+      debugPrint('DEBUG RoomProvider: Atribuindo categoria $categoryId ao jogador $playerId');
       
       if (_currentRoom == null) {
         _error = 'Nenhuma sala ativa encontrada';
@@ -442,7 +472,7 @@ class RoomProvider extends ChangeNotifier {
       _error = null;
       return true;
     } catch (e) {
-      print('ERROR RoomProvider: Erro ao atribuir categoria: $e');
+      debugPrint('ERROR RoomProvider: Erro ao atribuir categoria: $e');
       _error = e.toString();
       notifyListeners();
       return false;
@@ -452,7 +482,7 @@ class RoomProvider extends ChangeNotifier {
   // ATUALIZADO: Método para distribuir disciplinas automaticamente usando DTO
   Future<bool> distributeCategoriesAutomatically(int hostId) async {
     try {
-      print('DEBUG RoomProvider: Distribuindo categorias automaticamente');
+      debugPrint('DEBUG RoomProvider: Distribuindo categorias automaticamente');
       
       if (_currentRoom == null) {
         _error = 'Nenhuma sala ativa encontrada';
@@ -473,7 +503,7 @@ class RoomProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      print('ERROR RoomProvider: Erro ao distribuir categorias: $e');
+      debugPrint('ERROR RoomProvider: Erro ao distribuir categorias: $e');
       _error = 'Erro de conexão ao distribuir disciplinas: $e';
       notifyListeners();
       return false;
@@ -485,11 +515,11 @@ class RoomProvider extends ChangeNotifier {
     try {
       if (_currentRoom == null) return null;
       
-      print('DEBUG RoomProvider: Buscando estatísticas de distribuição da API');
+      debugPrint('DEBUG RoomProvider: Buscando estatísticas de distribuição da API');
       
       return await _roomService.getCategoryDistributionStats(_currentRoom!.roomCode);
     } catch (e) {
-      print('ERROR RoomProvider: Erro ao buscar estatísticas: $e');
+      debugPrint('ERROR RoomProvider: Erro ao buscar estatísticas: $e');
       return null;
     }
   }
@@ -499,11 +529,11 @@ class RoomProvider extends ChangeNotifier {
     try {
       if (_currentRoom == null) return [];
       
-      print('DEBUG RoomProvider: Buscando categorias disponíveis para jogador $playerId');
+      debugPrint('DEBUG RoomProvider: Buscando categorias disponíveis para jogador $playerId');
       
       return await _roomService.getAvailableCategoriesForPlayer(_currentRoom!.roomCode, playerId);
     } catch (e) {
-      print('ERROR RoomProvider: Erro ao buscar categorias disponíveis: $e');
+      debugPrint('ERROR RoomProvider: Erro ao buscar categorias disponíveis: $e');
       return [];
     }
   }
@@ -513,11 +543,11 @@ class RoomProvider extends ChangeNotifier {
     try {
       if (_currentRoom == null) return false;
       
-      print('DEBUG RoomProvider: Verificando se todas as categorias foram atribuídas');
+      debugPrint('DEBUG RoomProvider: Verificando se todas as categorias foram atribuídas');
       
       return await _roomService.areAllCategoriesAssigned(_currentRoom!.roomCode);
     } catch (e) {
-      print('ERROR RoomProvider: Erro ao verificar atribuições: $e');
+      debugPrint('ERROR RoomProvider: Erro ao verificar atribuições: $e');
       return false;
     }
   }

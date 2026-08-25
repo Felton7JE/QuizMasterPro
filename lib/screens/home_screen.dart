@@ -56,32 +56,14 @@ class HomeScreen extends StatelessWidget {
           Row(
             children: [
               Text(
-                'QuizMaster',
+                'Meu Quiz +',
                 style: TextStyle(
                   fontSize: isSmallScreen ? 20 : 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 6 : 8, 
-                  vertical: isSmallScreen ? 2 : 4
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Pro',
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 8 : 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+
             ],
           ),
           if (!isSmallScreen)
@@ -95,7 +77,7 @@ class HomeScreen extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(8),
-                  onTap: () => Navigator.pushNamed(context, '/join-room'),
+                  onTap: () => Navigator.pushNamed(context, '/login'),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
@@ -185,7 +167,7 @@ class HomeScreen extends StatelessWidget {
                   width: double.infinity,
                   child: CustomButton(
                     text: 'Começar a Jogar',
-                    onPressed: () => Navigator.pushNamed(context, '/menu'),
+                    onPressed: () => Navigator.pushNamed(context, '/login'),
                     isPrimary: true,
                     icon: Icons.play_arrow,
                     isLarge: true,
@@ -209,7 +191,7 @@ class HomeScreen extends StatelessWidget {
               children: [
                 CustomButton(
                   text: 'Começar a Jogar',
-                  onPressed: () => Navigator.pushNamed(context, '/menu'),
+                  onPressed: () => Navigator.pushNamed(context, '/login'),
                   isPrimary: true,
                   icon: Icons.play_arrow,
                   isLarge: true,
@@ -237,7 +219,7 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'Por que escolher o QuizMaster?',
+            'Por que escolher o Meu Quiz +?',
             style: TextStyle(
               fontSize: isSmallScreen ? 24 : 32,
               fontWeight: FontWeight.bold,
@@ -397,7 +379,18 @@ class HomeScreen extends StatelessWidget {
                       duration: '15-30 min',
                       categories: '4 Categorias',
                       badge: 'Popular',
-                      onTap: () => Navigator.pushNamed(context, '/menu'),
+                      onTap: () => Navigator.pushNamed(context, '/login'),
+                    ),
+                    const SizedBox(height: 16),
+                    GameModeCard(
+                      icon: Icons.workspace_premium_rounded,
+                      title: 'Passe de Temporada',
+                      description: 'Desbloqueie prêmios exclusivos jogando durante a temporada',
+                      players: 'Solo/Equipe',
+                      duration: '30 Dias',
+                      categories: 'Temática',
+                      badge: 'Evento',
+                      onTap: () => Navigator.pushNamed(context, '/login'),
                     ),
                     const SizedBox(height: 16),
                     GameModeCard(
@@ -408,7 +401,7 @@ class HomeScreen extends StatelessWidget {
                       duration: '5-15 min',
                       categories: 'Categoria Livre',
                       badge: 'Novo',
-                      onTap: () => Navigator.pushNamed(context, '/menu'),
+                      onTap: () => Navigator.pushNamed(context, '/login'),
                     ),
                   ],
                 );
@@ -427,7 +420,20 @@ class HomeScreen extends StatelessWidget {
                             duration: '15-30 min',
                             categories: '4 Categorias',
                             badge: 'Popular',
-                            onTap: () => Navigator.pushNamed(context, '/menu'),
+                            onTap: () => Navigator.pushNamed(context, '/login'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: GameModeCard(
+                            icon: Icons.workspace_premium_rounded,
+                            title: 'Passe de Temporada',
+                            description: 'Prêmios exclusivos do mês',
+                            players: 'Solo/Equipe',
+                            duration: '30 Dias',
+                            categories: 'Temática',
+                            badge: 'Evento',
+                            onTap: () => Navigator.pushNamed(context, '/login'),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -440,7 +446,7 @@ class HomeScreen extends StatelessWidget {
                             duration: '5-15 min',
                             categories: 'Categoria Livre',
                             badge: 'Novo',
-                            onTap: () => Navigator.pushNamed(context, '/menu'),
+                            onTap: () => Navigator.pushNamed(context, '/login'),
                           ),
                         ),
                       ],
@@ -456,7 +462,7 @@ class HomeScreen extends StatelessWidget {
                             players: 'Solo',
                             duration: 'Sem limite',
                             categories: 'Todas',
-                            onTap: () => Navigator.pushNamed(context, '/quiz-game'),
+                            onTap: () => Navigator.pushNamed(context, '/login'),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -469,7 +475,7 @@ class HomeScreen extends StatelessWidget {
                             duration: '10-20 min',
                             categories: 'Tempo Real',
                             badge: 'Quente',
-                            onTap: () => Navigator.pushNamed(context, '/menu'),
+                            onTap: () => Navigator.pushNamed(context, '/login'),
                           ),
                         ),
                       ],
@@ -489,7 +495,20 @@ class HomeScreen extends StatelessWidget {
                         duration: '15-30 min',
                         categories: '4 Categorias',
                         badge: 'Popular',
-                        onTap: () => Navigator.pushNamed(context, '/menu'),
+                        onTap: () => Navigator.pushNamed(context, '/login'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: GameModeCard(
+                        icon: Icons.workspace_premium_rounded,
+                        title: 'Temporada',
+                        description: 'Passe VIP',
+                        players: 'Todos',
+                        duration: '30 Dias',
+                        categories: 'Tema',
+                        badge: 'Evento',
+                        onTap: () => Navigator.pushNamed(context, '/login'),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -502,7 +521,7 @@ class HomeScreen extends StatelessWidget {
                         duration: '5-15 min',
                         categories: 'Categoria Livre',
                         badge: 'Novo',
-                        onTap: () => Navigator.pushNamed(context, '/menu'),
+                        onTap: () => Navigator.pushNamed(context, '/login'),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -514,7 +533,7 @@ class HomeScreen extends StatelessWidget {
                         players: 'Solo',
                         duration: 'Sem limite',
                         categories: 'Todas',
-                        onTap: () => Navigator.pushNamed(context, '/quiz-game'),
+                        onTap: () => Navigator.pushNamed(context, '/login'),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -527,7 +546,7 @@ class HomeScreen extends StatelessWidget {
                         duration: '10-20 min',
                         categories: 'Tempo Real',
                         badge: 'Quente',
-                        onTap: () => Navigator.pushNamed(context, '/menu'),
+                        onTap: () => Navigator.pushNamed(context, '/login'),
                       ),
                     ),
                   ],

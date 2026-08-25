@@ -8,7 +8,7 @@ class MockRoomService implements RoomService {
   bool shouldThrowError = false;
 
   @override
-  Future<RoomModel> joinRoom(String roomCode, String userId) async {
+  Future<RoomModel> joinRoom(String roomCode, String userId, {String? password}) async {
     if (shouldThrowError) {
       throw Exception('Sala não encontrada ou cheia');
     }

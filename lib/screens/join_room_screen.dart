@@ -51,14 +51,167 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
 
     try {
       final roomProvider = Provider.of<RoomProvider>(context, listen: false);
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-      // Primeiro, tenta pegar os detalhes da sala para verificar se ela existe e se precisa de senha
       final roomCode = _roomCodeController.text.trim().toUpperCase();
+
+      // Primeiro, busca os dados da sala sem entrar
+      final roomPreview = await roomProvider.getRoomPreview(roomCode);
+      
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (roomPreview != null) {
+        _showRoomPreviewDialog(roomPreview, roomCode);
+      } else {
+        setState(() {
+          _error = 'Não foi possível carregar os detalhes da sala.';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = _formatError(e.toString());
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showRoomPreviewDialog(RoomModel room, String roomCode) {
+    final hasPassword = room.isPasswordProtected;
+    final tempPasswordController = TextEditingController(text: _passwordController.text.trim());
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1E293B),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  const Text(
+                    'Detalhes da Sala',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  if (hasPassword) ...[
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.amber),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.lock, color: Colors.amber, size: 14),
+                          SizedBox(width: 4),
+                          Text('Privada', style: TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Host: ${room.hostName ?? 'Desconhecido'}', style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 8),
+                  Text('Modo: ${room.gameMode.toString().split('.').last}', style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 8),
+                  Text('Perguntas: ${room.questionCount}', style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 12),
+                  if (hasPassword) ...[
+                    TextFormField(
+                      controller: tempPasswordController,
+                      obscureText: true,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Senha da Sala',
+                        labelStyle: const TextStyle(color: Colors.amber),
+                        prefixIcon: const Icon(Icons.lock, color: Colors.amber),
+                        filled: true,
+                        fillColor: const Color(0xFF0F172A),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.amber),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.amber.withOpacity(0.5)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('💰 ', style: TextStyle(fontSize: 20)),
+                        Expanded(
+                          child: Text(
+                            'Custo de Entrada: ${room.entryFee ?? 0} moedas',
+                            style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Fechar o modal
+                  },
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6366F1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    final passToUse = tempPasswordController.text.trim();
+                    _passwordController.text = passToUse;
+                    Navigator.of(context).pop(); // Fechar o modal
+                    _executeJoinRoom(roomCode, password: passToUse.isNotEmpty ? passToUse : null);
+                  },
+                  child: const Text('Entrar na Partida', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _executeJoinRoom(String roomCode, {String? password}) async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final roomProvider = Provider.of<RoomProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final userId = authProvider.currentUser?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
 
-      // Tenta entrar na sala (por agora, a API não suporta verificação de senha)
-      final success = await roomProvider.joinRoom(roomCode, userId);
+      final pass = password ?? (_passwordController.text.trim().isNotEmpty ? _passwordController.text.trim() : null);
+      final success = await roomProvider.joinRoom(roomCode, userId, password: pass);
 
       if (success && mounted) {
         final gameMode = roomProvider.currentRoom?.gameMode;
@@ -71,6 +224,11 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
           // Navega para o lobby da sala de equipe
           Navigator.pushReplacementNamed(context, '/team-lobby');
         }
+      } else if (!success && mounted) {
+        setState(() {
+          _error = roomProvider.error ?? 'Erro ao entrar na sala.';
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -83,14 +241,20 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
   }
 
   String _formatError(String error) {
-    if (error.contains('404')) {
+    if (error.contains('Senha incorreta')) {
+      return '🔒 Senha incorreta! Verifique a senha com o criador da sala.';
+    } else if (error.contains('Energia insuficiente')) {
+      return '⚡ Energia insuficiente para entrar na partida.';
+    } else if (error.contains('404') || error.contains('não encontrada')) {
       return 'Sala não encontrada. Verifique o código.';
+    } else if (error.contains('cheia')) {
+      return 'A sala já está cheia.';
     } else if (error.contains('403')) {
-      return 'Acesso negado. Sala pode estar cheia ou senha incorreta.';
+      return 'Acesso negado. A sala pode ser privada ou estar cheia.';
     } else if (error.contains('400')) {
       return 'Código de sala inválido.';
     }
-    return 'Erro ao entrar na sala. Tente novamente.';
+    return error.replaceAll('Exception:', '').replaceAll('RuntimeException:', '').trim();
   }
 
   void _pasteFromClipboard() async {
@@ -118,30 +282,14 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
         title: Row(
           children: [
             Text(
-              'QuizMaster',
+              'Meu Quiz +',
               style: TextStyle(
                 fontSize: isSmallScreen ? 18 : 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-            SizedBox(width: isSmallScreen ? 6 : 8),
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: isSmallScreen ? 4 : 6,
-                vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6366F1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'Pro',
-                style: TextStyle(
-                  color: Colors.white,
-                ),
-              ),
-            ),
+
           ],
         ),
         actions: [

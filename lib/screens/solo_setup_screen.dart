@@ -5,6 +5,7 @@ import '../providers/room_provider.dart';
 import '../providers/category_provider.dart';
 import '../models/room_model.dart';
 import '../models/category_models.dart' as CategoryModels;
+import '../widgets/responsive_chip.dart';
 
 class SoloSetupScreen extends StatefulWidget {
   const SoloSetupScreen({super.key});
@@ -78,7 +79,7 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
       enableChat: false,
       showRealTimeRanking: false,
       allowReconnection: false,
-      hostId: userId,
+      hostId: int.parse(userId),
     );
 
     if (!created) {
@@ -110,11 +111,12 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
     if (!mounted) return;
     setState(() => _isStarting = false);
 
-    // 5. Navegar para o quiz
+    // 5. Navegar para a tela de contagem (que depois vai para o quiz)
     Navigator.pushReplacementNamed(
       context,
-      '/quiz-game',
+      '/quiz-countdown',
       arguments: {
+        'gameMode': 'CLASSIC',
         'gameId': gameId,
         'playerCategory': _selectedCategory?.name,
         'isSolo': true,
@@ -232,11 +234,11 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _buildDiffBtn(Difficulty.EASY, 'Facil', const Color(0xFF10B981)),
+                    _buildDiffBtn(Difficulty.EASY, 'Facil', Icons.sentiment_satisfied_alt),
                     const SizedBox(width: 10),
-                    _buildDiffBtn(Difficulty.MEDIUM, 'Medio', const Color(0xFFF59E0B)),
+                    _buildDiffBtn(Difficulty.MEDIUM, 'Medio', Icons.sentiment_neutral),
                     const SizedBox(width: 10),
-                    _buildDiffBtn(Difficulty.HARD, 'Dificil', const Color(0xFFEF4444)),
+                    _buildDiffBtn(Difficulty.HARD, 'Dificil', Icons.whatshot),
                   ],
                 ),
                 const SizedBox(height: 28),
@@ -252,9 +254,9 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
                   ),
                   child: Slider(
                     value: _questionCount.toDouble(),
-                    min: 5,
+                    min: 10,
                     max: 30,
-                    divisions: 5,
+                    divisions: 4,
                     onChanged: (v) =>
                         setState(() => _questionCount = v.round()),
                   ),
@@ -262,7 +264,7 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: const [
-                    Text('5',
+                    Text('10',
                         style:
                             TextStyle(color: Colors.grey, fontSize: 12)),
                     Text('30',
@@ -364,68 +366,38 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
             color: Colors.white),
       );
 
+  IconData _getCategoryIcon(String? name) {
+    if (name == null) return Icons.category;
+    switch (name.toUpperCase()) {
+      case 'MATH': return Icons.calculate;
+      case 'PORTUGUESE': return Icons.language;
+      case 'HISTORY': return Icons.history_edu;
+      case 'GEOGRAPHY': return Icons.public;
+      case 'SCIENCE': return Icons.science;
+      case 'ENGLISH': return Icons.chat;
+      case 'MIXED': return Icons.category;
+      default: return Icons.category;
+    }
+  }
+
   Widget _buildCategoryChip(CategoryModels.Category? cat, String label) {
-    final isSelected =
-        cat == null ? _selectedCategory == null : _selectedCategory?.id == cat.id;
-    return GestureDetector(
+    final isSelected = cat == null ? _selectedCategory == null : _selectedCategory?.id == cat.id;
+    return ResponsiveChip(
+      icon: _getCategoryIcon(cat?.name),
+      label: label,
+      isSelected: isSelected,
       onTap: () => setState(() => _selectedCategory = cat),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF6366F1)
-              : const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFF6366F1)
-                : const Color(0xFF334155),
-            width: 1.5,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight:
-                isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? Colors.white : Colors.grey[400],
-          ),
-        ),
-      ),
     );
   }
 
-  Widget _buildDiffBtn(Difficulty diff, String label, Color color) {
+  Widget _buildDiffBtn(Difficulty diff, String label, IconData icon) {
     final isSelected = _difficulty == diff;
     return Expanded(
-      child: GestureDetector(
+      child: ResponsiveChip(
+        icon: icon,
+        label: label,
+        isSelected: isSelected,
         onTap: () => setState(() => _difficulty = diff),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? color.withOpacity(0.15)
-                : const Color(0xFF1E293B),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? color : const Color(0xFF334155),
-              width: 1.5,
-            ),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight:
-                  isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? color : Colors.grey[400],
-            ),
-          ),
-        ),
       ),
     );
   }

@@ -3,12 +3,19 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../providers/room_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/websocket_provider.dart';
+
 import '../models/room_model.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/cosmetic_avatar.dart';
+import '../widgets/vip_badge_widget.dart';
 import '../utils/snackbar_utils.dart';
 import '../utils/format_utils.dart';
+import '../providers/store_provider.dart';
+import '../config/api_config.dart';
 
 class KahootLobbyScreen extends StatefulWidget {
   const KahootLobbyScreen({super.key});
@@ -396,56 +403,71 @@ class _KahootLobbyScreenState extends State<KahootLobbyScreen>
                               )
                             : ListView.separated(
                                 itemCount: _currentRoom!.players.length,
-                                separatorBuilder: (_, __) => const Divider(
-                                    color: Color(0xFF334155), height: 16),
+                                separatorBuilder: (_, __) => const SizedBox(height: 8),
                                 itemBuilder: (_, index) {
                                   final player = _currentRoom!.players[index];
-                                  return Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 20,
-                                        backgroundColor: player.isHost
-                                            ? const Color(0xFF6366F1).withOpacity(0.2)
-                                            : const Color(0xFF334155),
-                                        child: Text(
-                                          (player.username.isNotEmpty
-                                                  ? player.username[0]
-                                                  : '?')
-                                              .toUpperCase(),
-                                          style: TextStyle(
-                                            color: player.isHost
-                                                ? const Color(0xFF6366F1)
-                                                : Colors.white70,
-                                            fontWeight: FontWeight.bold,
+                                  final storeProvider = context.read<StoreProvider>();
+                                  final bannerUrl = storeProvider.getBannerUrl(player.activeBannerId);
+                                  final resolvedBanner = ApiConfig.resolveAssetUrl(bannerUrl);
+
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1E293B),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFF334155)),
+                                      image: resolvedBanner != null
+                                          ? DecorationImage(
+                                              image: CachedNetworkImageProvider(
+                                                resolvedBanner,
+                                                headers: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
+                                              ),
+                                              fit: BoxFit.cover,
+                                              colorFilter: ColorFilter.mode(
+                                                Colors.black.withOpacity(0.6),
+                                                BlendMode.darken,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        CosmeticAvatar(
+                                          radius: 20,
+                                          avatarUrl: player.avatar,
+                                          username: player.username,
+                                          activeAvatarId: player.activeAvatarId,
+                                          activeFrameId: player.activeFrameId,
+                                          isVip: player.isVip,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: VipUsernameText(
+                                            username: player.username,
+                                            isVip: player.isVip,
+                                            style: const TextStyle(
+                                                color: Colors.white, fontSize: 15),
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          player.username,
-                                          style: const TextStyle(
-                                              color: Colors.white, fontSize: 15),
-                                        ),
-                                      ),
-                                      if (player.isHost)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF6366F1)
-                                                .withOpacity(0.2),
-                                            borderRadius: BorderRadius.circular(8),
+                                        if (player.isHost)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF6366F1)
+                                                  .withOpacity(0.2),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Text(
+                                              'Criador',
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF6366F1)),
+                                            ),
                                           ),
-                                          child: const Text(
-                                            'Criador',
-                                            style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF6366F1)),
-                                          ),
-                                        ),
-                                    ],
+                                      ],
+                                    ),
                                   );
                                 },
                               ),

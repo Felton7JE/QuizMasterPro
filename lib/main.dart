@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quizmaster_pro/screens/create_room_screen.dart';
+import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/menu_screen.dart';
 import 'screens/team_lobby_screen.dart';
@@ -12,27 +13,54 @@ import 'screens/quiz_game_screen.dart';
 import 'screens/quiz_results_screen.dart';
 import 'screens/ranking_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/nickname_screen.dart';
 import 'screens/join_room_screen.dart';
 import 'screens/solo_setup_screen.dart';
+import 'screens/survival_game_screen.dart';
+import 'screens/time_attack_game_screen.dart';
+import 'screens/free_mode_results_screen.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/room_service.dart';
 import 'services/game_service.dart';
 import 'services/category_service.dart';
 import 'services/question_service.dart';
+import 'services/mission_service.dart';
+import 'services/store_service.dart';
+import 'services/solo_service.dart';
+import 'services/season_service.dart';
+import 'services/study_quiz_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/room_provider.dart';
 import 'providers/game_provider.dart';
 import 'providers/category_provider.dart';
 import 'providers/question_provider.dart';
 import 'providers/websocket_provider.dart';
+import 'providers/mission_provider.dart';
+import 'providers/store_provider.dart';
+import 'providers/solo_provider.dart';
+import 'providers/season_provider.dart';
+import 'providers/free_mode_provider.dart';
+import 'providers/study_quiz_provider.dart';
+import 'screens/quests_screen.dart';
+import 'screens/store_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/solo_map_screen.dart';
+import 'screens/solo_quiz_game_screen.dart';
+import 'screens/boss_battle_screen.dart';
+import 'screens/season_pass_screen.dart';
+import 'screens/season_map_screen.dart';
+import 'screens/study_mode_screen.dart';
+import 'screens/resource_download_screen.dart';
+import 'services/asset_manager_service.dart';
 
 void main() {
-  runApp(const QuizMasterApp());
+  runApp(const MeuQuizApp());
 }
 
-class QuizMasterApp extends StatelessWidget {
-  const QuizMasterApp({super.key});
+class MeuQuizApp extends StatelessWidget {
+  const MeuQuizApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +70,13 @@ class QuizMasterApp extends StatelessWidget {
         Provider<ApiService>(
           create: (_) => ApiService(),
           dispose: (_, apiService) => apiService.dispose(),
+        ),
+        Provider<MissionService>(
+          create: (_) => MissionService(),
+          dispose: (_, missionService) => missionService.dispose(),
+        ),
+        Provider<StoreService>(
+          create: (_) => StoreService(),
         ),
         ProxyProvider<ApiService, AuthService>(
           update: (_, apiService, __) => AuthService(apiService),
@@ -58,27 +93,75 @@ class QuizMasterApp extends StatelessWidget {
         ProxyProvider<ApiService, QuestionService>(
           update: (_, apiService, __) => QuestionService(apiService),
         ),
+        ProxyProvider<ApiService, SoloService>(
+          update: (_, apiService, __) => SoloService(apiService),
+        ),
+        ProxyProvider<ApiService, SeasonService>(
+          update: (_, apiService, __) => SeasonService(apiService),
+        ),
+        Provider<StudyQuizService>(
+          create: (_) => StudyQuizService(),
+        ),
+        ChangeNotifierProvider<AssetManagerService>(
+          create: (_) => AssetManagerService()..initialize(),
+        ),
         
         // Providers
         ChangeNotifierProxyProvider<AuthService, AuthProvider>(
           create: (context) => AuthProvider(context.read<AuthService>()),
-          update: (_, authService, __) => AuthProvider(authService),
+          update: (_, authService, previous) => previous ?? AuthProvider(authService),
+        ),
+        ChangeNotifierProxyProvider2<MissionService, AuthProvider, MissionProvider>(
+          create: (context) => MissionProvider(
+            context.read<MissionService>(),
+            context.read<AuthProvider>(),
+          ),
+          update: (_, missionService, authProvider, previous) => 
+            previous ?? MissionProvider(missionService, authProvider),
+        ),
+        ChangeNotifierProxyProvider2<StoreService, AuthProvider, StoreProvider>(
+          create: (context) => StoreProvider(
+            context.read<StoreService>(),
+            context.read<AuthProvider>(),
+          ),
+          update: (_, storeService, authProvider, previous) => 
+            previous ?? StoreProvider(storeService, authProvider),
         ),
         ChangeNotifierProxyProvider<RoomService, RoomProvider>(
           create: (context) => RoomProvider(context.read<RoomService>()),
-          update: (_, roomService, __) => RoomProvider(roomService),
+          update: (_, roomService, previous) => previous ?? RoomProvider(roomService),
         ),
         ChangeNotifierProxyProvider<GameService, GameProvider>(
           create: (context) => GameProvider(context.read<GameService>()),
-          update: (_, gameService, __) => GameProvider(gameService),
+          update: (_, gameService, previous) => previous ?? GameProvider(gameService),
         ),
         ChangeNotifierProxyProvider<CategoryService, CategoryProvider>(
           create: (context) => CategoryProvider(context.read<CategoryService>()),
-          update: (_, categoryService, __) => CategoryProvider(categoryService),
+          update: (_, categoryService, previous) => previous ?? CategoryProvider(categoryService),
         ),
         ChangeNotifierProxyProvider<QuestionService, QuestionProvider>(
           create: (context) => QuestionProvider(context.read<QuestionService>()),
-          update: (_, questionService, __) => QuestionProvider(questionService),
+          update: (_, questionService, previous) => previous ?? QuestionProvider(questionService),
+        ),
+        ChangeNotifierProxyProvider2<SoloService, AuthProvider, SoloProvider>(
+          create: (context) => SoloProvider(
+            context.read<SoloService>(),
+            context.read<AuthProvider>(),
+          ),
+          update: (_, soloService, authProvider, previous) => 
+            previous ?? SoloProvider(soloService, authProvider),
+        ),
+        ChangeNotifierProxyProvider<SeasonService, SeasonProvider>(
+          create: (context) => SeasonProvider(context.read<SeasonService>()),
+          update: (_, seasonService, previous) => previous ?? SeasonProvider(seasonService),
+        ),
+        ChangeNotifierProxyProvider<SoloService, FreeModeProvider>(
+          create: (context) => FreeModeProvider(context.read<SoloService>()),
+          update: (_, soloService, previous) => previous ?? FreeModeProvider(soloService),
+        ),
+        ChangeNotifierProxyProvider<StudyQuizService, StudyQuizProvider>(
+          create: (context) => StudyQuizProvider(service: context.read<StudyQuizService>()),
+          update: (_, studyService, previous) => previous ?? StudyQuizProvider(service: studyService),
         ),
         // WebSocket: ligação STOMP em tempo real
         ChangeNotifierProvider<WebSocketProvider>(
@@ -86,7 +169,8 @@ class QuizMasterApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'QuizMaster Pro',
+        title: 'Meu Quiz +',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           primarySwatch: Colors.indigo,
           primaryColor: const Color(0xFF6366F1),
@@ -100,8 +184,10 @@ class QuizMasterApp extends StatelessWidget {
         ),
         initialRoute: '/',
         routes: {
-          '/': (context) => const HomeScreen(),
+          '/': (context) => const SplashScreen(),
+          '/intro': (context) => const HomeScreen(),
           '/menu': (context) => const MenuScreen(),
+          '/nickname_setup': (context) => const NicknameScreen(),
           '/create-room': (context) => const CreateRoomScreen(),
           '/join-room': (context) => const JoinRoomScreen(),
           '/team-lobby': (context) => const TeamLobbyScreen(),
@@ -114,9 +200,32 @@ class QuizMasterApp extends StatelessWidget {
           '/ranking': (context) => const RankingScreen(),
           '/login': (context) => const LoginScreen(),
           '/solo-setup': (context) => const SoloSetupScreen(),
+          '/quests': (context) => const QuestsScreen(),
+          '/store': (context) => const StoreScreen(),
+          '/profile': (context) => const ProfileScreen(),
+          '/settings': (context) => const SettingsScreen(),
+          '/solo-map': (context) => const SoloMapScreen(),
+          '/solo-game': (context) => const SoloQuizGameScreen(),
+          '/boss-battle': (context) => const BossBattleScreen(),
+          '/season-pass': (context) => const SeasonPassScreen(),
+          '/season-map': (context) => const SeasonMapScreen(),
+          '/study-mode': (context) => const StudyModeScreen(),
+          '/survival-game': (context) => const SurvivalGameScreen(),
+          '/time-attack-game': (context) => const TimeAttackGameScreen(),
+          '/free-mode-results': (context) => const FreeModeResultsScreen(),
+          '/resource-download': (context) => ResourceDownloadScreen(
+                onDownloadComplete: () {
+                  final authProvider = context.read<AuthProvider>();
+                  final currentUser = authProvider.currentUser;
+                  if (currentUser != null && currentUser.username.contains('@')) {
+                    Navigator.pushReplacementNamed(context, '/nickname_setup');
+                  } else {
+                    Navigator.pushReplacementNamed(context, '/menu');
+                  }
+                },
+              ),
         },
       ),
     );
   }
 }
-

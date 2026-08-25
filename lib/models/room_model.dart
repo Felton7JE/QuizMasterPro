@@ -1,3 +1,24 @@
+enum ConnectionType {
+  online('online'),
+  hotspot('hotspot');
+
+  const ConnectionType(this.value);
+  final String value;
+}
+
+enum GameCategory {
+  math('math'),
+  portuguese('portuguese'),
+  history('history'),
+  geography('geography'),
+  science('science'),
+  english('english'),
+  mixed('mixed');
+
+  const GameCategory(this.value);
+  final String value;
+}
+
 enum GameMode { 
   TEAM('TEAM'),
   DUEL('DUEL'),
@@ -100,6 +121,7 @@ class RoomModel {
   final bool enableChat;
   final bool showRealTimeRanking;
   final bool allowReconnection;
+  final int? entryFee;
   final RoomStatus status;
   final String? hostId; // Pode ser null
   final String? hostName; // Novo campo
@@ -109,6 +131,8 @@ class RoomModel {
   final bool? isPrivate; // Novo campo
   final DateTime createdAt;
   final DateTime? startsAt; // NEW: início sincronizado do countdown (opcional)
+
+  bool get isPasswordProtected => (password != null && password!.isNotEmpty) || (isPrivate == true);
 
   RoomModel({
     required this.id,
@@ -127,6 +151,7 @@ class RoomModel {
     required this.enableChat,
     required this.showRealTimeRanking,
     required this.allowReconnection,
+    this.entryFee,
     required this.status,
     this.hostId,
     this.hostName,
@@ -181,6 +206,7 @@ class RoomModel {
       enableChat: json['enableChat'] ?? true,
       showRealTimeRanking: json['showRealTimeRanking'] ?? true,
       allowReconnection: json['allowReconnection'] ?? true,
+      entryFee: json['entryFee'],
       status: RoomStatus.fromString(json['status'] ?? 'WAITING'),
       hostId: json['hostId']?.toString(),
       hostName: json['hostName'],
@@ -211,6 +237,7 @@ class RoomModel {
       'enableChat': enableChat,
       'showRealTimeRanking': showRealTimeRanking,
       'allowReconnection': allowReconnection,
+      'entryFee': entryFee,
       'status': status.value,
       'hostId': hostId,
       'hostName': hostName,
@@ -239,7 +266,8 @@ class CreateRoomRequest {
   final bool enableChat;
   final bool showRealTimeRanking;
   final bool allowReconnection;
-  final String hostId;
+  final int? entryFee;
+  final int hostId; // Changed from String to int
 
   CreateRoomRequest({
     required this.roomName,
@@ -256,6 +284,7 @@ class CreateRoomRequest {
     required this.enableChat,
     required this.showRealTimeRanking,
     required this.allowReconnection,
+    this.entryFee,
     required this.hostId,
   });
 
@@ -275,6 +304,7 @@ class CreateRoomRequest {
       'enableChat': enableChat,
       'showRealTimeRanking': showRealTimeRanking,
       'allowReconnection': allowReconnection,
+      'entryFee': entryFee,
       'hostId': hostId,
     };
   }
@@ -289,6 +319,11 @@ class PlayerInRoom {
   final String? assignedCategory; // Nova propriedade para disciplina atribuída
   final bool isReady;
   final bool isHost;
+  final int? activeBannerId;
+  final int? activePhraseId;
+  final int? activeAvatarId;
+  final int? activeFrameId;
+  final bool isVip;
 
   PlayerInRoom({
     required this.userId,
@@ -299,6 +334,11 @@ class PlayerInRoom {
     this.assignedCategory, // Adicionar ao construtor
     required this.isReady,
     required this.isHost,
+    this.activeBannerId,
+    this.activePhraseId,
+    this.activeAvatarId,
+    this.activeFrameId,
+    this.isVip = false,
   });
 
   factory PlayerInRoom.fromJson(Map<String, dynamic> json) {
@@ -322,6 +362,11 @@ class PlayerInRoom {
       assignedCategory: parseAssignedCategory(json['assignedCategory']),
       isReady: json['isReady'] ?? false,
       isHost: json['isHost'] ?? false,
+      activeBannerId: json['activeBannerId'],
+      activePhraseId: json['activePhraseId'],
+      activeAvatarId: json['activeAvatarId'],
+      activeFrameId: json['activeFrameId'],
+      isVip: json['isVip'] ?? false,
     );
   }
 
@@ -335,6 +380,11 @@ class PlayerInRoom {
       'assignedCategory': assignedCategory, // Adicionar ao JSON
       'isReady': isReady,
       'isHost': isHost,
+      'activeBannerId': activeBannerId,
+      'activePhraseId': activePhraseId,
+      'activeAvatarId': activeAvatarId,
+      'activeFrameId': activeFrameId,
+      'isVip': isVip,
     };
   }
 }

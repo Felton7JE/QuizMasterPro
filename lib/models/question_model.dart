@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'room_model.dart';
 
 // Modelo independente para questões por categoria
@@ -24,7 +25,7 @@ class QuestionData {
 
   factory QuestionData.fromJson(Map<String, dynamic> json) {
     // ignore: avoid_print
-    print('🟡 DEBUG QuestionData: fromJson chamado com: $json');
+    debugPrint('🟡 DEBUG QuestionData: fromJson chamado com: $json');
     
     try {
       final question = QuestionData(
@@ -43,12 +44,12 @@ class QuestionData {
       );
       
       // ignore: avoid_print
-      print('🟡 DEBUG QuestionData: Questão criada com sucesso - id: ${question.id}');
+      debugPrint('🟡 DEBUG QuestionData: Questão criada com sucesso - id: ${question.id}');
       
       return question;
     } catch (e) {
       // ignore: avoid_print
-      print('❌ ERRO QuestionData: Erro ao criar questão - $e');
+      debugPrint('❌ ERRO QuestionData: Erro ao criar questão - $e');
       rethrow;
     }
   }

@@ -5,7 +5,14 @@ import 'package:provider/provider.dart';
 import '../providers/websocket_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/game_provider.dart';
+import '../providers/room_provider.dart';
 import '../services/websocket_service.dart';
+import '../models/game_model.dart';
+import '../widgets/in_game_chat_bubble.dart';
+import '../widgets/in_game_chat_sheet.dart';
+import '../widgets/in_game_chat_button.dart';
+import '../widgets/cosmetic_avatar.dart';
+import '../widgets/vip_badge_widget.dart';
 
 class KahootGameScreen extends StatefulWidget {
   const KahootGameScreen({super.key});
@@ -40,6 +47,14 @@ class _KahootGameScreenState extends State<KahootGameScreen>
   // Streak tracking
   int _currentStreak = 0;
   int _bestStreak = 0;
+
+  // Live leaderboard
+  List<LeaderboardEntry> _liveLeaderboard = [];
+
+  // In-Game Chat
+  InGameChatMessageEvent? _latestChatMessage;
+  Timer? _chatCooldownTimer;
+  int _chatCooldownSeconds = 0;
 
   // Timer
   int _timeLeft = 15;
@@ -80,6 +95,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
   @override
   void dispose() {
     _timer?.cancel();
+    _chatCooldownTimer?.cancel();
     _progressController.dispose();
     _questionController.dispose();
     // Remove listener ao sair
@@ -90,13 +106,74 @@ class _KahootGameScreenState extends State<KahootGameScreen>
 
   void _initGame() {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    _gameId = args?['gameId']?.toString();
-    _questionTime = (args?['questionTime'] as num?)?.toInt() ?? 15;
+    final roomProv = Provider.of<RoomProvider>(context, listen: false);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final wsProv = Provider.of<WebSocketProvider>(context, listen: false);
+
+    _gameId = args?['gameId']?.toString() ?? roomProv.currentRoom?.gameId;
+    _questionTime = (args?['questionTime'] as num?)?.toInt() ?? roomProv.currentRoom?.questionTime ?? 15;
 
     // Atualizar duração do progressController com o tempo real
     _progressController.duration = Duration(seconds: _questionTime);
 
-    final wsProv = Provider.of<WebSocketProvider>(context, listen: false);
+    // Inicializar o ranking com os jogadores da sala imediatamente
+    if (roomProv.currentRoom != null && roomProv.currentRoom!.players.isNotEmpty) {
+      _liveLeaderboard = roomProv.currentRoom!.players.asMap().entries.map((entry) {
+        final idx = entry.key;
+        final p = entry.value;
+        return LeaderboardEntry(
+          userId: p.userId,
+          username: p.username,
+          fullName: p.fullName,
+          avatar: p.avatar,
+          score: 0,
+          correctAnswers: 0,
+          totalAnswers: 0,
+          averageTime: 0.0,
+          position: idx + 1,
+          activeBannerId: p.activeBannerId,
+          activePhraseId: p.activePhraseId,
+          activeAvatarId: p.activeAvatarId,
+          activeFrameId: p.activeFrameId,
+          isVip: p.isVip,
+        );
+      }).toList();
+    } else {
+      final me = auth.currentUser;
+      if (me != null) {
+        _liveLeaderboard = [
+          LeaderboardEntry(
+            userId: me.id,
+            username: me.username,
+            fullName: me.fullName ?? me.username,
+            avatar: me.avatar,
+            score: 0,
+            correctAnswers: 0,
+            totalAnswers: 0,
+            averageTime: 0.0,
+            position: 1,
+            activeBannerId: me.activeBannerId,
+            activePhraseId: me.activePhraseId,
+            activeAvatarId: me.activeAvatarId,
+            activeFrameId: me.activeFrameId,
+            isVip: me.isVip,
+          ),
+        ];
+      }
+    }
+
+    // Carregar ranking do servidor se disponível
+    if (_gameId != null && _gameId!.isNotEmpty) {
+      final gp = Provider.of<GameProvider>(context, listen: false);
+      gp.loadLiveLeaderboard(_gameId!).then((_) {
+        if (mounted && gp.leaderboard.isNotEmpty) {
+          setState(() {
+            _liveLeaderboard = gp.leaderboard;
+          });
+        }
+      });
+    }
+
     wsProv.addListener(_onWebSocketEvent);
 
     // Consumir evento pendente (primeira pergunta já foi emitida ao iniciar)
@@ -104,6 +181,17 @@ class _KahootGameScreenState extends State<KahootGameScreen>
     if (pendingNext != null) {
       wsProv.clearNextQuestionEvent();
       _onNextQuestion(pendingNext);
+    }
+
+    final pendingLb = wsProv.lastLeaderboardUpdateEvent;
+    if (pendingLb != null) {
+      try {
+        final list = pendingLb.payload as List<dynamic>;
+        _liveLeaderboard = list.map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>)).toList();
+        wsProv.clearLeaderboardUpdateEvent();
+      } catch (e) {
+        if (kDebugMode) debugPrint('Erro ao parsear pending leaderboard no Kahoot: $e');
+      }
     }
 
     final pendingEnd = wsProv.lastGameEndedEvent;
@@ -128,6 +216,91 @@ class _KahootGameScreenState extends State<KahootGameScreen>
       wsProv.clearGameEndedEvent();
       _onGameEnded();
     }
+
+    final lbEvent = wsProv.lastLeaderboardUpdateEvent;
+    if (lbEvent != null) {
+      try {
+        final list = lbEvent.payload as List<dynamic>;
+        final parsed = list.map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>)).toList();
+        setState(() {
+          _liveLeaderboard = parsed;
+        });
+      } catch (e) {
+        if (kDebugMode) debugPrint('Erro ao parsear leaderboard via WS no Kahoot: $e');
+      }
+      wsProv.clearLeaderboardUpdateEvent();
+    }
+
+    final chatEvent = wsProv.lastChatMessageEvent;
+    if (chatEvent != null) {
+      setState(() {
+        _latestChatMessage = chatEvent;
+      });
+      wsProv.clearChatMessageEvent();
+    }
+  }
+
+  void _startChatCooldown() {
+    _chatCooldownTimer?.cancel();
+    setState(() {
+      _chatCooldownSeconds = 8;
+    });
+
+    _chatCooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_chatCooldownSeconds <= 1) {
+        timer.cancel();
+        setState(() {
+          _chatCooldownSeconds = 0;
+        });
+      } else {
+        setState(() {
+          _chatCooldownSeconds--;
+        });
+      }
+    });
+  }
+
+  void _sendChatMessage(String phrase, int? phraseId) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final roomProv = Provider.of<RoomProvider>(context, listen: false);
+    final wsProv = Provider.of<WebSocketProvider>(context, listen: false);
+    final user = auth.currentUser;
+    final roomCode = roomProv.currentRoom?.roomCode ?? '';
+
+    if (user == null) return;
+
+    final chatMessage = InGameChatMessageEvent(
+      roomCode: roomCode,
+      userId: user.id,
+      username: user.username,
+      phraseText: phrase,
+      avatar: user.avatar,
+      isVip: user.isVip,
+      activeFrameId: user.activeFrameId,
+      activePhraseId: phraseId ?? user.activePhraseId,
+      timestamp: DateTime.now(),
+    );
+
+    wsProv.sendChatMessage(roomCode, chatMessage);
+    _startChatCooldown();
+  }
+
+  void _openChatSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => InGameChatSheet(
+        cooldownSecondsRemaining: _chatCooldownSeconds,
+        onSelectPhrase: (phrase, phraseId) {
+          _sendChatMessage(phrase, phraseId);
+        },
+      ),
+    );
   }
 
   void _onNextQuestion(NextQuestionEvent event) {
@@ -220,17 +393,21 @@ class _KahootGameScreenState extends State<KahootGameScreen>
       );
 
       if (success && mounted) {
-        final correctAnswer = (_currentQuestion!['correctAnswer'] as num?)?.toInt() ?? -1;
-        final isCorrect = selectedIndex == correctAnswer;
+        final lastAns = gp.playerAnswers.isNotEmpty ? gp.playerAnswers.last : null;
+        final correctAnswer = lastAns?.correctAnswer ?? (_currentQuestion!['correctAnswer'] as num?)?.toInt() ?? -1;
+        final isCorrect = lastAns?.isCorrect ?? (correctAnswer != -1 && selectedIndex == correctAnswer);
+        final pointsGained = lastAns?.points ?? (isCorrect ? (100 + _timeLeft * 10) : 0);
+
+        if (lastAns?.correctAnswer != null) {
+          _currentQuestion!['correctAnswer'] = lastAns!.correctAnswer;
+        }
 
         if (isCorrect) {
           _currentStreak++;
           if (_currentStreak > _bestStreak) {
             _bestStreak = _currentStreak;
           }
-          final bonus = _timeLeft * 10;
-          // Guardar pendente para revelar APENAS quando o tempo esgotar
-          _pendingPointsEarned = 100 + bonus;
+          _pendingPointsEarned = pointsGained > 0 ? pointsGained : (100 + _timeLeft * 10);
           _pendingIsCorrect = true;
         } else {
           _currentStreak = 0;
@@ -238,10 +415,54 @@ class _KahootGameScreenState extends State<KahootGameScreen>
           _pendingIsCorrect = false;
         }
 
-        if (kDebugMode) print('Kahoot submit ok: correct=$isCorrect pts=$_pendingPointsEarned (pendente)');
+        // Atualizar pontuação e ranking local imediatamente
+        final myIdx = _liveLeaderboard.indexWhere((e) => e.userId == userId);
+        if (myIdx != -1) {
+          final cur = _liveLeaderboard[myIdx];
+          final newScore = cur.score + _pendingPointsEarned;
+          _liveLeaderboard[myIdx] = LeaderboardEntry(
+            userId: cur.userId,
+            username: cur.username,
+            fullName: cur.fullName,
+            avatar: cur.avatar,
+            score: newScore,
+            correctAnswers: cur.correctAnswers + (isCorrect ? 1 : 0),
+            totalAnswers: cur.totalAnswers + 1,
+            averageTime: cur.averageTime,
+            position: cur.position,
+            activeBannerId: cur.activeBannerId,
+            activePhraseId: cur.activePhraseId,
+            activeAvatarId: cur.activeAvatarId,
+            activeFrameId: cur.activeFrameId,
+            isVip: cur.isVip,
+          );
+          _liveLeaderboard.sort((a, b) => b.score.compareTo(a.score));
+          for (int i = 0; i < _liveLeaderboard.length; i++) {
+            final e = _liveLeaderboard[i];
+            _liveLeaderboard[i] = LeaderboardEntry(
+              userId: e.userId,
+              username: e.username,
+              fullName: e.fullName,
+              avatar: e.avatar,
+              score: e.score,
+              correctAnswers: e.correctAnswers,
+              totalAnswers: e.totalAnswers,
+              averageTime: e.averageTime,
+              position: i + 1,
+              activeBannerId: e.activeBannerId,
+              activePhraseId: e.activePhraseId,
+              activeAvatarId: e.activeAvatarId,
+              activeFrameId: e.activeFrameId,
+              isVip: e.isVip,
+            );
+          }
+          setState(() {});
+        }
+
+        if (kDebugMode) debugPrint('Kahoot submit ok: correct=$isCorrect pts=$_pendingPointsEarned (pendente)');
       }
     } catch (e) {
-      if (kDebugMode) print('Kahoot submit error: $e');
+      if (kDebugMode) debugPrint('Kahoot submit error: $e');
     }
   }
 
@@ -315,57 +536,91 @@ class _KahootGameScreenState extends State<KahootGameScreen>
     final correctAnswer = (_currentQuestion?['correctAnswer'] as num?)?.toInt() ?? -1;
     final category = _currentQuestion?['category']?.toString() ?? '';
 
+    final roomProv = Provider.of<RoomProvider>(context, listen: false);
+    final isChatEnabled = roomProv.currentRoom?.enableChat ?? true;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            _buildHeader(isSmallScreen, category),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-                child: Column(
-                  children: [
-                    // Card da pergunta — idêntico ao quiz_game_screen
-                    SlideTransition(
-                      position: _slideAnimation,
-                      child: _buildQuestionCard(questionText, isSmallScreen),
-                    ),
-                    SizedBox(height: isSmallScreen ? 24 : 32),
-
-                    // Opções em lista vertical — idêntico ao quiz_game_screen
-                    ...options.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final optionText = entry.value;
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
-                        child: _buildAnswerOption(
-                          index: index,
-                          optionText: optionText,
-                          letter: String.fromCharCode(65 + index),
-                          correctAnswer: correctAnswer,
-                          isSmallScreen: isSmallScreen,
+            Column(
+              children: [
+                _buildHeader(isSmallScreen, category),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                    child: Column(
+                      children: [
+                        // Card da pergunta — idêntico ao quiz_game_screen
+                        SlideTransition(
+                          position: _slideAnimation,
+                          child: _buildQuestionCard(questionText, isSmallScreen),
                         ),
-                      );
-                    }).toList(),
+                        SizedBox(height: isSmallScreen ? 24 : 32),
 
-                    // Feedback de pontos após revelar a resposta correta
-                    if (_showCorrectAnswer && _pointsEarned > 0) ...[
-                      SizedBox(height: isSmallScreen ? 16 : 24),
-                      _buildPointsFeedback(isSmallScreen),
-                    ],
+                        // Opções em lista vertical — idêntico ao quiz_game_screen
+                        ...options.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final optionText = entry.value;
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+                            child: _buildAnswerOption(
+                              index: index,
+                              optionText: optionText,
+                              letter: String.fromCharCode(65 + index),
+                              correctAnswer: correctAnswer,
+                              isSmallScreen: isSmallScreen,
+                            ),
+                          );
+                        }).toList(),
 
-                    // Mensagem de aguardar os outros enquanto o tempo desce
-                    if (_hasAnswered && !_showCorrectAnswer) ...[
-                      SizedBox(height: isSmallScreen ? 12 : 16),
-                      _buildWaitingMessage(isSmallScreen),
-                    ],
+                        // Feedback de pontos após revelar a resposta correta
+                        if (_showCorrectAnswer && _pointsEarned > 0) ...[
+                          SizedBox(height: isSmallScreen ? 16 : 24),
+                          _buildPointsFeedback(isSmallScreen),
+                        ],
 
-                    const SizedBox(height: 32),
-                  ],
+                        // Mensagem de aguardar os outros enquanto o tempo desce
+                        if (_hasAnswered && !_showCorrectAnswer) ...[
+                          SizedBox(height: isSmallScreen ? 12 : 16),
+                          _buildWaitingMessage(isSmallScreen),
+                        ],
+
+                        SizedBox(height: isSmallScreen ? 20 : 28),
+                        _buildLiveLeaderboard(isSmallScreen),
+
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
                 ),
+              ],
+            ),
+
+            // In-Game Chat Overlay (bolha animada)
+            Positioned(
+              top: 90,
+              left: 20,
+              right: 20,
+              child: InGameChatOverlay(
+                latestMessage: _latestChatMessage,
+                onDismiss: () {
+                  if (mounted) setState(() => _latestChatMessage = null);
+                },
               ),
             ),
+
+            // Botão flutuante de Chat / Reações
+            if (isChatEnabled)
+              Positioned(
+                bottom: isSmallScreen ? 16 : 24,
+                right: isSmallScreen ? 16 : 24,
+                child: InGameChatButton(
+                  cooldownSecondsRemaining: _chatCooldownSeconds,
+                  onTap: _openChatSheet,
+                ),
+              ),
           ],
         ),
       ),
@@ -664,6 +919,203 @@ class _KahootGameScreenState extends State<KahootGameScreen>
               color: Colors.white,
               fontWeight: FontWeight.w500,
               fontSize: isSmallScreen ? 14 : 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Live Leaderboard Widget ─────────────────────────────────────────────
+
+  Widget _buildLiveLeaderboard(bool isSmallScreen) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final myId = auth.currentUser?.id;
+    final top = _liveLeaderboard.take(3).toList();
+    LeaderboardEntry? me;
+    if (myId != null && !_liveLeaderboard.any((e) => e.userId == myId && e.position <= 3)) {
+      me = _liveLeaderboard.where((e) => e.userId == myId).isNotEmpty
+          ? _liveLeaderboard.firstWhere((e) => e.userId == myId)
+          : null;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(isSmallScreen ? 14 : 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF334155), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.leaderboard_rounded, color: Color(0xFF818CF8), size: 18),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Ranking ao Vivo',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 14 : 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'AO VIVO',
+                      style: TextStyle(
+                        color: const Color(0xFF34D399),
+                        fontSize: isSmallScreen ? 10 : 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...top.map((e) => _buildLeaderboardRow(e, isSmallScreen, highlight: myId != null && e.userId == myId)),
+          if (me != null) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Divider(color: const Color(0xFF334155).withOpacity(0.8), height: 12),
+            ),
+            _buildLeaderboardRow(me, isSmallScreen, highlight: true, isPlayerRow: true),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeaderboardRow(LeaderboardEntry e, bool isSmall, {bool highlight = false, bool isPlayerRow = false}) {
+    Widget rankWidget;
+
+    if (e.position == 1) {
+      rankWidget = const Text('🥇', style: TextStyle(fontSize: 16));
+    } else if (e.position == 2) {
+      rankWidget = const Text('🥈', style: TextStyle(fontSize: 16));
+    } else if (e.position == 3) {
+      rankWidget = const Text('🥉', style: TextStyle(fontSize: 16));
+    } else {
+      rankWidget = Text(
+        '#${e.position}',
+        style: TextStyle(
+          color: Colors.white70,
+          fontSize: isSmall ? 12 : 13,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: isSmall ? 10 : 12, vertical: isSmall ? 6 : 8),
+      decoration: BoxDecoration(
+        color: highlight
+            ? const Color(0xFF6366F1).withOpacity(0.2)
+            : const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: highlight ? const Color(0xFF818CF8) : const Color(0xFF334155),
+          width: highlight ? 1.5 : 1.0,
+        ),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            child: Center(child: rankWidget),
+          ),
+          const SizedBox(width: 8),
+          CosmeticAvatar(
+            radius: isSmall ? 14 : 16,
+            avatarUrl: e.avatar,
+            username: e.username,
+            activeAvatarId: e.activeAvatarId,
+            activeFrameId: e.activeFrameId,
+            isVip: e.isVip,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: VipUsernameText(
+                    username: e.username,
+                    isVip: e.isVip,
+                    style: TextStyle(
+                      color: highlight ? Colors.white : Colors.white70,
+                      fontSize: isSmall ? 12 : 13,
+                      fontWeight: highlight ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (isPlayerRow) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'VOCÊ',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${e.score} pts',
+            style: TextStyle(
+              color: const Color(0xFF10B981),
+              fontSize: isSmall ? 12 : 13,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],

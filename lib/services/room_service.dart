@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' hide Category;
 import '../models/room_model.dart';
 import '../models/category_models.dart';
 import 'api_service.dart';
@@ -8,42 +9,43 @@ class RoomService {
   RoomService(this._apiService);
 
   Future<RoomModel> createRoom(CreateRoomRequest request) async {
-    print('DEBUG RoomService: Iniciando createRoom...');
-    print('DEBUG RoomService: Body = ${request.toJson()}');
+    debugPrint('DEBUG RoomService: Iniciando createRoom...');
+    debugPrint('DEBUG RoomService: Body = ${request.toJson()}');
     
     final response = await _apiService.post('/api/rooms', request.toJson());
     
-    print('DEBUG RoomService: Response recebido: $response');
+    debugPrint('DEBUG RoomService: Response recebido: $response');
     
     final roomModel = RoomModel.fromJson(response);
     
-    print('DEBUG RoomService: RoomModel criado: ${roomModel.toJson()}');
+    debugPrint('DEBUG RoomService: RoomModel criado: ${roomModel.toJson()}');
     
     return roomModel;
   }
 
   Future<RoomModel> getRoomDetails(String roomCode) async {
     try {
-      print('DEBUG RoomService: Buscando detalhes da sala $roomCode');
+      debugPrint('DEBUG RoomService: Buscando detalhes da sala $roomCode');
       final response = await _apiService.get('/api/rooms/$roomCode');
-      print('DEBUG RoomService: Response getRoomDetails RAW: $response');
-      print('DEBUG RoomService: assignmentType no JSON: ${response['assignmentType']}');
+      debugPrint('DEBUG RoomService: Response getRoomDetails RAW: $response');
+      debugPrint('DEBUG RoomService: assignmentType no JSON: ${response['assignmentType']}');
       
       final roomModel = RoomModel.fromJson(response);
-      print('DEBUG RoomService: assignmentType após parsing: ${roomModel.assignmentType}');
-      print('DEBUG RoomService: RoomModel parseado com sucesso');
+      debugPrint('DEBUG RoomService: assignmentType após parsing: ${roomModel.assignmentType}');
+      debugPrint('DEBUG RoomService: RoomModel parseado com sucesso');
       
       return roomModel;
     } catch (e, stackTrace) {
-      print('DEBUG RoomService: Erro ao buscar detalhes da sala: $e');
-      print('DEBUG RoomService: Stack trace: $stackTrace');
+      debugPrint('DEBUG RoomService: Erro ao buscar detalhes da sala: $e');
+      debugPrint('DEBUG RoomService: Stack trace: $stackTrace');
       rethrow;
     }
   }
 
-  Future<RoomModel> joinRoom(String roomCode, String userId) async {
+  Future<RoomModel> joinRoom(String roomCode, String userId, {String? password}) async {
     final body = {
       'userId': userId,
+      if (password != null && password.trim().isNotEmpty) 'password': password.trim(),
     };
     final response = await _apiService.post('/api/rooms/$roomCode/join', body);
     return RoomModel.fromJson(response);
@@ -102,7 +104,7 @@ class RoomService {
       // (foundation import exists in this file scope)
       if (const bool.fromEnvironment('dart.vm.product') == false) {
         // Non-production: print the parsed response
-        print('DEBUG RoomService.startGame response: $parsed');
+        debugPrint('DEBUG RoomService.startGame response: $parsed');
       }
     } catch (_) {
       // ignore printing errors
@@ -111,9 +113,9 @@ class RoomService {
     return parsed;
   }
 
-  Future<void> playAgain(String roomCode, String hostId) async {
+  Future<void> playAgain(String roomCode, String userId) async {
     final body = {
-      'hostId': hostId,
+      'hostId': userId, // Backend currently accepts hostId in StartGameRequest, which we repurpose as userId
     };
     await _apiService.post('/api/rooms/$roomCode/play-again', body);
   }
@@ -144,12 +146,12 @@ class RoomService {
 
   // Método de teste para verificar conexão
   Future<void> testConnection() async {
-    print('DEBUG RoomService: Testando conexão...');
+    debugPrint('DEBUG RoomService: Testando conexão...');
     try {
       // Usar o novo método de filtrar salas
       await getPublicRooms(page: 0, size: 1);
     } catch (e) {
-      print('DEBUG RoomService: Erro de conexão: $e');
+      debugPrint('DEBUG RoomService: Erro de conexão: $e');
       throw e;
     }
   }
@@ -157,14 +159,14 @@ class RoomService {
   // ATUALIZADO: Método para atribuir categoria específica a um jogador usando DTO
   Future<bool> assignCategoryToPlayer(String roomCode, AssignCategoryRequest request) async {
   // Não engolir exceções: deixar ApiException subir para Provider capturar e mostrar mensagem real
-  print('DEBUG RoomService: Atribuindo categoria ${request.categoryId} ao jogador ${request.playerId} na sala $roomCode');
+  debugPrint('DEBUG RoomService: Atribuindo categoria ${request.categoryId} ao jogador ${request.playerId} na sala $roomCode');
   await _apiService.post('/api/rooms/$roomCode/assign-category', request.toJson());
   return true;
   }
 
   // ATUALIZADO: Método para distribuir categorias automaticamente usando DTO
   Future<bool> distributeCategoriesAutomatically(String roomCode, DistributeCategoriesRequest request) async {
-  print('DEBUG RoomService: Distribuindo categorias automaticamente na sala $roomCode pelo host ${request.hostId}');
+  debugPrint('DEBUG RoomService: Distribuindo categorias automaticamente na sala $roomCode pelo host ${request.hostId}');
   await _apiService.post('/api/rooms/$roomCode/distribute-categories', request.toJson());
   return true;
   }
@@ -172,13 +174,13 @@ class RoomService {
   // NOVO: Método para obter estatísticas de distribuição de categorias
   Future<CategoryDistributionStatsResponse?> getCategoryDistributionStats(String roomCode) async {
     try {
-      print('DEBUG RoomService: Buscando estatísticas de distribuição de categorias para sala $roomCode');
+      debugPrint('DEBUG RoomService: Buscando estatísticas de distribuição de categorias para sala $roomCode');
       
       final response = await _apiService.get('/api/rooms/$roomCode/category-distribution');
       
       return CategoryDistributionStatsResponse.fromJson(response);
     } catch (e) {
-      print('DEBUG RoomService: Erro ao buscar estatísticas de distribuição: $e');
+      debugPrint('DEBUG RoomService: Erro ao buscar estatísticas de distribuição: $e');
       return null;
     }
   }
@@ -186,13 +188,13 @@ class RoomService {
   // NOVO: Método para obter categorias disponíveis para um jogador
   Future<List<Category>> getAvailableCategoriesForPlayer(String roomCode, int playerId) async {
     try {
-      print('DEBUG RoomService: Buscando categorias disponíveis para jogador $playerId na sala $roomCode');
+      debugPrint('DEBUG RoomService: Buscando categorias disponíveis para jogador $playerId na sala $roomCode');
       
       final response = await _apiService.get('/api/rooms/$roomCode/available-categories/$playerId');
       
       return (response as List).map((c) => Category.fromJson(c)).toList();
     } catch (e) {
-      print('DEBUG RoomService: Erro ao buscar categorias disponíveis: $e');
+      debugPrint('DEBUG RoomService: Erro ao buscar categorias disponíveis: $e');
       return [];
     }
   }
@@ -200,13 +202,13 @@ class RoomService {
   // NOVO: Método para verificar se todas as categorias foram atribuídas
   Future<bool> areAllCategoriesAssigned(String roomCode) async {
     try {
-      print('DEBUG RoomService: Verificando se todas as categorias foram atribuídas na sala $roomCode');
+      debugPrint('DEBUG RoomService: Verificando se todas as categorias foram atribuídas na sala $roomCode');
       
       final response = await _apiService.get('/api/rooms/$roomCode/categories-assignment-status');
       
       return response as bool;
     } catch (e) {
-      print('DEBUG RoomService: Erro ao verificar status de atribuição: $e');
+      debugPrint('DEBUG RoomService: Erro ao verificar status de atribuição: $e');
       return false;
     }
   }
@@ -231,5 +233,12 @@ class RoomService {
       'count': count,
     };
     await _apiService.post('/api/rooms/$roomCode/add-bots', body);
+  }
+
+  Future<void> sendRematchRequest(String roomCode, String userId) async {
+    final body = {
+      'userId': int.tryParse(userId) ?? 0,
+    };
+    await _apiService.post('/api/rooms/$roomCode/rematch-request', body);
   }
 }

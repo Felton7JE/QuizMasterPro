@@ -13,7 +13,7 @@ import 'package:quizmaster_pro/main.dart';
 void main() {
   testWidgets('QuizMaster app should start and render HomeScreen buttons', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const QuizMasterApp());
+    await tester.pumpWidget(const MeuQuizApp());
 
     // Wait for initial animations or future builders
     await tester.pumpAndSettle();

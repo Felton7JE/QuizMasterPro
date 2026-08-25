@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:quizmaster_pro/models/game_model.dart';
 import 'package:quizmaster_pro/models/room_model.dart';
+import '../widgets/cosmetic_avatar.dart';
+import '../widgets/vip_badge_widget.dart';
 
 class TeamDetailsScreen extends StatelessWidget {
   final List<LeaderboardEntry> leaderboard;
@@ -187,15 +189,15 @@ class TeamDetailsScreen extends StatelessWidget {
         children: [
           Text(teamName, style: TextStyle(color: teamColor, fontWeight: FontWeight.bold, fontSize: 16)),
           const Divider(color: Colors.white24),
-          _buildAwardItem('👑 MVP', mvp?.username ?? '-', '${mvp?.score ?? 0} pts', teamColor),
-          _buildAwardItem('⚡ Flash', flash?.username ?? '-', '${flash?.averageTime.toStringAsFixed(1) ?? 0}s', teamColor),
-          _buildAwardItem('🎯 Sniper', sniper?.username ?? '-', '${sniper?.correctAnswers ?? 0}/${sniper?.totalAnswers ?? 0}', teamColor),
+          _buildAwardItem('👑 MVP', mvp, '${mvp?.score ?? 0} pts', teamColor),
+          _buildAwardItem('⚡ Flash', flash, '${flash?.averageTime.toStringAsFixed(1) ?? 0}s', teamColor),
+          _buildAwardItem('🎯 Sniper', sniper, '${sniper?.correctAnswers ?? 0}/${sniper?.totalAnswers ?? 0}', teamColor),
         ],
       ),
     );
   }
 
-  Widget _buildAwardItem(String title, String player, String stat, Color color) {
+  Widget _buildAwardItem(String title, LeaderboardEntry? player, String stat, Color color) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Column(
@@ -205,7 +207,26 @@ class TeamDetailsScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Text(player, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+              if (player != null) ...[
+                CosmeticAvatar(
+                  radius: 12,
+                  avatarUrl: player.avatar,
+                  username: player.username,
+                  activeAvatarId: player.activeAvatarId,
+                  activeFrameId: player.activeFrameId,
+                  isVip: player.isVip,
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: player != null
+                    ? VipUsernameText(
+                        username: player.username,
+                        isVip: player.isVip,
+                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      )
+                    : const Text('-', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              ),
               Text(stat, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.bold)),
             ],
           ),
@@ -234,7 +255,22 @@ class TeamDetailsScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: Text(p.username, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+                  CosmeticAvatar(
+                    radius: 12,
+                    avatarUrl: p.avatar,
+                    username: p.username,
+                    activeAvatarId: p.activeAvatarId,
+                    activeFrameId: p.activeFrameId,
+                    isVip: p.isVip,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: VipUsernameText(
+                      username: p.username,
+                      isVip: p.isVip,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
                   Text('${p.score}', style: TextStyle(color: teamColor, fontWeight: FontWeight.bold)),
                 ],
               ),

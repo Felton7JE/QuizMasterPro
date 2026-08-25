@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
+import '../config/app_config.dart';
+import '../services/api_service.dart';
 
 /// Evento recebido via WebSocket quando o host inicia o jogo.
 class GameStartedEvent {
@@ -83,6 +85,62 @@ class GameEndedEvent {
   }
 }
 
+/// Evento recebido via WebSocket quando uma frase/chat é enviada durante o jogo.
+class InGameChatMessageEvent {
+  final String roomCode;
+  final String userId;
+  final String username;
+  final String phraseText;
+  final String? avatar;
+  final bool isVip;
+  final int? activeFrameId;
+  final int? activePhraseId;
+  final DateTime timestamp;
+
+  InGameChatMessageEvent({
+    required this.roomCode,
+    required this.userId,
+    required this.username,
+    required this.phraseText,
+    this.avatar,
+    this.isVip = false,
+    this.activeFrameId,
+    this.activePhraseId,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+
+  factory InGameChatMessageEvent.fromJson(Map<String, dynamic> json) {
+    return InGameChatMessageEvent(
+      roomCode: json['roomCode']?.toString() ?? '',
+      userId: json['userId']?.toString() ?? '',
+      username: json['username']?.toString() ?? 'Jogador',
+      phraseText: json['phraseText']?.toString() ?? json['message']?.toString() ?? '',
+      avatar: json['avatar']?.toString(),
+      isVip: json['isVip'] == true,
+      activeFrameId: json['activeFrameId'] as int?,
+      activePhraseId: json['activePhraseId'] as int?,
+      timestamp: json['timestamp'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['timestamp'] as int)
+          : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': 'CHAT_MESSAGE',
+      'roomCode': roomCode,
+      'userId': userId,
+      'username': username,
+      'phraseText': phraseText,
+      'avatar': avatar,
+      'isVip': isVip,
+      'activeFrameId': activeFrameId,
+      'activePhraseId': activePhraseId,
+      'timestamp': timestamp.millisecondsSinceEpoch,
+    };
+  }
+}
+
 /// Evento recebido via WebSocket quando o Leaderboard é atualizado.
 class LeaderboardUpdateEvent {
   final String roomCode;
@@ -100,7 +158,7 @@ class LeaderboardUpdateEvent {
 
 /// Serviço singleton que gere a ligação WebSocket STOMP ao backend Spring.
 class WebSocketService {
-  static const String _wsUrl = 'ws://localhost:8080/ws/websocket';
+  static String get _wsUrl => AppConfig.wsUrl;
 
   StompClient? _client;
   bool _connected = false;
@@ -118,14 +176,23 @@ class WebSocketService {
   /// Callback chamado quando o Leaderboard é atualizado
   Function(LeaderboardUpdateEvent)? onLeaderboardUpdate;
 
+  /// Callback chamado quando uma frase/chat em jogo é recebida
+  Function(InGameChatMessageEvent)? onChatMessage;
+
   /// Callback chamado quando o evento RETURN_TO_LOBBY é recebido
   Function()? onReturnToLobby;
+
+  /// Callback chamado quando o evento REMATCH_REQUEST é recebido
+  Function(String)? onRematchRequest;
 
   /// Callback chamado quando a ligação é estabelecida
   Function()? onConnected;
 
   /// Callback chamado quando a ligação falha
   Function(String error)? onError;
+
+  /// Callback chamado quando o WebSocket desconecta
+  Function()? onDisconnected;
 
   bool get isConnected => _connected;
 
@@ -136,44 +203,57 @@ class WebSocketService {
     Function(NextQuestionEvent)? onNextQuestion,
     Function(GameEndedEvent)? onGameEnded,
     Function(LeaderboardUpdateEvent)? onLeaderboardUpdate,
+    Function(InGameChatMessageEvent)? onChatMessage,
     Function()? onReturnToLobby,
+    Function(String)? onRematchRequest,
     Function()? onConnected,
+    Function()? onDisconnected,
     Function(String)? onError,
   }) {
     this.onGameStarted = onGameStarted;
     this.onNextQuestion = onNextQuestion;
     this.onGameEnded = onGameEnded;
     this.onLeaderboardUpdate = onLeaderboardUpdate;
+    this.onChatMessage = onChatMessage;
     this.onReturnToLobby = onReturnToLobby;
+    this.onRematchRequest = onRematchRequest;
     this.onConnected = onConnected;
+    this.onDisconnected = onDisconnected;
     this.onError = onError;
     _subscribedRoom = roomCode;
 
-    if (kDebugMode) print('🔌 WebSocket: A ligar a $_wsUrl para sala $roomCode...');
+    if (kDebugMode) debugPrint('🔌 WebSocket: A ligar a $_wsUrl para sala $roomCode...');
 
     _client = StompClient(
       config: StompConfig(
         url: _wsUrl,
+        webSocketConnectHeaders: {
+          if (ApiService.token != null) 'Authorization': 'Bearer ${ApiService.token}',
+        },
+        stompConnectHeaders: {
+          if (ApiService.token != null) 'Authorization': 'Bearer ${ApiService.token}',
+        },
         onConnect: _onConnect,
         onDisconnect: (_) {
           _connected = false;
-          if (kDebugMode) print('🔌 WebSocket: Desligado');
+          if (kDebugMode) debugPrint('🔌 WebSocket: Desligado');
+          this.onDisconnected?.call();
         },
         onStompError: (frame) {
           _connected = false;
           final msg = frame.body ?? 'Erro desconhecido';
-          if (kDebugMode) print('❌ WebSocket STOMP error: $msg');
+          if (kDebugMode) debugPrint('❌ WebSocket STOMP error: $msg');
           this.onError?.call(msg);
         },
         onWebSocketError: (error) {
           _connected = false;
           final msg = error.toString();
-          if (kDebugMode) print('❌ WebSocket error: $msg');
+          if (kDebugMode) debugPrint('❌ WebSocket error: $msg');
           this.onError?.call(msg);
         },
         reconnectDelay: const Duration(seconds: 5),
-        heartbeatIncoming: const Duration(seconds: 0),
-        heartbeatOutgoing: const Duration(seconds: 0),
+        heartbeatIncoming: const Duration(seconds: 10),
+        heartbeatOutgoing: const Duration(seconds: 10),
       ),
     );
     _client!.activate();
@@ -181,7 +261,7 @@ class WebSocketService {
 
   void _onConnect(StompFrame frame) {
     _connected = true;
-    if (kDebugMode) print('✅ WebSocket: Ligado com sucesso!');
+    if (kDebugMode) debugPrint('✅ WebSocket: Ligado com sucesso!');
     onConnected?.call();
 
     if (_subscribedRoom != null) {
@@ -193,7 +273,7 @@ class WebSocketService {
     if (_client == null || !_connected) return;
 
     final topic = '/topic/room/$roomCode';
-    if (kDebugMode) print('📡 WebSocket: A subscrever $topic');
+    if (kDebugMode) debugPrint('📡 WebSocket: A subscrever $topic');
 
     _client!.subscribe(
       destination: topic,
@@ -202,7 +282,7 @@ class WebSocketService {
         try {
           final json = jsonDecode(frame.body!) as Map<String, dynamic>;
           final type = json['type'] as String?;
-          if (kDebugMode) print('📨 WebSocket: Evento recebido: $type');
+          if (kDebugMode) debugPrint('📨 WebSocket: Evento recebido: $type');
 
           if (type == 'GAME_STARTED') {
             final event = GameStartedEvent.fromJson(json);
@@ -216,13 +296,38 @@ class WebSocketService {
           } else if (type == 'LEADERBOARD_UPDATE') {
             final event = LeaderboardUpdateEvent.fromJson(json);
             onLeaderboardUpdate?.call(event);
+          } else if (type == 'CHAT_MESSAGE' || type == 'IN_GAME_CHAT') {
+            final event = InGameChatMessageEvent.fromJson(json);
+            onChatMessage?.call(event);
           } else if (type == 'RETURN_TO_LOBBY') {
             onReturnToLobby?.call();
+          } else if (type == 'REMATCH_REQUEST') {
+            final requesterName = json['requesterName'] as String?;
+            if (requesterName != null) {
+              onRematchRequest?.call(requesterName);
+            }
           }
         } catch (e) {
-          if (kDebugMode) print('❌ WebSocket: Erro a processar evento: $e');
+          if (kDebugMode) debugPrint('❌ WebSocket: Erro a processar evento: $e');
         }
       },
+    );
+  }
+
+  /// Envia uma frase/mensagem de chat durante o jogo
+  void sendChatMessage(String roomCode, InGameChatMessageEvent message) {
+    if (_client == null || !_connected) {
+      if (kDebugMode) debugPrint('⚠️ WebSocket: Não conectado para enviar mensagem de chat');
+      return;
+    }
+
+    final destination = '/app/room/$roomCode/chat';
+    final payload = jsonEncode(message.toJson());
+    if (kDebugMode) debugPrint('💬 WebSocket: Enviando chat para $destination: $payload');
+
+    _client!.send(
+      destination: destination,
+      body: payload,
     );
   }
 
@@ -240,6 +345,6 @@ class WebSocketService {
     _client = null;
     _connected = false;
     _subscribedRoom = null;
-    if (kDebugMode) print('🔌 WebSocket: Desligado manualmente');
+    if (kDebugMode) debugPrint('🔌 WebSocket: Desligado manualmente');
   }
 }

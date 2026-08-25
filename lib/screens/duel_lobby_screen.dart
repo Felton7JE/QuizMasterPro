@@ -1,13 +1,21 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../providers/room_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/websocket_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
 import '../models/room_model.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/cosmetic_avatar.dart';
+import '../widgets/vip_badge_widget.dart';
 import '../utils/snackbar_utils.dart';
 import '../utils/format_utils.dart';
+import '../providers/store_provider.dart';
+import '../config/api_config.dart';
+import '../services/api_service.dart';
 
 class DuelLobbyScreen extends StatefulWidget {
   const DuelLobbyScreen({super.key});
@@ -206,9 +214,10 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
       return Scaffold(
         backgroundColor: const Color(0xFF0F172A),
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
               const Icon(Icons.error_outline, color: Colors.red, size: 48),
               const SizedBox(height: 16),
               Text(
@@ -225,8 +234,9 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
             ],
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
     final authProvider = Provider.of<AuthProvider>(context);
     final currentUser = authProvider.currentUser;
@@ -246,7 +256,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
 
     final isHost = hostPlayer.userId == currentUser?.id;
 
-    print(
+    debugPrint(
         'DEBUG LOBBY: currentUser?.id=${currentUser?.id}, hostPlayer.userId=${hostPlayer.userId}, isHost=$isHost');
 
     final challengerPlayer = _currentRoom!.players.firstWhere(
@@ -299,11 +309,30 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              Text(
+        child: Consumer<WebSocketProvider>(
+          builder: (context, wsProvider, _) {
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                children: [
+                  if (!wsProvider.isConnected)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.wifi_off, color: Colors.white, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(child: Text('Conexão perdida. Tentando reconectar...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                        ],
+                      ),
+                    ),
+                  Text(
                 _currentRoom!.roomName,
                 style: const TextStyle(
                     fontSize: 28,
@@ -360,6 +389,24 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
                         ),
                       ],
                     ),
+                    if (_currentRoom!.entryFee != null && _currentRoom!.entryFee! > 0) ...[
+                      const Divider(color: Color(0xFF334155), height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.monetization_on,
+                              color: Colors.amber, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Aposta: ${_currentRoom!.entryFee} Moedas',
+                            style: const TextStyle(
+                                color: Colors.amber, 
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -373,6 +420,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
                     // Host
                     Expanded(
                       child: _buildPlayerCard(
+                        context: context,
                         player: hostPlayer,
                         isHost: true,
                         isEmpty: false,
@@ -409,6 +457,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
                     // Challenger
                     Expanded(
                       child: _buildPlayerCard(
+                        context: context,
                         player: challengerPlayer,
                         isHost: false,
                         isEmpty: !isRoomFull,
@@ -447,19 +496,25 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
               ],
             ],
           ),
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  ),
+);
   }
 
   Widget _buildPlayerCard({
+    required BuildContext context,
     required PlayerInRoom player,
     required bool isHost,
     required bool isEmpty,
     required Color color,
   }) {
+    final storeProvider = context.read<StoreProvider>();
+    final bannerUrl = isEmpty ? null : storeProvider.getBannerUrl(player.activeBannerId);
+    final resolvedBanner = ApiConfig.resolveAssetUrl(bannerUrl);
+
     return Container(
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(16),
@@ -475,55 +530,86 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
                 )
               ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor:
-                isEmpty ? const Color(0xFF334155) : color.withOpacity(0.2),
-            child: isEmpty
-                ? const Icon(Icons.person_outline, size: 40, color: Colors.grey)
-                : Text(
-                    player.username.substring(0, 1).toUpperCase(),
-                    style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: color),
-                  ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isEmpty ? 'Aguardando...' : player.username,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isEmpty ? Colors.grey : Colors.white,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (isHost && !isEmpty) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Stack(
+          children: [
+            if (resolvedBanner != null)
+              Positioned.fill(
+                child: CachedNetworkImage(
+                  imageUrl: resolvedBanner,
+                  httpHeaders: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
+                  fit: BoxFit.cover,
+                  color: Colors.black.withOpacity(0.6),
+                  colorBlendMode: BlendMode.darken,
+                  placeholder: (context, url) => Container(color: const Color(0xFF1E293B)),
+                  errorWidget: (context, url, error) => const SizedBox.shrink(),
+                ),
               ),
-              child: Text(
-                'Criador',
-                style: TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.bold, color: color),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  isEmpty
+                      ? CircleAvatar(
+                          radius: 40,
+                          backgroundColor: const Color(0xFF334155),
+                          child: const Icon(Icons.person_outline, size: 40, color: Colors.grey),
+                        )
+                      : CosmeticAvatar(
+                          radius: 40,
+                          avatarUrl: player.avatar,
+                          username: player.username,
+                          activeAvatarId: player.activeAvatarId,
+                          activeFrameId: player.activeFrameId,
+                          isVip: player.isVip,
+                        ),
+                  const SizedBox(height: 16),
+                  isEmpty
+                      ? const Text(
+                          'Aguardando...',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                          textAlign: TextAlign.center,
+                        )
+                      : VipUsernameText(
+                          username: player.username,
+                          isVip: player.isVip,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                  if (isHost && !isEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Criador',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.bold, color: color),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
+
 
   Widget _buildDetailItem(IconData icon, String value, String label) {
     return Column(
