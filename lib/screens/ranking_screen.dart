@@ -1,14 +1,15 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/solo_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../widgets/cosmetic_avatar.dart';
+import '../widgets/app_logo_text.dart';
 import '../widgets/vip_badge_widget.dart';
 import '../config/api_config.dart';
 import '../services/api_service.dart';
 import '../providers/store_provider.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -61,7 +62,7 @@ class _RankingScreenState extends State<RankingScreen> {
             'games': item['gamesPlayed'] ?? 0,
             'streak': item['streak'] ?? 0,
             'level': item['level'] ?? 1,
-            'avatar': item['avatar'] ?? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop&crop=face',
+            'avatar': item['avatar'],
             'change': 0,
             'badges': item['activeTitleName'] != null ? [item['activeTitleName']] : [],
             'bannerUrl': item['activeBannerUrl'],
@@ -80,7 +81,7 @@ class _RankingScreenState extends State<RankingScreen> {
             'games': 0,
             'streak': item['highestStreak'] ?? 0,
             'level': 1,
-            'avatar': 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop&crop=face',
+            'avatar': item['avatar'],
             'change': 0,
             'badges': [],
             'bannerUrl': null,
@@ -117,14 +118,7 @@ class _RankingScreenState extends State<RankingScreen> {
         elevation: 0,
         title: Row(
           children: [
-            Text(
-              'Meu Quiz +',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 18 : 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            AppLogoText(fontSize: isSmallScreen ? 18 : 20),
 
           ],
         ),
@@ -149,7 +143,7 @@ class _RankingScreenState extends State<RankingScreen> {
         ],
       ),
       body: _isLoading 
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)))
+          ? const Center(child: LoadingLogo(size: 60))
           : SingleChildScrollView(
         padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
         child: Column(
@@ -165,11 +159,16 @@ class _RankingScreenState extends State<RankingScreen> {
               ),
             ),
             SizedBox(height: isSmallScreen ? 6 : 8),
-            Text(
-              'Veja os melhores jogadores do Meu Quiz +',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 14 : 16,
-                color: Colors.grey,
+            RichText(
+              text: TextSpan(
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 14 : 16,
+                  color: Colors.grey,
+                ),
+                children: [
+                  const TextSpan(text: 'Veja os melhores jogadores do '),
+                  AppLogoText.getSpan(fontSize: isSmallScreen ? 14 : 16),
+                ],
               ),
             ),
             SizedBox(height: isSmallScreen ? 24 : 32),
@@ -478,7 +477,7 @@ class _RankingScreenState extends State<RankingScreen> {
                           imageUrl: resolvedBanner,
                           httpHeaders: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
                           fit: BoxFit.cover,
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                           colorBlendMode: BlendMode.darken,
                           placeholder: (context, url) => Container(color: const Color(0xFF1E293B)),
                           errorWidget: (context, url, error) => const SizedBox.shrink(),
@@ -525,7 +524,7 @@ class _RankingScreenState extends State<RankingScreen> {
                                     shape: BoxShape.circle,
                                   ),
                                   child: Text(
-                                    '${place}º',
+                                    '$placeº',
                                     style: TextStyle(
                                       fontSize: isSmallScreen ? 8 : 12,
                                       fontWeight: FontWeight.bold,
@@ -598,7 +597,7 @@ class _RankingScreenState extends State<RankingScreen> {
                               children: player['badges'].map<Widget>((badge) => Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: color.withOpacity(0.2),
+                                  color: color.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -638,8 +637,8 @@ class _RankingScreenState extends State<RankingScreen> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    color.withOpacity(0.8),
-                    color.withOpacity(0.4),
+                    color.withValues(alpha: 0.8),
+                    color.withValues(alpha: 0.4),
                   ],
                 ),
                 borderRadius: const BorderRadius.only(
@@ -685,17 +684,17 @@ class _RankingScreenState extends State<RankingScreen> {
                   ),
                 ),
                 if (!isSmallScreen)
-                  Column(
+                  const Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Text(
+                      Text(
                         '1,247 jogadores ativos',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
                         ),
                       ),
-                      const Text(
+                      Text(
                         'Atualizado há 5 min',
                         style: TextStyle(
                           fontSize: 12,
@@ -748,7 +747,7 @@ class _RankingScreenState extends State<RankingScreen> {
         return Container(
           margin: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
           decoration: BoxDecoration(
-            color: isCurrentUser ? const Color(0xFF6366F1).withOpacity(0.1) : const Color(0xFF1E293B),
+            color: isCurrentUser ? const Color(0xFF6366F1).withValues(alpha: 0.1) : const Color(0xFF1E293B),
             borderRadius: BorderRadius.circular(8),
             border: isCurrentUser ? Border.all(color: const Color(0xFF6366F1)) : null,
           ),
@@ -764,7 +763,7 @@ class _RankingScreenState extends State<RankingScreen> {
                           ? {'Authorization': 'Bearer ${ApiService.token}'}
                           : null,
                       fit: BoxFit.cover,
-                      color: Colors.black.withOpacity(0.6),
+                      color: Colors.black.withValues(alpha: 0.6),
                       colorBlendMode: BlendMode.darken,
                       placeholder: (context, url) => Container(color: const Color(0xFF1E293B)),
                       errorWidget: (context, url, error) => const SizedBox.shrink(),

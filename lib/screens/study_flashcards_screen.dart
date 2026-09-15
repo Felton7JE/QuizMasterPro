@@ -147,7 +147,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> with Sing
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E293B),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.indigo.withOpacity(0.3)),
+                      border: Border.all(color: Colors.indigo.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -163,9 +163,9 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> with Sing
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _emerald.withOpacity(0.15),
+                      color: _emerald.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: _emerald.withOpacity(0.4)),
+                      border: Border.all(color: _emerald.withValues(alpha: 0.4)),
                     ),
                     child: Row(
                       children: [
@@ -307,7 +307,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> with Sing
                   side: const BorderSide(color: Colors.amberAccent, width: 1.5),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  backgroundColor: Colors.amber.withOpacity(0.08),
+                  backgroundColor: Colors.amber.withValues(alpha: 0.08),
                 ),
               ),
             ),
@@ -327,10 +327,10 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> with Sing
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.indigoAccent.withOpacity(0.5), width: 1.5),
+        border: Border.all(color: Colors.indigoAccent.withValues(alpha: 0.5), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.indigoAccent.withOpacity(0.15),
+            color: Colors.indigoAccent.withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 8),
           )
@@ -346,7 +346,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> with Sing
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.indigo.withOpacity(0.25),
+                  color: Colors.indigo.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -402,10 +402,10 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> with Sing
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _emeraldAccent.withOpacity(0.6), width: 1.5),
+        border: Border.all(color: _emeraldAccent.withValues(alpha: 0.6), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: _emeraldAccent.withOpacity(0.15),
+            color: _emeraldAccent.withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 8),
           )
@@ -421,7 +421,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> with Sing
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _emerald.withOpacity(0.25),
+                  color: _emerald.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
@@ -452,12 +452,12 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> with Sing
             ),
           ),
           const Spacer(),
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.auto_awesome_rounded, size: 16, color: _emeraldAccent),
-              const SizedBox(width: 6),
-              const Text(
+              Icon(Icons.auto_awesome_rounded, size: 16, color: _emeraldAccent),
+              SizedBox(width: 6),
+              Text(
                 'Memorizado pelo Tutor IA',
                 style: TextStyle(fontSize: 12, color: _emeraldAccent),
               ),

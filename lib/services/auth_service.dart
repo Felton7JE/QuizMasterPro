@@ -8,8 +8,8 @@ class AuthService {
   final ApiService _apiService;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     // Para Web, use 'clientId'. Para obter token no Android/iOS, use 'serverClientId' e configure o SHA-1 no Google Cloud Console.
-    clientId: kIsWeb ? '502311568221-kfmk538ritii93mof5k3bls1p1p0e2qk.apps.googleusercontent.com' : null, 
-    serverClientId: '502311568221-kfmk538ritii93mof5k3bls1p1p0e2qk.apps.googleusercontent.com',
+    clientId: kIsWeb ? '502311568221-o528dh1d2e77055t3jvb6nma2djr7gps.apps.googleusercontent.com' : null, 
+    serverClientId: kIsWeb ? null : '502311568221-o528dh1d2e77055t3jvb6nma2djr7gps.apps.googleusercontent.com',
   );
 
   AuthService(this._apiService);

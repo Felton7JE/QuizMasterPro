@@ -15,13 +15,8 @@ class AssetManagerService extends ChangeNotifier {
   List<DownloadTask> _tasks = [];
 
   Future<void> initialize() async {
-    FileDownloader().configureNotificationForGroup(
-      'assets',
-      running: const TaskNotification('Baixando Recursos', '{progress}%'),
-      complete: const TaskNotification('Pronto', 'Recursos atualizados'),
-      error: const TaskNotification('Erro', 'Falha ao baixar recursos'),
-      paused: const TaskNotification('Pausado', 'Download pausado'),
-    );
+    // Notifications disabled to prevent spamming the Android notification tray
+    // The user already sees the progress on the ResourceDownloadScreen
   }
 
   Future<void> startDownload(List<String> urls) async {
@@ -81,19 +76,16 @@ class AssetManagerService extends ChangeNotifier {
 
     await FileDownloader().downloadBatch(
       _tasks,
-      batchProgressCallback: (succeeded, failed) {},
-      taskProgressCallback: (taskProgress) {},
+      batchProgressCallback: (succeeded, failed) {
+        downloadedAssets = succeeded + failed;
+        progress = downloadedAssets / totalAssets;
+        notifyListeners();
+      },
       taskStatusCallback: (update) {
         final task = update.task;
         final status = update.status;
         if (status == TaskStatus.complete) {
           _localPaths[task.url] = '${dir.path}/assets/${task.filename}';
-          downloadedAssets++;
-          progress = downloadedAssets / totalAssets;
-          if (downloadedAssets == totalAssets) {
-            isDownloading = false;
-          }
-          notifyListeners();
         } else if (status == TaskStatus.paused) {
           isPaused = true;
           notifyListeners();
@@ -105,6 +97,7 @@ class AssetManagerService extends ChangeNotifier {
     );
     
     isDownloading = false;
+    progress = 1.0;
     notifyListeners();
   }
 
@@ -129,7 +122,7 @@ class AssetManagerService extends ChangeNotifier {
   }
 
   static String getFileNameFromUrl(String url) {
-    return url.hashCode.toString() + '_' + Uri.parse(url).pathSegments.last;
+    return '${url.hashCode}_${Uri.parse(url).pathSegments.last}';
   }
 
   String? getLocalPathSync(String url) {

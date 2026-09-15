@@ -16,6 +16,7 @@ import '../utils/snackbar_utils.dart';
 import '../utils/format_utils.dart';
 import '../providers/store_provider.dart';
 import '../config/api_config.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class KahootLobbyScreen extends StatefulWidget {
   const KahootLobbyScreen({super.key});
@@ -197,7 +198,7 @@ class _KahootLobbyScreenState extends State<KahootLobbyScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _isStartingGame = false);
-        AppSnackBar.showError(context, 'Erro ao iniciar jogo: $e');
+        AppSnackBar.showError(context, e.toString());
       }
     }
   }
@@ -207,7 +208,7 @@ class _KahootLobbyScreenState extends State<KahootLobbyScreen>
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF0F172A),
-        body: Center(child: CircularProgressIndicator(color: Color(0xFF6366F1))),
+        body: Center(child: LoadingLogo(size: 60)),
       );
     }
 
@@ -424,7 +425,7 @@ class _KahootLobbyScreenState extends State<KahootLobbyScreen>
                                               ),
                                               fit: BoxFit.cover,
                                               colorFilter: ColorFilter.mode(
-                                                Colors.black.withOpacity(0.6),
+                                                Colors.black.withValues(alpha: 0.6),
                                                 BlendMode.darken,
                                               ),
                                             )
@@ -455,7 +456,7 @@ class _KahootLobbyScreenState extends State<KahootLobbyScreen>
                                                 horizontal: 8, vertical: 4),
                                             decoration: BoxDecoration(
                                               color: const Color(0xFF6366F1)
-                                                  .withOpacity(0.2),
+                                                  .withValues(alpha: 0.2),
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: const Text(
@@ -482,7 +483,7 @@ class _KahootLobbyScreenState extends State<KahootLobbyScreen>
               // Botões — mesmo padrão do Duel Lobby
               if (isHost) ...[
                 if (_isStartingGame)
-                  const CircularProgressIndicator(color: Color(0xFF6366F1))
+                  const LoadingLogo(size: 60)
                 else
                   SizedBox(
                     width: double.infinity,
@@ -501,7 +502,7 @@ class _KahootLobbyScreenState extends State<KahootLobbyScreen>
                   style: TextStyle(color: Colors.white70, fontSize: 16),
                 ),
                 const SizedBox(height: 16),
-                const CircularProgressIndicator(color: Color(0xFF6366F1)),
+                const LoadingLogo(size: 60),
               ],
             ],
           ),

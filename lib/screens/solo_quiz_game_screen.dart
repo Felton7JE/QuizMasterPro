@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/solo_provider.dart';
+import '../services/app_audio_service.dart';
 import '../services/solo_service.dart';
 import '../services/websocket_service.dart';
 import '../widgets/cosmetic_avatar.dart';
@@ -12,6 +14,8 @@ import '../widgets/vip_badge_widget.dart';
 import '../widgets/in_game_chat_bubble.dart';
 import '../widgets/in_game_chat_sheet.dart';
 import '../widgets/in_game_chat_button.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
+import '../utils/snackbar_utils.dart';
 
 class SoloQuizGameScreen extends StatefulWidget {
   const SoloQuizGameScreen({super.key});
@@ -58,10 +62,13 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
   int _chatCooldownSeconds = 0;
 
   final List<Map<String, dynamic>> _answeredQuestions = [];
+  bool _vibrationEnabled = true;
+  bool _timerSfxPlayed = false; // Evita repetir o som de timer
 
   @override
   void initState() {
     super.initState();
+    _loadVibrationSetting();
     _timerAnimController = AnimationController(
       vsync: this,
       duration: Duration(seconds: _questionTimeSeconds),
@@ -100,6 +107,15 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
       final levelNumber = args?['levelNumber'] as int? ?? 1;
       _initSoloGame(levelNumber);
     });
+  }
+
+  Future<void> _loadVibrationSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _vibrationEnabled = prefs.getBool('vibrationEnabled') ?? true;
+      });
+    }
   }
 
   @override
@@ -219,6 +235,14 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
       _isLoading = false;
     });
 
+    // Inicia a música certa para o nível
+    final audio = context.read<AppAudioService>();
+    if (data.isBossLevel) {
+      audio.playBossMusic();
+    } else {
+      audio.playGameMusic();
+    }
+
     _startQuestionTurn();
   }
 
@@ -233,6 +257,7 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
       _botAnsweredThisTurn = false;
       _botWasCorrectThisTurn = null;
       _playerDamagedThisTurn = false;
+      _timerSfxPlayed = false; // Reset do som do timer
     });
 
     _timerAnimController.reset();
@@ -243,6 +268,11 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
     _questionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_timeRemaining > 0) {
         setState(() => _timeRemaining--);
+        // Toca o som do timer nos últimos 5 segundos
+        if (_timeRemaining <= 5 && !_timerSfxPlayed && mounted) {
+          _timerSfxPlayed = true;
+          context.read<AppAudioService>().playSfxTimer();
+        }
       } else {
         timer.cancel();
         if (!_hasAnswered) {
@@ -301,12 +331,14 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
     final basePoints = 100 * multiplier;
     final pointsEarned = isCorrect ? (basePoints + speedBonus) : 0;
 
-    // Feedback háptico nativo e tremor de tela
+    // Feedback háptico e áudio
     if (isCorrect) {
-      HapticFeedback.lightImpact();
+      if (_vibrationEnabled) HapticFeedback.vibrate();
+      context.read<AppAudioService>().playSfxCorrect();
       _shakeController.forward(from: 0.0);
     } else {
-      HapticFeedback.heavyImpact();
+      if (_vibrationEnabled) HapticFeedback.vibrate();
+      context.read<AppAudioService>().playSfxWrong();
       if (_gameData?.isBossLevel == true) {
         _playerDamagedThisTurn = true;
         _shakeController.forward(from: 0.0);
@@ -322,8 +354,16 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
       }
     });
 
+    final rawId = currentQuestion['id'];
+    int? parsedId;
+    if (rawId is int) {
+      parsedId = rawId;
+    } else if (rawId != null) {
+      parsedId = int.tryParse(rawId.toString());
+    }
+
     _answeredQuestions.add({
-      'questionId': currentQuestion['id'],
+      'questionId': parsedId,
       'wasCorrect': isCorrect,
     });
 
@@ -340,6 +380,7 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
   }
 
   Future<void> _finishGame() async {
+    setState(() => _isLoading = true);
     final soloProv = context.read<SoloProvider>();
     final response = await soloProv.finishLevel(
       levelNumber: _gameData!.levelNumber,
@@ -350,7 +391,13 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
       answeredQuestions: _answeredQuestions,
     );
 
-    if (!mounted || response == null) return;
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    if (response == null) {
+      AppSnackBar.showError(context, 'Ocorreu um erro ao salvar o progresso. Tente novamente.');
+      Navigator.of(context).pop();
+      return;
+    }
 
     _showResultsDialog(response);
   }
@@ -501,7 +548,7 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF0F172A),
-        body: Center(child: CircularProgressIndicator(color: Colors.amber)),
+        body: Center(child: LoadingLogo(size: 60)),
       );
     }
 
@@ -553,137 +600,139 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
           },
           child: Stack(
             children: [
-              Column(
-                children: [
-                  // Placar DUPLO: Jogador VS BOT / CHEFE
-                  _buildScoreBoard(context),
+              Positioned.fill(
+                child: Column(
+                  children: [
+                    // Placar DUPLO: Jogador VS BOT / CHEFE
+                    _buildScoreBoard(context),
 
-                  // Banner de Provocação do Chefe Animado
-                  if (_gameData!.isBossLevel && (_gameData!.bossTaunt != null && _gameData!.bossTaunt!.isNotEmpty))
-                    SlideTransition(
-                      position: _tauntSlideAnim,
-                      child: FadeTransition(
-                        opacity: _tauntFadeAnim,
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Color(0xFF991B1B), Color(0xFF450A0A)],
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.psychology_alt_rounded, color: Colors.amber, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  '${_gameData!.botName}: "${_gameData!.bossTaunt}"',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                    // Banner de Provocação do Chefe Animado
+                    if (_gameData!.isBossLevel && (_gameData!.bossTaunt != null && _gameData!.bossTaunt!.isNotEmpty))
+                      SlideTransition(
+                        position: _tauntSlideAnim,
+                        child: FadeTransition(
+                          opacity: _tauntFadeAnim,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF991B1B), Color(0xFF450A0A)],
                               ),
-                            ],
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.psychology_alt_rounded, color: Colors.amber, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '${_gameData!.botName}: "${_gameData!.bossTaunt}"',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
 
-                  // Banner da Pergunta de Ouro (2x Pontos)
-                  if (isGoldenLast)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      color: Colors.amber,
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.stars_rounded, color: Colors.black87, size: 20),
-                          SizedBox(width: 6),
-                          Text(
-                            'PERGUNTA DE OURO - VALOR DUPLO (2X PONTOS)',
-                            style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  // Barra do Timer Regressivo
-                  AnimatedBuilder(
-                    animation: _timerAnimController,
-                    builder: (context, child) {
-                      return LinearProgressIndicator(
-                        value: 1.0 - _timerAnimController.value,
-                        backgroundColor: Colors.white10,
-                        color: _timeRemaining <= 4 ? Colors.redAccent : (_gameData!.isBossLevel ? Colors.orangeAccent : Colors.amber),
-                        minHeight: 6,
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Pergunta
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E293B),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: _gameData!.isBossLevel
-                                      ? Colors.redAccent.withValues(alpha: 0.6)
-                                      : (isGoldenLast ? Colors.amber : Colors.white10),
-                                  width: isGoldenLast || _gameData!.isBossLevel ? 2 : 1),
-                              boxShadow: _gameData!.isBossLevel
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.redAccent.withValues(alpha: 0.15),
-                                        blurRadius: 12,
-                                        spreadRadius: 1,
-                                      )
-                                    ]
-                                  : null,
+                    // Banner da Pergunta de Ouro (2x Pontos)
+                    if (isGoldenLast)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        color: Colors.amber,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.stars_rounded, color: Colors.black87, size: 20),
+                            SizedBox(width: 6),
+                            Text(
+                              'PERGUNTA DE OURO - VALOR DUPLO (2X PONTOS)',
+                              style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12),
                             ),
-                            child: Text(
-                              currentQuestion['questionText'] ?? '',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                height: 1.4,
+                          ],
+                        ),
+                      ),
+
+                    // Barra do Timer Regressivo
+                    AnimatedBuilder(
+                      animation: _timerAnimController,
+                      builder: (context, child) {
+                        return LinearProgressIndicator(
+                          value: 1.0 - _timerAnimController.value,
+                          backgroundColor: Colors.white10,
+                          color: _timeRemaining <= 4 ? Colors.redAccent : (_gameData!.isBossLevel ? Colors.orangeAccent : Colors.amber),
+                          minHeight: 6,
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Pergunta
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E293B),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                    color: _gameData!.isBossLevel
+                                        ? Colors.redAccent.withValues(alpha: 0.6)
+                                        : (isGoldenLast ? Colors.amber : Colors.white10),
+                                    width: isGoldenLast || _gameData!.isBossLevel ? 2 : 1),
+                                boxShadow: _gameData!.isBossLevel
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.redAccent.withValues(alpha: 0.15),
+                                          blurRadius: 12,
+                                          spreadRadius: 1,
+                                        )
+                                      ]
+                                    : null,
                               ),
-                              textAlign: TextAlign.center,
+                              child: Text(
+                                currentQuestion['questionText'] ?? '',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.4,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                          ),
 
-                          const SizedBox(height: 20),
+                            const SizedBox(height: 20),
 
-                          // Opções de Resposta
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: options.length,
-                              itemBuilder: (ctx, idx) {
-                                return _buildOptionButton(idx, options[idx].toString(), currentQuestion['correctAnswer']);
-                              },
+                            // Opções de Resposta
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: options.length,
+                                itemBuilder: (ctx, idx) {
+                                  return _buildOptionButton(idx, options[idx].toString(), currentQuestion['correctAnswer']);
+                                },
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
 
               // Overlay de dano sofrido (Flash avermelhado)
@@ -696,9 +745,9 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
                   ),
                 ),
 
-              // In-Game Chat Overlay (bolhas animadas)
+              // In-Game Chat Overlay
               Positioned(
-                top: 90,
+                bottom: 90,
                 left: 20,
                 right: 20,
                 child: InGameChatOverlay(

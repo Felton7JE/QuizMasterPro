@@ -11,6 +11,7 @@ import '../widgets/crystal_balance_chip.dart';
 import 'study_flashcards_screen.dart';
 import 'study_quiz_game_screen.dart';
 import 'store_screen.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class StudyModeScreen extends StatefulWidget {
   const StudyModeScreen({super.key});
@@ -374,10 +375,10 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isVip
-              ? const Color(0xFFFFD700).withOpacity(0.5)
+              ? const Color(0xFFFFD700).withValues(alpha: 0.5)
               : isCooldown
-                  ? Colors.amber.withOpacity(0.5)
-                  : Colors.indigo.withOpacity(0.3),
+                  ? Colors.amber.withValues(alpha: 0.5)
+                  : Colors.indigo.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -405,9 +406,9 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFD700).withOpacity(0.15),
+                              color: const Color(0xFFFFD700).withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.5)),
+                              border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.5)),
                             ),
                             child: const Text(
                               'Ser VIP 👑',
@@ -447,9 +448,9 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.15),
+                color: Colors.red.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
@@ -468,16 +469,16 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.15),
+                color: Colors.amber.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
                   const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.amber),
+                    child: LoadingLogo(size: 60),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -593,7 +594,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.indigo.withOpacity(0.4)),
+              border: Border.all(color: Colors.indigo.withValues(alpha: 0.4)),
             ),
             child: const Row(
               children: [
@@ -711,10 +712,10 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF4F46E5).withOpacity(0.2) : const Color(0xFF1E293B),
+          color: isSelected ? const Color(0xFF4F46E5).withValues(alpha: 0.2) : const Color(0xFF1E293B),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? Colors.indigoAccent : Colors.grey.withOpacity(0.2),
+            color: isSelected ? Colors.indigoAccent : Colors.grey.withValues(alpha: 0.2),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -761,7 +762,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
                 color: const Color(0xFF1E293B),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: Colors.indigoAccent.withOpacity(0.4),
+                  color: Colors.indigoAccent.withValues(alpha: 0.4),
                   style: BorderStyle.solid,
                   width: 1.5,
                 ),
@@ -771,7 +772,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.indigo.withOpacity(0.15),
+                      color: Colors.indigo.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.cloud_upload_rounded, color: Colors.indigoAccent, size: 36),
@@ -796,7 +797,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
             decoration: BoxDecoration(
               color: const Color(0xFF1E293B),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _emerald.withOpacity(0.4)),
+              border: Border.all(color: _emerald.withValues(alpha: 0.4)),
             ),
             child: Row(
               children: [
@@ -832,9 +833,9 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E1B4B).withOpacity(0.7),
+            color: const Color(0xFF1E1B4B).withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF818CF8).withOpacity(0.35)),
+            border: Border.all(color: const Color(0xFF818CF8).withValues(alpha: 0.35)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -842,7 +843,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withOpacity(0.25),
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.lightbulb_rounded, color: Color(0xFFFBBF24), size: 20),
@@ -898,7 +899,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
               final p = studyPresets[index];
               return ActionChip(
                 backgroundColor: const Color(0xFF1E293B),
-                side: BorderSide(color: Colors.indigo.withOpacity(0.3)),
+                side: BorderSide(color: Colors.indigo.withValues(alpha: 0.3)),
                 label: Text(p['name']!, style: const TextStyle(color: Colors.white, fontSize: 12)),
                 onPressed: () => _applyPreset(p),
               );
@@ -984,8 +985,8 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
                   color: isSel
                       ? Colors.indigoAccent
                       : isRec
-                          ? Colors.indigo.withOpacity(0.4)
-                          : Colors.grey.withOpacity(0.2),
+                          ? Colors.indigo.withValues(alpha: 0.4)
+                          : Colors.grey.withValues(alpha: 0.2),
                 ),
                 onSelected: (_) => setState(() => _selectedQuestionCount = count),
               );
@@ -1026,7 +1027,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
 
   Widget _buildMyQuizzesTab(StudyQuizProvider provider) {
     if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Colors.indigoAccent));
+      return const Center(child: LoadingLogo(size: 60));
     }
 
     if (provider.quizzes.isEmpty) {
@@ -1066,7 +1067,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
           decoration: BoxDecoration(
             color: const Color(0xFF1E293B),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.indigo.withOpacity(0.2)),
+            border: Border.all(color: Colors.indigo.withValues(alpha: 0.2)),
           ),
           padding: const EdgeInsets.all(18),
           child: Column(
@@ -1077,7 +1078,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: isPdf ? Colors.red.withOpacity(0.15) : Colors.indigo.withOpacity(0.15),
+                      color: isPdf ? Colors.red.withValues(alpha: 0.15) : Colors.indigo.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -1184,7 +1185,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.indigo.withOpacity(0.15),
+              color: Colors.indigo.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.qr_code_rounded, color: Colors.indigoAccent, size: 48),
@@ -1234,7 +1235,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
 
   Widget _buildGeneratingOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.75),
+      color: Colors.black.withValues(alpha: 0.75),
       child: Center(
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 36),
@@ -1242,7 +1243,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
           decoration: BoxDecoration(
             color: const Color(0xFF1E293B),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.indigoAccent.withOpacity(0.5)),
+            border: Border.all(color: Colors.indigoAccent.withValues(alpha: 0.5)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1250,7 +1251,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
               const SizedBox(
                 width: 50,
                 height: 50,
-                child: CircularProgressIndicator(color: Colors.indigoAccent, strokeWidth: 3.5),
+                child: LoadingLogo(size: 60),
               ),
               const SizedBox(height: 20),
               const Text(

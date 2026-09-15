@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../utils/validation_utils.dart';
 import '../utils/snackbar_utils.dart';
@@ -18,8 +19,19 @@ class _LoginScreenState extends State<LoginScreen> {
     
     if (mounted) {
       if (success) {
-        AppSnackBar.showSuccess(context, 'Login realizado com sucesso!');
-        Navigator.pushReplacementNamed(context, '/resource-download');
+        final currentUser = authProvider.currentUser;
+        final prefs = await SharedPreferences.getInstance();
+        final hasSeenTutorial = prefs.getBool('has_seen_tutorial') ?? false;
+
+        if (!mounted) return;
+
+        if (currentUser != null && currentUser.username.contains('@')) {
+          Navigator.pushReplacementNamed(context, '/nickname_setup');
+        } else if (!hasSeenTutorial) {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        } else {
+          Navigator.pushReplacementNamed(context, '/menu');
+        }
       } else {
         AppSnackBar.showError(context, authProvider.error ?? 'Erro no login');
       }

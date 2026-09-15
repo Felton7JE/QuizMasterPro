@@ -19,12 +19,16 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> loginWithGoogle() async {
     _setLoading(true);
+    debugPrint('🔵 LOGIN: Iniciando loginWithGoogle...');
     try {
       _currentUser = await _authService.loginWithGoogle();
       _error = null;
+      debugPrint('🟢 LOGIN: Sucesso! User: ${_currentUser?.id}');
       notifyListeners();
       return true;
     } catch (e) {
+      debugPrint('🔴 LOGIN ERRO COMPLETO: $e');
+      debugPrint('🔴 LOGIN ERRO TIPO: ${e.runtimeType}');
       _error = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;

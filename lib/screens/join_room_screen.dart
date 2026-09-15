@@ -5,6 +5,7 @@ import '../providers/room_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/room_model.dart';
 import '../widgets/custom_button_responsive.dart';
+import '../widgets/app_logo_text.dart';
 
 class JoinRoomScreen extends StatefulWidget {
   const JoinRoomScreen({super.key});
@@ -101,7 +102,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.2),
+                        color: Colors.amber.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: Colors.amber),
                       ),
@@ -144,7 +145,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.amber.withOpacity(0.5)),
+                          borderSide: BorderSide(color: Colors.amber.withValues(alpha: 0.5)),
                         ),
                       ),
                     ),
@@ -155,7 +156,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                     decoration: BoxDecoration(
                       color: Colors.black26,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
                     ),
                     child: Row(
                       children: [
@@ -279,19 +280,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
-        title: Row(
-          children: [
-            Text(
-              'Meu Quiz +',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 18 : 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-
-          ],
-        ),
+        title: AppLogoText(fontSize: isSmallScreen ? 18 : 20),
         actions: [
           IconButton(
             onPressed: () => Navigator.pushNamedAndRemoveUntil(
@@ -370,7 +359,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                 color: Colors.white,
                 size: isSmallScreen ? 28 : 32,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Entrar numa Sala',
@@ -383,7 +372,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             'Digite o código da sala para entrar na partida',
             style: TextStyle(
@@ -414,7 +403,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                 color: const Color(0xFF10B981),
                 size: isSmallScreen ? 20 : 24,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 'Código da Sala',
                 style: TextStyle(
@@ -429,7 +418,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(color: const Color(0xFF10B981)),
                   ),
@@ -441,7 +430,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                         color: const Color(0xFF10B981),
                         size: isSmallScreen ? 14 : 16,
                       ),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Text(
                         'Colar',
                         style: TextStyle(
@@ -539,7 +528,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                 color: const Color(0xFFF59E0B),
                 size: isSmallScreen ? 20 : 24,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 'Senha (Opcional)',
                 style: TextStyle(
@@ -612,7 +601,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                 color: const Color(0xFF6366F1),
                 size: isSmallScreen ? 20 : 24,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 'Nome do Jogador',
                 style: TextStyle(
@@ -678,9 +667,9 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
     return Container(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B).withOpacity(0.5),
+        color: const Color(0xFF1E293B).withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF334155).withOpacity(0.5)),
+        border: Border.all(color: const Color(0xFF334155).withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -692,7 +681,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                 color: const Color(0xFF6366F1),
                 size: isSmallScreen ? 20 : 24,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 'Como funciona',
                 style: TextStyle(
@@ -736,7 +725,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
               ),
             ),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
@@ -767,9 +756,9 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
     return Container(
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
+        color: Colors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.withOpacity(0.3)),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -778,7 +767,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
             color: Colors.red,
             size: isSmallScreen ? 20 : 24,
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               _error!,

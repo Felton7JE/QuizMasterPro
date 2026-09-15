@@ -13,6 +13,8 @@ import '../widgets/in_game_chat_sheet.dart';
 import '../widgets/in_game_chat_button.dart';
 import '../widgets/cosmetic_avatar.dart';
 import '../widgets/vip_badge_widget.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
+import '../services/app_audio_service.dart';
 
 class KahootGameScreen extends StatefulWidget {
   const KahootGameScreen({super.key});
@@ -355,6 +357,12 @@ class _KahootGameScreenState extends State<KahootGameScreen>
         _correctAnswers++;
         _pointsEarned = _pendingPointsEarned;
         _totalPoints += _pointsEarned;
+        
+        context.read<AppAudioService>().playSfxCorrect();
+        context.read<AppAudioService>().triggerVibration();
+      } else {
+        context.read<AppAudioService>().playSfxWrong();
+        context.read<AppAudioService>().triggerVibration(heavy: true);
       }
     });
     // O backend enviará o NEXT_QUESTION após os 4 segundos de revelação
@@ -519,7 +527,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: Color(0xFF6366F1)),
+              LoadingLogo(size: 60),
               SizedBox(height: 24),
               Text('Aguardando a primeira pergunta...',
                   style: TextStyle(color: Colors.white70, fontSize: 16)),
@@ -573,7 +581,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
                               isSmallScreen: isSmallScreen,
                             ),
                           );
-                        }).toList(),
+                        }),
 
                         // Feedback de pontos após revelar a resposta correta
                         if (_showCorrectAnswer && _pointsEarned > 0) ...[
@@ -600,7 +608,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
 
             // In-Game Chat Overlay (bolha animada)
             Positioned(
-              top: 90,
+              bottom: 90,
               left: 20,
               right: 20,
               child: InGameChatOverlay(
@@ -678,9 +686,9 @@ class _KahootGameScreenState extends State<KahootGameScreen>
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFD700).withOpacity(0.15),
+                      color: const Color(0xFFFFD700).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.4)),
+                      border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.4)),
                     ),
                     child: Text(
                       '$_totalPoints pts',
@@ -745,7 +753,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
         border: Border.all(color: const Color(0xFF334155)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -783,10 +791,10 @@ class _KahootGameScreenState extends State<KahootGameScreen>
 
     if (showResult) {
       if (isCorrect) {
-        backgroundColor = const Color(0xFF10B981).withOpacity(0.2);
+        backgroundColor = const Color(0xFF10B981).withValues(alpha: 0.2);
         borderColor = const Color(0xFF10B981);
       } else if (isSelected && !isCorrect) {
-        backgroundColor = const Color(0xFFEF4444).withOpacity(0.2);
+        backgroundColor = const Color(0xFFEF4444).withValues(alpha: 0.2);
         borderColor = const Color(0xFFEF4444);
       } else {
         backgroundColor = const Color(0xFF1E293B);
@@ -795,7 +803,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
       }
     } else {
       if (isSelected) {
-        backgroundColor = const Color(0xFF6366F1).withOpacity(0.2);
+        backgroundColor = const Color(0xFF6366F1).withValues(alpha: 0.2);
         borderColor = const Color(0xFF6366F1);
       } else {
         backgroundColor = const Color(0xFF1E293B);
@@ -866,9 +874,9 @@ class _KahootGameScreenState extends State<KahootGameScreen>
       width: double.infinity,
       padding: EdgeInsets.all(isSmallScreen ? 14 : 18),
       decoration: BoxDecoration(
-        color: const Color(0xFF10B981).withOpacity(0.1),
+        color: const Color(0xFF10B981).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.5)),
+        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -907,10 +915,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
           const SizedBox(
             width: 16,
             height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Color(0xFF6366F1),
-            ),
+            child: LoadingLogo(size: 60),
           ),
           const SizedBox(width: 12),
           Text(
@@ -948,7 +953,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
         border: Border.all(color: const Color(0xFF334155), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -962,7 +967,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withOpacity(0.2),
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.leaderboard_rounded, color: Color(0xFF818CF8), size: 18),
@@ -981,9 +986,9 @@ class _KahootGameScreenState extends State<KahootGameScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.15),
+                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4)),
+                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1016,7 +1021,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
           if (me != null) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Divider(color: const Color(0xFF334155).withOpacity(0.8), height: 12),
+              child: Divider(color: const Color(0xFF334155).withValues(alpha: 0.8), height: 12),
             ),
             _buildLeaderboardRow(me, isSmallScreen, highlight: true, isPlayerRow: true),
           ],
@@ -1050,7 +1055,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
       padding: EdgeInsets.symmetric(horizontal: isSmall ? 10 : 12, vertical: isSmall ? 6 : 8),
       decoration: BoxDecoration(
         color: highlight
-            ? const Color(0xFF6366F1).withOpacity(0.2)
+            ? const Color(0xFF6366F1).withValues(alpha: 0.2)
             : const Color(0xFF0F172A),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(

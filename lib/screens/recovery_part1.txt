@@ -1,0 +1,189 @@
+Created At: 2026-09-10T09:48:39Z
+Completed At: 2026-09-10T09:48:41Z
+File Path: `file:///d:/ProjectQuiz/QuizMasterPro/lib/screens/profile_screen.dart`
+Total Lines: 1641
+Total Bytes: 67143
+Showing lines 1270 to 1450
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1270:           ],
+1271:         ],
+1272:       ),
+1273:     );
+1274:   }
+1275: 
+1276:   Widget _buildHistorySection(BuildContext context, AuthProvider authProvider) {
+1277:     return Column(
+1278:       crossAxisAlignment: CrossAxisAlignment.start,
+1279:       children: [
+1280:         const Text(
+1281:           'Últimas Partidas',
+1282:           style: TextStyle(
+1283:             fontSize: 20,
+1284:             fontWeight: FontWeight.bold,
+1285:             color: Colors.white,
+1286:           ),
+1287:         ),
+1288:         const SizedBox(height: 16),
+1289:         FutureBuilder<List<Map<String, dynamic>>>(
+1290:           future: _historyFuture,
+1291:           builder: (context, snapshot) {
+1292:             if (snapshot.connectionState == ConnectionState.waiting) {
+1293:               return const Center(child: LoadingLogo(size: 60));
+1294:             }
+1295:             if (snapshot.hasError) {
+1296:               return const Center(
+1297:                   child: Text('Erro ao carregar histórico.',
+1298:                       style: TextStyle(color: Colors.redAccent)));
+1299:             }
+1300:             final history = snapshot.data ?? [];
+1301:             if (history.isEmpty) {
+1302:               return const Center(
+1303:                   child: Text('Ainda não jogaste nenhuma partida.',
+1304:                       style: TextStyle(color: Colors.grey)));
+1305:             }
+1306: 
+1307:             final visibleHistory = history.take(_historyLimit).toList();
+1308: 
+1309:             return Column(
+1310:               children: [
+1311:                 ListView.separated(
+1312:                   shrinkWrap: true,
+1313:                   physics: const NeverScrollableScrollPhysics(),
+1314:                   itemCount: visibleHistory.length,
+1315:                   separatorBuilder: (context, index) => const SizedBox(height: 12),
+1316:                   itemBuilder: (context, index) {
+1317:                     final game = visibleHistory[index];
+1318:                 final resultsList = game['results'] as List<dynamic>? ?? [];
+1319: 
+1320:                 // Find current user's result
+1321:                 final myResult = resultsList.firstWhere(
+1322:                   (r) => r['userId'].toString() == authProvider.currentUser?.id,
+1323:                   orElse: () => null,
+1324:                 );
+1325: 
+1326:                 if (myResult == null) return const SizedBox();
+1327: 
+1328:                 final gameMode = game['gameMode'] ?? 'CLASSIC';
+1329:                 final points = myResult['totalPoints'] ?? 0;
+1330:                 final correctAnswers = myResult['correctAnswers'] ?? 0;
+1331:                 final totalQuestions = myResult['totalQuestions'] ?? 0;
+1332: 
+1333:                 // Check if user is the winner
+1334:                 final winner = game['winner'];
+1335:                 final isWinner = winner != null &&
+1336:                     winner['userId'].toString() == authProvider.currentUser?.id;
+1337: 
+1338:                 IconData modeIcon;
+1339:                 Color modeColor;
+1340:                 switch (gameMode) {
+1341:                   case 'DUEL':
+1342:                     modeIcon = Icons.sports_kabaddi;
+1343:                     modeColor = Colors.orange;
+1344:                     break;
+1345:                   case 'TEAM':
+1346:                     modeIcon = Icons.groups;
+1347:                     modeColor = Colors.blue;
+1348:                     break;
+1349:                   case 'KAHOOT':
+1350:                     modeIcon = Icons.school;
+1351:                     modeColor = Colors.purple;
+1352:                     break;
+1353:                   default:
+1354:                     modeIcon = Icons.person;
+1355:                     modeColor = Colors.green;
+1356:                 }
+1357: 
+1358:                 return GestureDetector(
+1359:                   onTap: () => _showGameDetailsModal(context, game, authProvider),
+1360:                   child: Container(
+1361:                     padding: const EdgeInsets.all(16),
+1362:                     decoration: BoxDecoration(
+1363:                       color: AppColors.surface,
+1364:                       borderRadius: BorderRadius.circular(12),
+1365:                       border: Border.all(
+1366:                           color: isWinner
+1367:                               ? Colors.amber.withValues(alpha: 0.5)
+1368:                               : Colors.white10),
+1369:                     ),
+1370:                     child: Row(
+1371:                       children: [
+1372:                         Container(
+1373:                           padding: const EdgeInsets.all(12),
+1374:                           decoration: BoxDecoration(
+1375:                             color: modeColor.withValues(alpha: 0.2),
+1376:                             shape: BoxShape.circle,
+1377:                           ),
+1378:                           child: Icon(modeIcon, color: modeColor),
+1379:                         ),
+1380:                         const SizedBox(width: 16),
+1381:                         Expanded(
+1382:                           child: Column(
+1383:                             crossAxisAlignment: CrossAxisAlignment.start,
+1384:                             children: [
+1385:                               Text(
+1386:                                 gameMode,
+1387:                                 style: const TextStyle(
+1388:                                     color: Colors.white,
+1389:                                     fontWeight: FontWeight.bold,
+1390:                                     fontSize: 16),
+1391:                               ),
+1392:                               const SizedBox(height: 4),
+1393:                               Text(
+1394:                                 '$correctAnswers / $totalQuestions certas',
+1395:                                 style: const TextStyle(
+1396:                                     color: Colors.grey, fontSize: 13),
+1397:                               ),
+1398:                             ],
+1399:                           ),
+1400:                         ),
+1401:                         Column(
+1402:                           crossAxisAlignment: CrossAxisAlignment.end,
+1403:                           children: [
+1404:                             Text(
+1405:                               '+$points Pts',
+1406:                               style: const TextStyle(
+1407:                                   color: AppColors.primary,
+1408:                                   fontWeight: FontWeight.bold,
+1409:                                   fontSize: 16),
+1410:                             ),
+1411:                             if (gameMode == 'DUEL' ||
+1412:                                 gameMode == 'TEAM' ||
+1413:                                 gameMode == 'KAHOOT') ...[
+1414:                               const SizedBox(height: 4),
+1415:                               Text(
+1416:                                 isWinner ? 'VITÓRIA' : 'DERROTA',
+1417:                                 style: TextStyle(
+1418:                                   color:
+1419:                                       isWinner ? Colors.amber : Colors.redAccent,
+1420:                                   fontSize: 12,
+1421:                                   fontWeight: FontWeight.bold,
+1422:                                 ),
+1423:                               ),
+1424:                             ],
+1425:                           ],
+1426:                         ),
+1427:                       ],
+1428:                     ),
+1429:                   ),
+1430:                 );
+1431:               },
+1432:             ),
+1433:                 if (history.length > _historyLimit) ...[
+1434:                   const SizedBox(height: 16),
+1435:                   TextButton(
+1436:                     onPressed: () {
+1437:                       setState(() {
+1438:                         _historyLimit += 5;
+1439:                       });
+1440:                     },
+1441:                     style: TextButton.styleFrom(
+1442:                       foregroundColor: AppColors.primary,
+1443:                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+1444:                       shape: RoundedRectangleBorder(
+1445:                         borderRadius: BorderRadius.circular(20),
+1446:                         side: const BorderSide(color: AppColors.primary),
+1447:                       ),
+1448:                     ),
+1449:                     child: const Text('Mostrar Mais Partidas', style: TextStyle(fontWeight: FontWeight.bold)),
+1450:                   ),
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

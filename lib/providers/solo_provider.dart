@@ -70,7 +70,12 @@ class SoloProvider with ChangeNotifier {
       );
 
       // Recarregar o mapa para refletir alterações de progresso/estrelas/vidas
-      await fetchMapProgress();
+      try {
+        await fetchMapProgress();
+      } catch (e) {
+        debugPrint('Erro ao atualizar mapa no finishLevel: $e');
+      }
+
       return response;
     } catch (e) {
       _error = e.toString();

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../widgets/responsive_chip.dart';
 import '../../../providers/category_provider.dart';
-import '../../../models/category_models.dart' as CategoryModels;
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class GameConfigSection extends StatelessWidget {
   final String selectedMode;
@@ -25,6 +25,8 @@ class GameConfigSection extends StatelessWidget {
   final ValueChanged<int?> onQuestionTimeChanged;
   final ValueChanged<int?> onQuestionCountChanged;
   final ValueChanged<String> onConnectionChanged;
+  final int entryFee;
+  final ValueChanged<int?> onEntryFeeChanged;
 
   const GameConfigSection({
     super.key,
@@ -47,6 +49,8 @@ class GameConfigSection extends StatelessWidget {
     required this.onQuestionTimeChanged,
     required this.onQuestionCountChanged,
     required this.onConnectionChanged,
+    required this.entryFee,
+    required this.onEntryFeeChanged,
   });
 
   @override
@@ -138,7 +142,7 @@ class GameConfigSection extends StatelessWidget {
             children: [
               Expanded(
                 child: DropdownButtonFormField<int>(
-                  value: maxPlayers ~/ 2,
+                  initialValue: maxPlayers ~/ 2,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
                     labelText: 'Jogadores por Equipe',
@@ -172,7 +176,7 @@ class GameConfigSection extends StatelessWidget {
                 child: Container(
                   padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: const Color(0xFF10B981)),
                   ),
@@ -226,7 +230,7 @@ class GameConfigSection extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: questionTime,
+                initialValue: questionTime,
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
                   labelText: 'Tempo por Pergunta (segundos)',
@@ -281,7 +285,7 @@ class GameConfigSection extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: DropdownButtonFormField<int>(
-                  value: questionTime,
+                  initialValue: questionTime,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
                     labelText: 'Tempo por Pergunta (segundos)',
@@ -311,7 +315,7 @@ class GameConfigSection extends StatelessWidget {
 
         if (isSmallScreen) ...[
           DropdownButtonFormField<int>(
-            value: questionCount,
+            initialValue: questionCount,
             style: const TextStyle(color: Colors.white),
             decoration: const InputDecoration(
               labelText: 'Número de Perguntas',
@@ -335,7 +339,7 @@ class GameConfigSection extends StatelessWidget {
           ),
         ] else ...[
           DropdownButtonFormField<int>(
-            value: questionCount,
+            initialValue: questionCount,
             style: const TextStyle(color: Colors.white),
             decoration: const InputDecoration(
               labelText: 'Número de Perguntas',
@@ -358,6 +362,45 @@ class GameConfigSection extends StatelessWidget {
             onChanged: onQuestionCountChanged,
           ),
         ],
+
+        SizedBox(height: isSmallScreen ? 16 : 24),
+
+        // APOSTA (Taxa de Entrada)
+        Text(
+          'Taxa de Entrada (Moedas)',
+          style: TextStyle(
+            fontSize: isSmallScreen ? 14 : 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        SizedBox(height: isSmallScreen ? 6 : 8),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: isSmallScreen ? 0 : 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF334155)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: entryFee,
+              isExpanded: true,
+              dropdownColor: const Color(0xFF1E293B),
+              icon: const Icon(Icons.arrow_drop_down, color: Colors.white54),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              items: const [
+                DropdownMenuItem(value: 0, child: Text('Grátis (0)')),
+                DropdownMenuItem(value: 50, child: Text('50 moedas')),
+                DropdownMenuItem(value: 100, child: Text('100 moedas')),
+                DropdownMenuItem(value: 200, child: Text('200 moedas')),
+                DropdownMenuItem(value: 500, child: Text('500 moedas')),
+                DropdownMenuItem(value: 1000, child: Text('1000 moedas')),
+              ],
+              onChanged: onEntryFeeChanged,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -382,7 +425,7 @@ class GameConfigSection extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
               color: teamAssignmentType == 'CHOOSE' 
-                ? const Color(0xFF6366F1).withOpacity(0.2) 
+                ? const Color(0xFF6366F1).withValues(alpha: 0.2) 
                 : const Color(0xFF374151),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
@@ -447,7 +490,7 @@ class GameConfigSection extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
               color: teamAssignmentType == 'RANDOM' 
-                ? const Color(0xFF10B981).withOpacity(0.2) 
+                ? const Color(0xFF10B981).withValues(alpha: 0.2) 
                 : const Color(0xFF374151),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
@@ -521,7 +564,7 @@ class GameConfigSection extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
               color: categoryAssignmentMode == 'MANUAL' 
-                ? const Color(0xFF8B5CF6).withOpacity(0.2) 
+                ? const Color(0xFF8B5CF6).withValues(alpha: 0.2) 
                 : const Color(0xFF374151),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
@@ -585,7 +628,7 @@ class GameConfigSection extends StatelessWidget {
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
               color: categoryAssignmentMode == 'AUTO' 
-                ? const Color(0xFFF59E0B).withOpacity(0.2) 
+                ? const Color(0xFFF59E0B).withValues(alpha: 0.2) 
                 : const Color(0xFF374151),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
@@ -656,7 +699,7 @@ class GameConfigSection extends StatelessWidget {
       case 'SCIENCE': return Icons.science;
       case 'ENGLISH': return Icons.chat;
       case 'MIXED': return Icons.category;
-      default: return Icons.school;
+      default: return Icons.category;
     }
   }
 
@@ -668,21 +711,12 @@ class GameConfigSection extends StatelessWidget {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(8.0),
-          child: CircularProgressIndicator(strokeWidth: 2),
+          child: LoadingLogo(size: 60),
         ),
       );
     }
 
-    final list = categories.isNotEmpty
-        ? categories
-        : [
-            CategoryModels.Category(id: 1, name: 'MATH', displayName: 'Matemática', isActive: true, createdAt: ''),
-            CategoryModels.Category(id: 2, name: 'PORTUGUESE', displayName: 'Português', isActive: true, createdAt: ''),
-            CategoryModels.Category(id: 3, name: 'HISTORY', displayName: 'História', isActive: true, createdAt: ''),
-            CategoryModels.Category(id: 4, name: 'GEOGRAPHY', displayName: 'Geografia', isActive: true, createdAt: ''),
-            CategoryModels.Category(id: 5, name: 'SCIENCE', displayName: 'Ciências', isActive: true, createdAt: ''),
-            CategoryModels.Category(id: 6, name: 'ENGLISH', displayName: 'Inglês', isActive: true, createdAt: ''),
-          ];
+    final list = categories;
 
     return Wrap(
       spacing: isSmallScreen ? 6 : 8,
@@ -705,14 +739,7 @@ class GameConfigSection extends StatelessWidget {
     final catProvider = Provider.of<CategoryProvider>(context);
     final categories = catProvider.categories;
 
-    final chips = <Widget>[
-      ResponsiveChip(
-        icon: Icons.category,
-        label: 'Mistas',
-        isSelected: selectedCategory.toLowerCase() == 'mixed',
-        onTap: () => onCategoryChanged('mixed'),
-      ),
-    ];
+    final chips = <Widget>[];
 
     if (categories.isEmpty && catProvider.isLoading) {
       chips.add(const Padding(
@@ -720,19 +747,11 @@ class GameConfigSection extends StatelessWidget {
         child: SizedBox(
           width: 20,
           height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
+          child: LoadingLogo(size: 60),
         ),
       ));
     } else {
-      final list = categories.isNotEmpty
-          ? categories
-          : [
-              CategoryModels.Category(id: 1, name: 'MATH', displayName: 'Matemática', isActive: true, createdAt: ''),
-              CategoryModels.Category(id: 2, name: 'PORTUGUESE', displayName: 'Português', isActive: true, createdAt: ''),
-              CategoryModels.Category(id: 3, name: 'HISTORY', displayName: 'História', isActive: true, createdAt: ''),
-              CategoryModels.Category(id: 4, name: 'GEOGRAPHY', displayName: 'Geografia', isActive: true, createdAt: ''),
-              CategoryModels.Category(id: 5, name: 'SCIENCE', displayName: 'Ciências', isActive: true, createdAt: ''),
-            ];
+      final list = categories;
 
       for (final cat in list) {
         final keyName = cat.name.toLowerCase();

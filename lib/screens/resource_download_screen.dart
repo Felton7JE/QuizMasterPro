@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/asset_manager_service.dart';
 import '../services/store_service.dart';
+import '../services/season_service.dart';
+import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
+import '../config/api_config.dart';
 
 class ResourceDownloadScreen extends StatefulWidget {
   final VoidCallback onDownloadComplete;
 
-  const ResourceDownloadScreen({Key? key, required this.onDownloadComplete}) : super(key: key);
+  const ResourceDownloadScreen({super.key, required this.onDownloadComplete});
 
   @override
   _ResourceDownloadScreenState createState() => _ResourceDownloadScreenState();
@@ -38,12 +41,61 @@ class _ResourceDownloadScreenState extends State<ResourceDownloadScreen> {
       final items = await storeService.getAvailableItems(userId);
       
       // Filter out items that are images
-      final urls = items
-          .where((item) => (item.type == 'AVATAR' || item.type == 'BANNER') && item.value.startsWith('http'))
-          .map((item) => item.value)
-          .toSet() // Remove duplicates
-          .toList();
+      final urlsSet = items
+          .where((item) => (item.type == 'AVATAR' || item.type == 'BANNER'))
+          .map((item) => ApiConfig.resolveAssetUrl(item.value))
+          .where((url) => url != null && url.startsWith('http'))
+          .cast<String>()
+          .toSet();
 
+      // Fetch season progress to get season pass and season map assets
+      try {
+        if (!mounted) return;
+        final seasonService = context.read<SeasonService>();
+        final season = await seasonService.getSeasonProgress(userIdStr!);
+        if (season != null) {
+          final bannerUrl = ApiService.resolveImageUrl(season.bannerUrl);
+          if (bannerUrl != null && bannerUrl.startsWith('http')) {
+            urlsSet.add(bannerUrl);
+          }
+          final mapBgUrl = ApiService.resolveImageUrl(season.mapBackgroundUrl);
+          if (mapBgUrl != null && mapBgUrl.startsWith('http')) {
+            urlsSet.add(mapBgUrl);
+          }
+          final lockedUrl = ApiService.resolveImageUrl(season.lockedNodeIconUrl);
+          if (lockedUrl != null && lockedUrl.startsWith('http')) {
+            urlsSet.add(lockedUrl);
+          }
+          final currentUrl = ApiService.resolveImageUrl(season.currentNodeIconUrl);
+          if (currentUrl != null && currentUrl.startsWith('http')) {
+            urlsSet.add(currentUrl);
+          }
+          final completedUrl = ApiService.resolveImageUrl(season.completedNodeIconUrl);
+          if (completedUrl != null && completedUrl.startsWith('http')) {
+            urlsSet.add(completedUrl);
+          }
+          for (final reward in season.rewards) {
+            final freeUrl = ApiService.resolveImageUrl(reward.freeRewardImageUrl);
+            if (freeUrl != null && freeUrl.startsWith('http')) {
+              urlsSet.add(freeUrl);
+            }
+            final premiumUrl = ApiService.resolveImageUrl(reward.premiumRewardImageUrl);
+            if (premiumUrl != null && premiumUrl.startsWith('http')) {
+              urlsSet.add(premiumUrl);
+            }
+            final bossUrl = ApiService.resolveImageUrl(reward.bossImageUrl);
+            if (bossUrl != null && bossUrl.startsWith('http')) {
+              urlsSet.add(bossUrl);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint("Error fetching season assets: $e");
+      }
+
+      final urls = urlsSet.toList();
+
+      if (!mounted) return;
       final assetManager = context.read<AssetManagerService>();
       if (urls.isNotEmpty) {
         await assetManager.startDownload(urls);

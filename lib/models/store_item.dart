@@ -9,6 +9,7 @@ class StoreItem {
   final String type; // 'BANNER', 'TEXT_PHRASE', 'AVATAR', 'PROFILE_FRAME', 'ENERGY_REFILL', 'XP_BOOST'
   final String value;
   final String rarity;
+  final String currencyType; // 'COINS' or 'CRYSTALS'
   final bool isEquipped;
   
   const StoreItem({
@@ -19,6 +20,7 @@ class StoreItem {
     required this.type,
     required this.value,
     required this.rarity,
+    this.currencyType = 'COINS',
     this.isEquipped = false,
   });
 
@@ -30,6 +32,7 @@ class StoreItem {
     String? type,
     String? value,
     String? rarity,
+    String? currencyType,
     bool? isEquipped,
   }) {
     return StoreItem(
@@ -40,6 +43,7 @@ class StoreItem {
       type: type ?? this.type,
       value: value ?? this.value,
       rarity: rarity ?? this.rarity,
+      currencyType: currencyType ?? this.currencyType,
       isEquipped: isEquipped ?? this.isEquipped,
     );
   }
@@ -53,6 +57,7 @@ class StoreItem {
       type: json['type'] as String,
       value: json['value'] as String,
       rarity: json['rarity'] as String? ?? 'Comum',
+      currencyType: json['currencyType'] as String? ?? 'COINS',
       isEquipped: (json['isEquipped'] as bool?) ?? false,
     );
   }

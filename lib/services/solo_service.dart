@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'api_service.dart';
 
 class SoloLevelDto {
@@ -228,7 +227,7 @@ class SoloService {
       'streak': streak,
     };
     final res = await _api.post('/api/solo/free-mode/score?userId=$userId', requestBody);
-    return res as Map<String, dynamic>;
+    return res;
   }
 
   Future<List<dynamic>> getFreeModeLeaderboard(String gameMode) async {

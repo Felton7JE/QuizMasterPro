@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-import 'dart:io';
 
 class AppConfig {
   // Obter via --dart-define ou fallback inteligente

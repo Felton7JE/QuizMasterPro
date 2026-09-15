@@ -76,7 +76,7 @@ class BasicInfoSection extends StatelessWidget {
           const SizedBox(height: 16),
           if (selectedMode != 'duel')
             DropdownButtonFormField<int>(
-              value: maxPlayers,
+              initialValue: maxPlayers,
               style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 labelText: 'Máximo de Jogadores',
@@ -126,7 +126,7 @@ class BasicInfoSection extends StatelessWidget {
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: maxPlayers,
+                    initialValue: maxPlayers,
                     style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       labelText: 'Máximo de Jogadores',

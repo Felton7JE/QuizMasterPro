@@ -3,6 +3,7 @@ import '../../../theme/app_colors.dart';
 
 import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class RecentActivitySection extends StatefulWidget {
   const RecentActivitySection({super.key});
@@ -45,7 +46,7 @@ class _RecentActivitySectionState extends State<RecentActivitySection> {
           future: _activityFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: LoadingLogo(size: 60));
             }
             if (snapshot.hasError) {
               return const Text('Erro ao carregar atividade.', style: TextStyle(color: Colors.redAccent));
@@ -137,7 +138,7 @@ class _RecentActivitySectionState extends State<RecentActivitySection> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, size: 20, color: color),

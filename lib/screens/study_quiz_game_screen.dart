@@ -193,9 +193,9 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
               margin: const EdgeInsets.only(right: 16),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.15),
+                color: Colors.amber.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
               ),
               child: Text(
                 '$_score pts',
@@ -281,7 +281,7 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.indigo.withOpacity(0.2),
+                            color: Colors.indigo.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -306,9 +306,9 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
                         margin: const EdgeInsets.only(top: 10),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.1),
+                          color: Colors.amber.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
@@ -332,7 +332,7 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
                       decoration: BoxDecoration(
                         color: const Color(0xFF1E293B),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.indigo.withOpacity(0.3)),
+                        border: Border.all(color: Colors.indigo.withValues(alpha: 0.3)),
                       ),
                       child: Text(
                         currentQ.questionText,
@@ -398,18 +398,18 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
     final isSelected = _selectedOption == index;
 
     Color bgColor = const Color(0xFF1E293B);
-    Color borderColor = Colors.grey.withOpacity(0.2);
+    Color borderColor = Colors.grey.withValues(alpha: 0.2);
     Color textColor = Colors.white;
     IconData? trailingIcon;
 
     if (_isAnswered) {
       if (isCorrect) {
-        bgColor = _emerald.withOpacity(0.2);
+        bgColor = _emerald.withValues(alpha: 0.2);
         borderColor = _emeraldAccent;
         textColor = _emeraldAccent;
         trailingIcon = Icons.check_circle_rounded;
       } else if (isSelected) {
-        bgColor = Colors.red.withOpacity(0.2);
+        bgColor = Colors.red.withValues(alpha: 0.2);
         borderColor = Colors.redAccent;
         textColor = Colors.redAccent;
         trailingIcon = Icons.cancel_rounded;
@@ -440,7 +440,7 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
                   height: 32,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: borderColor.withOpacity(0.15),
+                    color: borderColor.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Text(
@@ -473,10 +473,10 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isCorrect ? _emerald.withOpacity(0.1) : Colors.indigo.withOpacity(0.15),
+        color: isCorrect ? _emerald.withValues(alpha: 0.1) : Colors.indigo.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isCorrect ? _emerald.withOpacity(0.4) : Colors.indigoAccent.withOpacity(0.4),
+          color: isCorrect ? _emerald.withValues(alpha: 0.4) : Colors.indigoAccent.withValues(alpha: 0.4),
         ),
       ),
       child: Column(
@@ -536,7 +536,7 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.indigo.withOpacity(0.5)),
+                  border: Border.all(color: Colors.indigo.withValues(alpha: 0.5)),
                 ),
                 child: Column(
                   children: [
@@ -630,7 +630,7 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
                     color: const Color(0xFF1E293B),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isCorr ? _emerald.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+                      color: isCorr ? _emerald.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(

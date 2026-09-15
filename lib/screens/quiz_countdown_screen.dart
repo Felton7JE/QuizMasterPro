@@ -25,8 +25,10 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
   Timer? _timer; // NEW: hold reference to cancel on dispose
   late AnimationController _scaleController;
   late AnimationController _fadeController;
+  late AnimationController _pulseController; // NEW
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _pulseAnimation; // NEW
 
   @override
   void initState() {
@@ -56,6 +58,19 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
     ).animate(CurvedAnimation(
       parent: _fadeController,
       curve: Curves.easeOut,
+    ));
+
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.15,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOutSine,
     ));
 
     // Try to align with startsAt if provided via route arguments
@@ -186,6 +201,10 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
             targetRoute = '/survival-game';
           } else if (gameMode == 'TIME_ATTACK') {
             targetRoute = '/time-attack-game';
+          } else if (gameMode == 'SOLO_MAP') {
+            targetRoute = '/solo-game';
+          } else if (gameMode == 'BOSS_BATTLE') {
+            targetRoute = '/boss-battle';
           } else {
             targetRoute = '/quiz-game';
           }
@@ -213,7 +232,28 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
     _timer?.cancel();
     _scaleController.dispose();
     _fadeController.dispose();
+    _pulseController.dispose();
     super.dispose();
+  }
+
+  IconData _getIconForMode(String mode) {
+    switch (mode) {
+      case 'SOLO_MAP':
+        return Icons.explore_rounded;
+      case 'BOSS_BATTLE':
+        return Icons.local_fire_department_rounded;
+      case 'DUEL':
+        return Icons.flash_on_rounded;
+      case 'TIME_ATTACK':
+        return Icons.timer_rounded;
+      case 'TEAM':
+      case 'KAHOOT':
+        return Icons.groups_rounded;
+      case 'SURVIVAL':
+        return Icons.favorite_rounded;
+      default:
+        return Icons.quiz_rounded;
+    }
   }
 
   @override
@@ -244,24 +284,32 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                 // Ícone do quiz
-                Container(
-                  padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6366F1).withOpacity(0.2),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF6366F1).withOpacity(0.3),
-                        blurRadius: 20,
-                        spreadRadius: 5,
+                AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _pulseAnimation.value,
+                      child: Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6366F1).withOpacity(0.3 * _pulseAnimation.value),
+                              blurRadius: 20 * _pulseAnimation.value,
+                              spreadRadius: 5 * _pulseAnimation.value,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          _getIconForMode(gameModeArg),
+                          size: isSmallScreen ? 64 : 80,
+                          color: const Color(0xFF6366F1),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.quiz,
-                    size: isSmallScreen ? 64 : 80,
-                    color: const Color(0xFF6366F1),
-                  ),
+                    );
+                  },
                 ),
                 
                 SizedBox(height: isSmallScreen ? 32 : 48),

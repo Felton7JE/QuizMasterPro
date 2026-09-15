@@ -8,6 +8,8 @@ import '../services/api_service.dart';
 import '../services/asset_manager_service.dart';
 import '../widgets/local_asset_image.dart';
 import '../widgets/vip_badge_widget.dart';
+import '../widgets/reward_claim_dialog.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class SeasonPassScreen extends StatefulWidget {
   const SeasonPassScreen({super.key});
@@ -20,6 +22,8 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _vipPulseController;
   late Animation<double> _vipPulseAnim;
+  bool _needsResourceDownload = false;
+  bool _isCheckingResources = false;
 
   @override
   void initState() {
@@ -33,13 +37,140 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
       CurvedAnimation(parent: _vipPulseController, curve: Curves.easeInOut),
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final auth = context.read<AuthProvider>();
       final prov = context.read<SeasonProvider>();
-      if (auth.currentUser != null && prov.seasonData == null) {
-        prov.fetchSeasonProgress(auth.currentUser!.id);
+      if (auth.currentUser != null) {
+        if (prov.seasonData == null) {
+          await prov.fetchSeasonProgress(auth.currentUser!.id);
+        }
+        _checkIfResourcesNeedDownload();
       }
     });
+  }
+
+  Future<void> _checkIfResourcesNeedDownload() async {
+    if (_isCheckingResources) return;
+    if (!mounted) return;
+    setState(() {
+      _isCheckingResources = true;
+    });
+
+    try {
+      final prov = context.read<SeasonProvider>();
+      final assetManager = context.read<AssetManagerService>();
+      final season = prov.seasonData;
+
+      if (season == null) {
+        if (mounted) {
+          setState(() {
+            _isCheckingResources = false;
+          });
+        }
+        return;
+      }
+
+      final urls = <String>{};
+      void addResolved(String? rawUrl) {
+        final resolved = ApiService.resolveImageUrl(rawUrl);
+        if (resolved != null && resolved.startsWith('http')) {
+          urls.add(resolved);
+        }
+      }
+
+      addResolved(season.bannerUrl);
+      addResolved(season.mapBackgroundUrl);
+      for (final reward in season.rewards) {
+        addResolved(reward.freeRewardImageUrl);
+        addResolved(reward.premiumRewardImageUrl);
+        addResolved(reward.bossImageUrl);
+      }
+
+      bool missingAny = false;
+      for (final url in urls) {
+        final path = await assetManager.getLocalPath(url);
+        if (path == null) {
+          missingAny = true;
+          break;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _needsResourceDownload = missingAny;
+          _isCheckingResources = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isCheckingResources = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildDownloadBanner() {
+    if (!_needsResourceDownload) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.indigoAccent.withValues(alpha: 0.15),
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.indigoAccent.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.download_for_offline_rounded, color: Colors.indigoAccent, size: 28),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Recursos Adicionais da Temporada',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  'Baixe os avatares e temas da temporada atual para uma melhor visualização.',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigoAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pushNamed(context, '/resource-download').then((_) {
+                _checkIfResourcesNeedDownload();
+              });
+            },
+            child: const Text('Baixar', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -49,45 +180,28 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
   }
 
   void _showClaimCelebrationDialog(BuildContext context, String title, String? value) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Colors.amber, width: 2),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.stars_rounded, color: Colors.amber, size: 64),
-            const SizedBox(height: 12),
-            const Text(
-              '🎉 RECOMPENSA COLETADA!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.amber,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Você recebeu: ${value ?? 'Prêmio'} ($title)',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber.shade700,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Excelente!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
+    int coins = 0;
+    int crystals = 0;
+    String? itemName;
+
+    if (title.contains('Moedas') || (value != null && value.contains('Moeda'))) {
+      coins = int.tryParse(value?.replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 100;
+    } else if (title.contains('Cristais') || (value != null && value.contains('Cristal'))) {
+      crystals = int.tryParse(value?.replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 10;
+    } else {
+      itemName = value ?? title;
+    }
+
+    RewardClaimDialog.show(
+      context,
+      RewardItemData(
+        title: 'Recompensa do Passe!',
+        subtitle: title,
+        coins: coins,
+        crystals: crystals,
+        itemName: itemName,
+        mainIcon: Icons.card_giftcard_rounded,
+        mainColor: Colors.amber,
       ),
     );
   }
@@ -126,14 +240,14 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
               decoration: BoxDecoration(
                 color: const Color(0xFF0F172A),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Preço do Passe VIP:', style: TextStyle(color: Colors.white70)),
+                  Text('Preço do Passe VIP:', style: TextStyle(color: Colors.white70)),
                   Row(
-                    children: const [
+                    children: [
                       Text('🪙 ', style: TextStyle(fontSize: 16)),
                       Text(
                         '$vipCost Moedas',
@@ -217,7 +331,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
         ),
       ),
       body: seasonProv.isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.amber))
+          ? const Center(child: LoadingLogo(size: 60))
           : seasonProv.error != null
               ? Center(
                   child: Text(
@@ -247,33 +361,31 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
 
     return Column(
       children: [
+        _buildDownloadBanner(),
         // Cabeçalho da Temporada com Efeitos e Animações
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1E3A8A), Color(0xFF1D4ED8), Color(0xFF0F172A)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            image: bannerPath != null
-                ? DecorationImage(
-                    image: FileImage(File(bannerPath)),
+        Stack(
+          children: [
+            if (bannerUrl != null)
+              Positioned.fill(
+                child: Opacity(
+                  opacity: 0.4,
+                  child: LocalAssetImage(
+                    imageUrl: bannerUrl,
                     fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(
-                        Colors.black.withValues(alpha: 0.5), BlendMode.darken),
-                  )
-                : (bannerUrl != null
-                    ? DecorationImage(
-                        image: NetworkImage(bannerUrl),
-                        fit: BoxFit.cover,
-                        colorFilter: ColorFilter.mode(
-                            Colors.black.withValues(alpha: 0.5), BlendMode.darken),
-                      )
-                    : null),
-          ),
-          child: Column(
+                  ),
+                ),
+              ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF1E3A8A), Color(0xFF1D4ED8), Color(0xFF0F172A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Column(
             children: [
               Text(
                 data.description,
@@ -367,12 +479,12 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                           ),
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               VipBadge(scale: 1.1),
-                              const SizedBox(width: 10),
-                              const Text(
+                              SizedBox(width: 10),
+                              Text(
                                 'COMPRAR PASSE VIP',
                                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
                               ),
@@ -402,12 +514,12 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
                           ),
                         ],
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           VipBadge(scale: 1.1),
-                          const SizedBox(width: 8),
-                          const Text(
+                          SizedBox(width: 8),
+                          Text(
                             'PASSE VIP ATIVO',
                             style: TextStyle(
                               color: Colors.black87,
@@ -454,6 +566,8 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
             ],
           ),
         ),
+        ],
+        ),
         
         // Lista de Recompensas
         Expanded(
@@ -493,8 +607,10 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildRewardRow(context, 'Grátis', reward.freeRewardType, reward.freeRewardValue, reward.freeRewardImageUrl, isUnlocked, false, reward.levelRequired, data),
-                            const Divider(color: Colors.white12),
-                            _buildRewardRow(context, 'VIP', reward.premiumRewardType, reward.premiumRewardValue, reward.premiumRewardImageUrl, isUnlocked, true, reward.levelRequired, data),
+                            if (reward.premiumRewardType != null)
+                              const Divider(color: Colors.white12),
+                            if (reward.premiumRewardType != null)
+                              _buildRewardRow(context, 'VIP', reward.premiumRewardType, reward.premiumRewardValue, reward.premiumRewardImageUrl, isUnlocked, true, reward.levelRequired, data),
                           ],
                         ),
                       ),
@@ -577,55 +693,57 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
       trailing = const Icon(Icons.lock_outline_rounded, color: Colors.amber, size: 20);
     }
 
-    return Row(
-      children: [
-        Container(
-          width: 48,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            tier,
-            style: TextStyle(
-              color: isPremiumRow ? Colors.amber : Colors.white70,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+    final resolvedImageUrl = ApiService.resolveImageUrl(imageUrl);
+    final hasValidImage = resolvedImageUrl != null && resolvedImageUrl.isNotEmpty;
+
+    Widget leadingContent = SizedBox(
+      width: 80,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 48,
+            child: Text(
+              tier,
+              style: TextStyle(
+                color: isPremiumRow ? Colors.amber : Colors.white70,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
           ),
+          hasValidImage
+              ? SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: isUnlocked
+                        ? LocalAssetImage(imageUrl: resolvedImageUrl, fit: BoxFit.cover)
+                        : ColorFiltered(
+                            colorFilter: const ColorFilter.mode(Colors.grey, BlendMode.saturation),
+                            child: LocalAssetImage(imageUrl: resolvedImageUrl, fit: BoxFit.cover),
+                          ),
+                  ),
+                )
+              : Icon(icon, color: isUnlocked ? iconColor : Colors.white24, size: 24),
+        ],
+      ),
+    );
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
+      leading: leadingContent,
+      title: Text(
+        value ?? 'Prêmio',
+        style: TextStyle(
+          color: isUnlocked ? Colors.white : Colors.white38,
+          fontWeight: FontWeight.w500,
+          fontSize: 14,
         ),
-        ApiService.resolveImageUrl(imageUrl) != null
-            ? (isUnlocked 
-                ? SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: LocalAssetImage(
-                      imageUrl: ApiService.resolveImageUrl(imageUrl)!,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : ColorFiltered(
-                    colorFilter: const ColorFilter.mode(Colors.grey, BlendMode.saturation),
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: LocalAssetImage(
-                        imageUrl: ApiService.resolveImageUrl(imageUrl)!,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  )
-              )
-            : Icon(icon, color: isUnlocked ? iconColor : Colors.white24, size: 20),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            value ?? 'Prêmio',
-            style: TextStyle(
-              color: isUnlocked ? Colors.white : Colors.white38,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        trailing,
-      ],
+      ),
+      trailing: trailing,
     );
   }
 
@@ -636,6 +754,8 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
     final hasSpecialImage = specialImageUrl != null && specialImageUrl.isNotEmpty;
 
     if (!hasSpecialImage) {
+      final isCoinReward = reward.freeRewardType == 'COIN' || reward.premiumRewardType == 'COIN';
+
       return Container(
         width: 50,
         height: 50,
@@ -653,14 +773,20 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
               : null,
         ),
         child: Center(
-          child: Text(
-            '${reward.levelRequired}',
-            style: TextStyle(
-              color: isUnlocked ? Colors.white : Colors.white54,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
+          child: isCoinReward
+              ? Icon(
+                  Icons.monetization_on_rounded,
+                  color: isUnlocked ? Colors.amber : Colors.white54,
+                  size: 28,
+                )
+              : Text(
+                  '${reward.levelRequired}',
+                  style: TextStyle(
+                    color: isUnlocked ? Colors.white : Colors.white54,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
         ),
       );
     }

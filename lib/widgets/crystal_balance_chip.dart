@@ -1,3 +1,4 @@
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -34,12 +35,12 @@ class CrystalBalanceChip extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: const Color(0xFFC084FC).withOpacity(0.6),
+              color: const Color(0xFFC084FC).withValues(alpha: 0.6),
               width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFA855F7).withOpacity(0.35),
+                color: const Color(0xFFA855F7).withValues(alpha: 0.35),
                 blurRadius: 8,
                 spreadRadius: 1,
               ),
@@ -172,7 +173,7 @@ class CrystalShopModal extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFA855F7).withOpacity(0.2),
+                        color: const Color(0xFFA855F7).withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: const Text('🔮', style: TextStyle(fontSize: 22)),
@@ -215,12 +216,12 @@ class CrystalShopModal extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  const Color(0xFF3B0764).withOpacity(0.8),
-                  const Color(0xFF1E1B4B).withOpacity(0.9),
+                  const Color(0xFF3B0764).withValues(alpha: 0.8),
+                  const Color(0xFF1E1B4B).withValues(alpha: 0.9),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFA855F7).withOpacity(0.4)),
+              border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.4)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -272,13 +273,13 @@ class CrystalShopModal extends StatelessWidget {
                     border: Border.all(
                       color: isPopular
                           ? const Color(0xFFFFD700)
-                          : const Color(0xFFA855F7).withOpacity(0.3),
+                          : const Color(0xFFA855F7).withValues(alpha: 0.3),
                       width: isPopular ? 1.8 : 1.0,
                     ),
                     boxShadow: isPopular
                         ? [
                             BoxShadow(
-                              color: const Color(0xFFFFD700).withOpacity(0.2),
+                              color: const Color(0xFFFFD700).withValues(alpha: 0.2),
                               blurRadius: 10,
                               offset: const Offset(0, 2),
                             ),
@@ -293,7 +294,7 @@ class CrystalShopModal extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFF2E1065),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFA855F7).withOpacity(0.4)),
+                        border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.4)),
                       ),
                       child: Center(
                         child: Text(
@@ -426,13 +427,13 @@ class CrystalShopModal extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF2E1065).withOpacity(0.5),
+            color: const Color(0xFF2E1065).withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFA855F7).withOpacity(0.5)),
+            border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.5)),
           ),
-          child: Row(
+          child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
+            children: [
               Icon(Icons.card_giftcard_rounded, color: Color(0xFFE9D5FF), size: 20),
               SizedBox(width: 8),
               Text(
@@ -513,7 +514,7 @@ class CrystalShopModal extends StatelessWidget {
                     },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA855F7)),
               child: isLoading
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(width: 16, height: 16, child: LoadingLogo(size: 60))
                   : const Text('Resgatar', style: TextStyle(color: Colors.white)),
             ),
           ],

@@ -26,10 +26,11 @@ class WelcomeSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 'Bem-vindo de volta, ${user?.fullName ?? user?.username ?? 'Jogador'}!',
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -39,6 +40,7 @@ class WelcomeSection extends StatelessWidget {
               const SizedBox(height: 8),
               const Text(
                 'Escolha seu modo de jogo favorito e comece a diversão',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.white70,

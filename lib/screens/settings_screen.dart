@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../utils/snackbar_utils.dart';
+import '../services/app_audio_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,6 +18,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _musicEnabled = true;
   bool _sfxEnabled = true;
   bool _vibrationEnabled = true;
+  double _musicVolume = 0.20;
+  double _sfxVolume = 0.70;
 
   @override
   void initState() {
@@ -25,11 +28,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+    final audio = context.read<AppAudioService>();
     setState(() {
-      _musicEnabled = prefs.getBool('musicEnabled') ?? true;
-      _sfxEnabled = prefs.getBool('sfxEnabled') ?? true;
-      _vibrationEnabled = prefs.getBool('vibrationEnabled') ?? true;
+      _musicEnabled = audio.musicEnabled;
+      _sfxEnabled = audio.sfxEnabled;
+      _vibrationEnabled = audio.vibrationEnabled;
+      _musicVolume = audio.musicVolume;
+      _sfxVolume = audio.sfxVolume;
     });
   }
 
@@ -38,10 +43,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setBool(key, value);
   }
 
+  Future<void> _resetToDefault() async {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Restaurar Padrões', style: TextStyle(color: Colors.white)),
+        content: const Text('Deseja restaurar todas as configurações para o padrão?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6366F1)),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final audio = context.read<AppAudioService>();
+              await audio.setMusicEnabled(true);
+              await audio.setSfxEnabled(true);
+              await audio.setVibrationEnabled(true);
+              await audio.setMusicVolume(0.20);
+              await audio.setSfxVolume(0.70);
+              
+              if (mounted) {
+                _loadSettings();
+                AppSnackBar.showSuccess(context, 'Configurações restauradas.');
+              }
+            },
+            child: const Text('Restaurar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _triggerVibration() {
-    if (_vibrationEnabled) {
-      HapticFeedback.lightImpact();
-    }
+    context.read<AppAudioService>().triggerVibration();
   }
 
   void _handleLogout() {
@@ -233,10 +271,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: _musicEnabled,
                 onChanged: (val) {
                   setState(() => _musicEnabled = val);
-                  _saveSetting('musicEnabled', val);
+                  context.read<AppAudioService>().setMusicEnabled(val);
                   _triggerVibration();
                 },
               ),
+              if (_musicEnabled) ...[
+                _buildSliderTile(
+                  title: 'Volume da Música',
+                  icon: Icons.graphic_eq_rounded,
+                  value: _musicVolume,
+                  onChanged: (val) {
+                    setState(() => _musicVolume = val);
+                    context.read<AppAudioService>().setMusicVolume(val);
+                  },
+                ),
+              ],
               _buildDivider(),
               _buildSwitchTile(
                 title: 'Efeitos sonoros',
@@ -244,10 +293,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: _sfxEnabled,
                 onChanged: (val) {
                   setState(() => _sfxEnabled = val);
-                  _saveSetting('sfxEnabled', val);
+                  context.read<AppAudioService>().setSfxEnabled(val);
                   _triggerVibration();
                 },
               ),
+              if (_sfxEnabled) ...[
+                _buildSliderTile(
+                  title: 'Volume dos Efeitos',
+                  icon: Icons.spatial_audio_off_rounded,
+                  value: _sfxVolume,
+                  onChanged: (val) {
+                    setState(() => _sfxVolume = val);
+                    context.read<AppAudioService>().setSfxVolume(val);
+                  },
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 24),
@@ -260,8 +320,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: _vibrationEnabled,
                 onChanged: (val) {
                   setState(() => _vibrationEnabled = val);
-                  _saveSetting('vibrationEnabled', val);
-                  if (val) HapticFeedback.lightImpact(); // vibrate if just turned on
+                  context.read<AppAudioService>().setVibrationEnabled(val);
+                  if (val) context.read<AppAudioService>().triggerVibration(); // vibrate if just turned on
                 },
               ),
             ],
@@ -282,6 +342,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: const Text('Apagar Conta', style: TextStyle(color: Colors.redAccent)),
                 trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38),
                 onTap: _handleDeleteAccount,
+              ),
+              _buildDivider(),
+              ListTile(
+                leading: const Icon(Icons.settings_backup_restore_rounded, color: Colors.orangeAccent),
+                title: const Text('Restaurar Padrões', style: TextStyle(color: Colors.orangeAccent)),
+                trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+                onTap: _resetToDefault,
               ),
             ],
           ),
@@ -572,6 +639,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
       secondary: Icon(icon, color: Colors.white70),
       activeColor: const Color(0xFF6366F1),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+
+  Widget _buildSliderTile({
+    required String title,
+    required IconData icon,
+    required double value,
+    required ValueChanged<double> onChanged,
+  }) {
+    final percent = (value * 100).round();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white54, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(title, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text('$percent%', style: const TextStyle(color: Color(0xFF818CF8), fontSize: 13, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 4,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                    activeTrackColor: const Color(0xFF6366F1),
+                    inactiveTrackColor: Colors.white12,
+                    thumbColor: Colors.white,
+                  ),
+                  child: Slider(
+                    value: value.clamp(0.0, 1.0),
+                    min: 0.0,
+                    max: 1.0,
+                    onChanged: onChanged,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +16,7 @@ import '../widgets/vip_badge_widget.dart';
 import '../config/api_config.dart';
 import '../providers/store_provider.dart';
 import '../utils/snackbar_utils.dart';
+import '../widgets/app_logo_text.dart';
 
 class TeamLobbyScreen extends StatefulWidget {
   const TeamLobbyScreen({super.key});
@@ -252,7 +253,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       }
     } catch (e) {
       if (mounted) {
-        AppSnackBar.showError(context, 'Erro ao atribuir equipe automaticamente: $e');
+        AppSnackBar.showError(context, e.toString());
       }
     } finally {
       if (mounted) {
@@ -294,7 +295,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
     } catch (e) {
       // Erro ao selecionar equipe - mostra na UI
       if (mounted) {
-        AppSnackBar.showError(context, 'Erro ao selecionar equipe: $e');
+        AppSnackBar.showError(context, e.toString());
       }
     }
   }
@@ -363,7 +364,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
     } catch (e) {
       // Erro ao distribuir equipes (exibido via snackbar abaixo)
       if (mounted) {
-        AppSnackBar.showError(context, 'Erro ao distribuir equipes: $e');
+        AppSnackBar.showError(context, e.toString());
       }
     } finally {
       if (mounted) {
@@ -429,7 +430,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       }
     } catch (e) {
       if (mounted) {
-        AppSnackBar.showError(context, 'Erro ao iniciar o jogo: $e');
+        AppSnackBar.showError(context, e.toString());
         setState(() {
           _isStartingGame = false;
         });
@@ -600,7 +601,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
     } catch (e) {
       // Erro ao distribuir disciplinas (exibido via snackbar abaixo)
       if (mounted) {
-        AppSnackBar.showError(context, 'Erro ao distribuir disciplinas: $e');
+        AppSnackBar.showError(context, e.toString());
       }
     } finally {
       if (mounted) {
@@ -612,15 +613,9 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
   }
 
   String _getCategoryDisplayName(String category) {
-    return {
-      'MATH': 'Matemática',
-      'PORTUGUESE': 'Português',
-      'HISTORY': 'História',
-      'GEOGRAPHY': 'Geografia',
-      'SCIENCE': 'Ciências',
-      'ENGLISH': 'Inglês',
-      'MIXED': 'Misto',
-    }[category] ?? category;
+    final provider = Provider.of<CategoryProvider>(context, listen: false);
+    final cat = provider.getCategoryByName(category);
+    return cat?.displayName ?? category;
   }
 
   int _getCategoryIdFromName(String category) {
@@ -655,10 +650,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   ),
                 ),
                 child: const Center(
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 3,
-                  ),
+                  child: LoadingLogo(size: 60),
                 ),
               ),
               const SizedBox(height: 24),
@@ -694,7 +686,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
             decoration: BoxDecoration(
               color: const Color(0xFF1E293B),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5)),
+              border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.5)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -703,7 +695,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withOpacity(0.1),
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(32),
                   ),
                   child: const Icon(
@@ -823,7 +815,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                     color: const Color(0xFF10B981),
                     size: isSmallScreen ? 20 : 24,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     'Jogadores Conectados',
                     style: TextStyle(
@@ -836,7 +828,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withOpacity(0.2),
+                      color: const Color(0xFF10B981).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFF10B981)),
                     ),
@@ -860,13 +852,10 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   child: ElevatedButton.icon(
                     onPressed: _isDistributingTeams ? null : _distributeTeamsRandomly,
                     icon: _isDistributingTeams 
-                        ? SizedBox(
+                        ? const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                            child: LoadingLogo(size: 60),
                           )
                         : Icon(Icons.shuffle, size: isSmallScreen ? 16 : 18),
                     label: Text(
@@ -965,25 +954,25 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         if (player.team != null) {
           switch (player.team!) {
             case TeamColor.RED:
-              backgroundColor = const Color(0xFFEF4444).withOpacity(0.1);
+              backgroundColor = const Color(0xFFEF4444).withValues(alpha: 0.1);
               borderColor = const Color(0xFFEF4444);
               teamIndicatorColor = const Color(0xFFEF4444);
               teamText = 'Equipe Vermelha';
               break;
             case TeamColor.BLUE:
-              backgroundColor = const Color(0xFF3B82F6).withOpacity(0.1);
+              backgroundColor = const Color(0xFF3B82F6).withValues(alpha: 0.1);
               borderColor = const Color(0xFF3B82F6);
               teamIndicatorColor = const Color(0xFF3B82F6);
               teamText = 'Equipe Azul';
               break;
             case TeamColor.GREEN:
-              backgroundColor = const Color(0xFF10B981).withOpacity(0.1);
+              backgroundColor = const Color(0xFF10B981).withValues(alpha: 0.1);
               borderColor = const Color(0xFF10B981);
               teamIndicatorColor = const Color(0xFF10B981);
               teamText = 'Equipe Verde';
               break;
             case TeamColor.YELLOW:
-              backgroundColor = const Color(0xFFF59E0B).withOpacity(0.1);
+              backgroundColor = const Color(0xFFF59E0B).withValues(alpha: 0.1);
               borderColor = const Color(0xFFF59E0B);
               teamIndicatorColor = const Color(0xFFF59E0B);
               teamText = 'Equipe Amarela';
@@ -1017,7 +1006,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                     ),
                     fit: BoxFit.cover,
                     colorFilter: ColorFilter.mode(
-                      Colors.black.withOpacity(0.6),
+                      Colors.black.withValues(alpha: 0.6),
                       BlendMode.darken,
                     ),
                   )
@@ -1029,7 +1018,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: teamIndicatorColor.withOpacity(0.2),
+                  color: teamIndicatorColor.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: CosmeticAvatar(
@@ -1041,7 +1030,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   isVip: player.isVip,
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               
               // Informações do jogador
               Expanded(
@@ -1151,7 +1140,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.3),
+                        color: Colors.grey.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(color: Colors.grey),
                       ),
@@ -1202,7 +1191,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   color: const Color(0xFFF59E0B),
                   size: isSmallScreen ? 20 : 24,
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
                   'Formação de Equipes',
                   style: TextStyle(
@@ -1215,7 +1204,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
             ),
             
             if (isChooseMode) ...[
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 'Selecione sua equipe clicando no botão abaixo:',
                 style: TextStyle(
@@ -1224,7 +1213,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                 ),
               ),
             ] else ...[
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 'As equipes serão formadas automaticamente:',
                 style: TextStyle(
@@ -1271,10 +1260,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                     const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
-                      ),
+                      child: LoadingLogo(size: 60),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -1303,7 +1289,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         return Container(
           padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
           decoration: BoxDecoration(
-            color: const Color(0xFF374151).withOpacity(0.3),
+            color: const Color(0xFF374151).withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFF6B7280)),
           ),
@@ -1377,21 +1363,21 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                 _selectTeam(team);
               } : null,
               borderRadius: BorderRadius.circular(12),
-              splashColor: canJoinTeam ? teamColor.withOpacity(0.3) : Colors.transparent,
-              highlightColor: canJoinTeam ? teamColor.withOpacity(0.1) : Colors.transparent,
+              splashColor: canJoinTeam ? teamColor.withValues(alpha: 0.3) : Colors.transparent,
+              highlightColor: canJoinTeam ? teamColor.withValues(alpha: 0.1) : Colors.transparent,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                 decoration: BoxDecoration(
-                  color: teamColor.withOpacity(isUserInThisTeam ? 0.2 : (canJoinTeam ? 0.15 : 0.1)),
+                  color: teamColor.withValues(alpha: isUserInThisTeam ? 0.2 : (canJoinTeam ? 0.15 : 0.1)),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isUserInThisTeam ? teamColor : teamColor.withOpacity(canJoinTeam ? 1.0 : 0.7),
+                    color: isUserInThisTeam ? teamColor : teamColor.withValues(alpha: canJoinTeam ? 1.0 : 0.7),
                     width: isUserInThisTeam ? 2 : (canJoinTeam ? 2 : 1),
                   ),
                   boxShadow: canJoinTeam ? [
                     BoxShadow(
-                      color: teamColor.withOpacity(0.4),
+                      color: teamColor.withValues(alpha: 0.4),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -1436,10 +1422,10 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                         decoration: BoxDecoration(
-                          color: teamColor.withOpacity(0.15),
+                          color: teamColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: teamColor.withOpacity(0.5),
+                            color: teamColor.withValues(alpha: 0.5),
                             style: BorderStyle.solid,
                           ),
                         ),
@@ -1472,7 +1458,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                         decoration: BoxDecoration(
-                          color: teamColor.withOpacity(0.2),
+                          color: teamColor.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: teamColor),
                         ),
@@ -1555,7 +1541,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                     ),
                     fit: BoxFit.cover,
                     colorFilter: ColorFilter.mode(
-                      Colors.black.withOpacity(0.6),
+                      Colors.black.withValues(alpha: 0.6),
                       BlendMode.darken,
                     ),
                   )
@@ -1568,7 +1554,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: teamColor.withOpacity(0.2),
+                      color: teamColor.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: CosmeticAvatar(
@@ -1580,7 +1566,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                       isVip: player.isVip,
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1807,7 +1793,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                   color: const Color(0xFF8B5CF6),
                   size: isSmallScreen ? 20 : 24,
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
                   'Atribuição de Disciplinas',
                   style: TextStyle(
@@ -1820,7 +1806,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
             ),
             
             if (isManualMode) ...[
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 'Selecione sua disciplina (uma por equipe):',
                 style: TextStyle(
@@ -1829,7 +1815,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                 ),
               ),
             ] else ...[
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 'As disciplinas serão distribuídas automaticamente:',
                 style: TextStyle(
@@ -1848,13 +1834,10 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                 child: ElevatedButton.icon(
                   onPressed: _isDistributingCategories ? null : _distributeCategoriesAutomatically,
                   icon: _isDistributingCategories 
-                      ? SizedBox(
+                      ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: LoadingLogo(size: 60),
                         )
                       : Icon(Icons.casino, size: isSmallScreen ? 16 : 18),
                   label: Text(
@@ -1977,7 +1960,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFFEF4444).withOpacity(0.2),
+              color: const Color(0xFFEF4444).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: const Color(0xFFEF4444)),
             ),
@@ -1994,7 +1977,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFF3B82F6).withOpacity(0.2),
+              color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: const Color(0xFF3B82F6)),
             ),
@@ -2039,7 +2022,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           return Container(
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
-              color: const Color(0xFF374151).withOpacity(0.3),
+              color: const Color(0xFF374151).withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFF6B7280)),
             ),
@@ -2058,7 +2041,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           return Container(
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
-              color: const Color(0xFF10B981).withOpacity(0.1),
+              color: const Color(0xFF10B981).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFF10B981)),
             ),
@@ -2102,7 +2085,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           return Container(
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF59E0B).withOpacity(0.1),
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFF59E0B)),
             ),
@@ -2171,7 +2154,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF8B5CF6).withOpacity(0.4),
+                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.4),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -2199,10 +2182,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                     const SizedBox(
                       width: 14,
                       height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                      child: LoadingLogo(size: 60),
                     ),
                   ],
                 ],
@@ -2237,15 +2217,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            'Meu Quiz +',
-            style: TextStyle(
-              fontSize: isSmallScreen ? 18 : 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-
+          AppLogoText(fontSize: isSmallScreen ? 18 : 20),
         ],
       ),
       actions: [
@@ -2262,7 +2234,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
               decoration: BoxDecoration(
                 color: const Color(0xFF1E293B),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.3)),
+                border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.3)),
               ),
               child: const Icon(
                 Icons.home,
@@ -2296,7 +2268,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6366F1).withOpacity(0.3),
+            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -2310,7 +2282,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
@@ -2338,7 +2310,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -2382,7 +2354,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           Container(
             height: 8,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Row(
@@ -2417,12 +2389,12 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFF6366F1).withOpacity(0.3),
+          color: const Color(0xFF6366F1).withValues(alpha: 0.3),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF000000).withOpacity(0.1),
+            color: const Color(0xFF000000).withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -2510,7 +2482,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF6366F1).withOpacity(0.4),
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.4),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -2534,7 +2506,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
   Widget _buildGameStatusBanner(bool isSmallScreen) {
     final playersCount = _currentRoom?.players.length ?? 0;
     final readyCount = _currentRoom?.players.where((p) => p.isReady).length ?? 0;
-    final minPlayers = 4; // 2 por equipe
+    const minPlayers = 4; // 2 por equipe
     
     String statusText;
     Color statusColor;
@@ -2557,9 +2529,9 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
     return Container(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
+        color: statusColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withOpacity(0.3)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -2591,16 +2563,10 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
       'HARD': 'Difícil',
     }[_currentRoom?.difficulty.value] ?? 'Médio';
 
+    final catProvider = Provider.of<CategoryProvider>(context, listen: false);
     String categoriesText = (_currentRoom?.categories ?? []).map((cat) {
-      return {
-        'MATH': 'Matemática',
-        'PORTUGUESE': 'Português',
-        'HISTORY': 'História',
-        'GEOGRAPHY': 'Geografia',
-        'SCIENCE': 'Ciências',
-        'ENGLISH': 'Inglês',
-        'MIXED': 'Misto',
-      }[cat] ?? cat;
+      final categoryObj = catProvider.getCategoryByName(cat);
+      return categoryObj?.displayName ?? cat;
     }).join(', ');
 
     if (categoriesText.isEmpty) {
@@ -2633,7 +2599,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.2),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(

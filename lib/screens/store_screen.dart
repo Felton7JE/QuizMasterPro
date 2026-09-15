@@ -262,7 +262,7 @@ class _StoreScreenState extends State<StoreScreen>
         ),
 
         if (_selectedCategoryIndex == 0) ...[
-          // Header de secÃ§Ã£o Banners
+          // Header de secção Banners
           _buildSectionHeader(
               'Banners',
               Icons.image_rounded,
@@ -273,7 +273,7 @@ class _StoreScreenState extends State<StoreScreen>
 
           if (!hasBanners)
             const SliverToBoxAdapter(
-              child: _EmptyState(message: 'Nenhum banner disponÃ­vel.'),
+              child: _EmptyState(message: 'Nenhum banner disponível.'),
             )
           else
             SliverPadding(
@@ -2295,7 +2295,7 @@ class _BannerCardState extends State<_BannerCard>
                             ),
                           ),
                         ),
-                      // Badge "POSSUÃDO" (nÃ£o equipado)
+                      // Badge "POSSUÍDO" (nÃ£o equipado)
                       if (widget.isPurchased && !isActive)
                         Positioned(
                           top: 8,
@@ -2308,7 +2308,7 @@ class _BannerCardState extends State<_BannerCard>
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(
-                              'POSSUÃDO',
+                              'POSSUÍDO',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 9,
@@ -2973,7 +2973,7 @@ class _TitleCard extends StatelessWidget {
         Icons.sports_esports_rounded
       ),
       'WINS': ('Vencer ${title.conditionValue}x', Icons.emoji_events_rounded),
-      'LEVEL': ('NÃ­vel ${title.conditionValue}', Icons.trending_up_rounded),
+      'LEVEL': ('Nível ${title.conditionValue}', Icons.trending_up_rounded),
     };
     final cond = condMap[title.conditionType];
     if (cond == null) return const SizedBox.shrink();

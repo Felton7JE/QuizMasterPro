@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -16,6 +15,7 @@ import '../utils/format_utils.dart';
 import '../providers/store_provider.dart';
 import '../config/api_config.dart';
 import '../services/api_service.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class DuelLobbyScreen extends StatefulWidget {
   const DuelLobbyScreen({super.key});
@@ -192,7 +192,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
       }
     } catch (e) {
       if (mounted) {
-        AppSnackBar.showError(context, 'Erro ao iniciar jogo: $e');
+        AppSnackBar.showError(context, e.toString());
       }
       setState(() {
         _isStartingGame = false;
@@ -206,7 +206,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
       return const Scaffold(
         backgroundColor: Color(0xFF0F172A),
         body:
-            Center(child: CircularProgressIndicator(color: Color(0xFF6366F1))),
+            Center(child: LoadingLogo(size: 60)),
       );
     }
 
@@ -320,7 +320,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
                       margin: const EdgeInsets.only(bottom: 16),
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                       decoration: BoxDecoration(
-                        color: Colors.redAccent.withOpacity(0.8),
+                        color: Colors.redAccent.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Row(
@@ -438,7 +438,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFF59E0B).withOpacity(0.5),
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.5),
                               blurRadius: 12,
                               spreadRadius: 2,
                             )
@@ -473,7 +473,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
               // Actions
               if (isHost) ...[
                 if (_isStartingGame)
-                  const CircularProgressIndicator(color: Color(0xFF6366F1))
+                  const LoadingLogo(size: 60)
                 else
                   SizedBox(
                     width: double.infinity,
@@ -492,7 +492,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
                   style: TextStyle(color: Colors.white70, fontSize: 16),
                 ),
                 const SizedBox(height: 16),
-                const CircularProgressIndicator(color: Color(0xFFEF4444)),
+                const LoadingLogo(size: 60),
               ],
             ],
           ),
@@ -524,7 +524,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
             ? []
             : [
                 BoxShadow(
-                  color: color.withOpacity(0.2),
+                  color: color.withValues(alpha: 0.2),
                   blurRadius: 16,
                   spreadRadius: 1,
                 )
@@ -540,7 +540,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
                   imageUrl: resolvedBanner,
                   httpHeaders: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
                   fit: BoxFit.cover,
-                  color: Colors.black.withOpacity(0.6),
+                  color: Colors.black.withValues(alpha: 0.6),
                   colorBlendMode: BlendMode.darken,
                   placeholder: (context, url) => Container(color: const Color(0xFF1E293B)),
                   errorWidget: (context, url, error) => const SizedBox.shrink(),
@@ -553,10 +553,10 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   isEmpty
-                      ? CircleAvatar(
+                      ? const CircleAvatar(
                           radius: 40,
-                          backgroundColor: const Color(0xFF334155),
-                          child: const Icon(Icons.person_outline, size: 40, color: Colors.grey),
+                          backgroundColor: Color(0xFF334155),
+                          child: Icon(Icons.person_outline, size: 40, color: Colors.grey),
                         )
                       : CosmeticAvatar(
                           radius: 40,
@@ -591,7 +591,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.2),
+                        color: color.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(

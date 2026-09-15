@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/app_logo_text.dart';
 import '../widgets/feature_card.dart';
-import '../widgets/game_mode_card.dart';
+import '../widgets/category_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -55,15 +56,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                'Meu Quiz +',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 20 : 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-
+              AppLogoText(fontSize: isSmallScreen ? 20 : 24),
             ],
           ),
           if (!isSmallScreen)
@@ -173,16 +166,6 @@ class HomeScreen extends StatelessWidget {
                     isLarge: true,
                   ),
                 ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: CustomButton(
-                    text: 'Saiba Mais',
-                    onPressed: () {},
-                    isPrimary: false,
-                    icon: Icons.info_outline,
-                  ),
-                ),
               ],
             )
           else
@@ -195,13 +178,6 @@ class HomeScreen extends StatelessWidget {
                   isPrimary: true,
                   icon: Icons.play_arrow,
                   isLarge: true,
-                ),
-                const SizedBox(width: 16),
-                CustomButton(
-                  text: 'Saiba Mais',
-                  onPressed: () {},
-                  isPrimary: false,
-                  icon: Icons.info_outline,
                 ),
               ],
             ),
@@ -218,14 +194,20 @@ class HomeScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
-            'Por que escolher o Meu Quiz +?',
-            style: TextStyle(
-              fontSize: isSmallScreen ? 24 : 32,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          RichText(
             textAlign: TextAlign.center,
+            text: TextSpan(
+              style: TextStyle(
+                fontSize: isSmallScreen ? 24 : 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              children: [
+                const TextSpan(text: 'Por que escolher o '),
+                AppLogoText.getSpan(fontSize: isSmallScreen ? 16 : 20),
+                const TextSpan(text: '?'),
+              ],
+            ),
           ),
           SizedBox(height: isSmallScreen ? 8 : 16),
           Text(
@@ -241,20 +223,20 @@ class HomeScreen extends StatelessWidget {
             builder: (context, constraints) {
               if (isSmallScreen) {
                 // Layout em coluna para telas pequenas
-                return Column(
+                return const Column(
                   children: [
                     FeatureCard(
                       icon: Icons.group,
                       title: 'Multiplayer Épico',
                       description: 'Jogue com até 8 pessoas divididas em 2 equipes de 4 jogadores cada. Cada jogador especialista em uma categoria!',
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     FeatureCard(
                       icon: Icons.diamond,
                       title: 'Múltiplos Modos',
                       description: 'Modo Equipe, 1v1, Quiz Clássico, estilo Kahoot e muito mais. Cada modo com suas próprias regras e desafios únicos.',
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     FeatureCard(
                       icon: Icons.wifi,
                       title: 'Online & Offline',
@@ -264,7 +246,7 @@ class HomeScreen extends StatelessWidget {
                 );
               } else if (isMediumScreen) {
                 // Layout em 2 colunas para telas médias
-                return Column(
+                return const Column(
                   children: [
                     Row(
                       children: [
@@ -275,7 +257,7 @@ class HomeScreen extends StatelessWidget {
                             description: 'Jogue com até 8 pessoas divididas em 2 equipes de 4 jogadores cada. Cada jogador especialista em uma categoria!',
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16),
                         Expanded(
                           child: FeatureCard(
                             icon: Icons.diamond,
@@ -285,7 +267,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
@@ -295,15 +277,15 @@ class HomeScreen extends StatelessWidget {
                             description: 'Jogue online com pessoas do mundo todo ou crie um hotspot Wi-Fi para jogar offline com seus amigos próximos.',
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        const Expanded(child: SizedBox()), // Espaço vazio
+                        SizedBox(width: 16),
+                        Expanded(child: SizedBox()), // Espaço vazio
                       ],
                     ),
                   ],
                 );
               } else {
                 // Layout em 3 colunas para telas grandes
-                return Row(
+                return const Row(
                   children: [
                     Expanded(
                       child: FeatureCard(
@@ -312,7 +294,7 @@ class HomeScreen extends StatelessWidget {
                         description: 'Jogue com até 8 pessoas divididas em 2 equipes de 4 jogadores cada. Cada jogador especialista em uma categoria!',
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     Expanded(
                       child: FeatureCard(
                         icon: Icons.diamond,
@@ -320,7 +302,7 @@ class HomeScreen extends StatelessWidget {
                         description: 'Modo Equipe, 1v1, Quiz Clássico, estilo Kahoot e muito mais. Cada modo com suas próprias regras e desafios únicos.',
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     Expanded(
                       child: FeatureCard(
                         icon: Icons.wifi,
@@ -367,191 +349,33 @@ class HomeScreen extends StatelessWidget {
           SizedBox(height: isSmallScreen ? 32 : 48),
           LayoutBuilder(
             builder: (context, constraints) {
-              if (isSmallScreen) {
-                // Layout em coluna para telas pequenas
-                return Column(
-                  children: [
-                    GameModeCard(
-                      icon: Icons.group,
-                      title: 'Modo Equipe',
-                      description: 'Forme equipes de até 4 jogadores e compete em diferentes categorias',
-                      players: '2-8 Jogadores',
-                      duration: '15-30 min',
-                      categories: '4 Categorias',
-                      badge: 'Popular',
-                      onTap: () => Navigator.pushNamed(context, '/login'),
-                    ),
-                    const SizedBox(height: 16),
-                    GameModeCard(
-                      icon: Icons.workspace_premium_rounded,
-                      title: 'Passe de Temporada',
-                      description: 'Desbloqueie prêmios exclusivos jogando durante a temporada',
-                      players: 'Solo/Equipe',
-                      duration: '30 Dias',
-                      categories: 'Temática',
-                      badge: 'Evento',
-                      onTap: () => Navigator.pushNamed(context, '/login'),
-                    ),
-                    const SizedBox(height: 16),
-                    GameModeCard(
-                      icon: Icons.flash_on,
-                      title: 'Duelo 1v1',
-                      description: 'Desafie um amigo para um duelo direto de conhecimentos',
-                      players: '2 Jogadores',
-                      duration: '5-15 min',
-                      categories: 'Categoria Livre',
-                      badge: 'Novo',
-                      onTap: () => Navigator.pushNamed(context, '/login'),
-                    ),
-                  ],
-                );
-              } else if (isMediumScreen) {
-                // Layout em 2 colunas para telas médias
-                return Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GameModeCard(
-                            icon: Icons.group,
-                            title: 'Modo Equipe',
-                            description: 'Forme equipes de até 4 jogadores e compete em diferentes categorias',
-                            players: '2-8 Jogadores',
-                            duration: '15-30 min',
-                            categories: '4 Categorias',
-                            badge: 'Popular',
-                            onTap: () => Navigator.pushNamed(context, '/login'),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: GameModeCard(
-                            icon: Icons.workspace_premium_rounded,
-                            title: 'Passe de Temporada',
-                            description: 'Prêmios exclusivos do mês',
-                            players: 'Solo/Equipe',
-                            duration: '30 Dias',
-                            categories: 'Temática',
-                            badge: 'Evento',
-                            onTap: () => Navigator.pushNamed(context, '/login'),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: GameModeCard(
-                            icon: Icons.flash_on,
-                            title: 'Duelo 1v1',
-                            description: 'Desafie um amigo para um duelo direto de conhecimentos',
-                            players: '2 Jogadores',
-                            duration: '5-15 min',
-                            categories: 'Categoria Livre',
-                            badge: 'Novo',
-                            onTap: () => Navigator.pushNamed(context, '/login'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GameModeCard(
-                            icon: Icons.quiz,
-                            title: 'Quiz Clássico',
-                            description: 'Teste seus conhecimentos sozinho no modo tradicional',
-                            players: 'Solo',
-                            duration: 'Sem limite',
-                            categories: 'Todas',
-                            onTap: () => Navigator.pushNamed(context, '/login'),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: GameModeCard(
-                            icon: Icons.emoji_emotions,
-                            title: 'Estilo Kahoot',
-                            description: 'Todos respondem a mesma pergunta simultaneamente',
-                            players: '2-20 Jogadores',
-                            duration: '10-20 min',
-                            categories: 'Tempo Real',
-                            badge: 'Quente',
-                            onTap: () => Navigator.pushNamed(context, '/login'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              } else {
-                // Layout em 4 colunas para telas grandes
-                return Row(
-                  children: [
-                    Expanded(
-                      child: GameModeCard(
-                        icon: Icons.group,
-                        title: 'Modo Equipe',
-                        description: 'Forme equipes de até 4 jogadores e compete em diferentes categorias',
-                        players: '2-8 Jogadores',
-                        duration: '15-30 min',
-                        categories: '4 Categorias',
-                        badge: 'Popular',
-                        onTap: () => Navigator.pushNamed(context, '/login'),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: GameModeCard(
-                        icon: Icons.workspace_premium_rounded,
-                        title: 'Temporada',
-                        description: 'Passe VIP',
-                        players: 'Todos',
-                        duration: '30 Dias',
-                        categories: 'Tema',
-                        badge: 'Evento',
-                        onTap: () => Navigator.pushNamed(context, '/login'),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: GameModeCard(
-                        icon: Icons.flash_on,
-                        title: 'Duelo 1v1',
-                        description: 'Desafie um amigo para um duelo direto de conhecimentos',
-                        players: '2 Jogadores',
-                        duration: '5-15 min',
-                        categories: 'Categoria Livre',
-                        badge: 'Novo',
-                        onTap: () => Navigator.pushNamed(context, '/login'),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: GameModeCard(
-                        icon: Icons.quiz,
-                        title: 'Quiz Clássico',
-                        description: 'Teste seus conhecimentos sozinho no modo tradicional',
-                        players: 'Solo',
-                        duration: 'Sem limite',
-                        categories: 'Todas',
-                        onTap: () => Navigator.pushNamed(context, '/login'),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: GameModeCard(
-                        icon: Icons.emoji_emotions,
-                        title: 'Estilo Kahoot',
-                        description: 'Todos respondem a mesma pergunta simultaneamente',
-                        players: '2-20 Jogadores',
-                        duration: '10-20 min',
-                        categories: 'Tempo Real',
-                        badge: 'Quente',
-                        onTap: () => Navigator.pushNamed(context, '/login'),
-                      ),
-                    ),
-                  ],
-                );
-              }
+              return Column(
+                children: [
+                  CategoryCard(
+                    title: 'SOLO',
+                    subtitle: 'Aventura, Temporada e Modo Livre',
+                    icon: Icons.person_outline,
+                    gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                    onTap: () => Navigator.pushNamed(context, '/login'),
+                  ),
+                  const SizedBox(height: 16),
+                  CategoryCard(
+                    title: 'ONLINE',
+                    subtitle: 'Desafia amigos em 1v1, Equipa ou Salas',
+                    icon: Icons.public,
+                    gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                    onTap: () => Navigator.pushNamed(context, '/login'),
+                  ),
+                  const SizedBox(height: 16),
+                  CategoryCard(
+                    title: 'ESTUDO',
+                    subtitle: 'Gera quizzes com IA para estudar',
+                    icon: Icons.school_outlined,
+                    gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+                    onTap: () => Navigator.pushNamed(context, '/login'),
+                  ),
+                ],
+              );
             },
           ),
         ],
@@ -559,4 +383,3 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
-

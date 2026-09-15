@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/mission_model.dart';
 import '../services/mission_service.dart';
+import '../services/api_service.dart';
 import 'auth_provider.dart';
 
 class MissionProvider with ChangeNotifier {
@@ -29,7 +30,12 @@ class MissionProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _missions = await _missionService.getActiveMissions(_authProvider.token!);
+      final fetched = await _missionService.getActiveMissions(ApiService.token!);
+      final uniqueMissions = <int, MissionModel>{};
+      for (var mission in fetched) {
+        uniqueMissions[mission.id] = mission;
+      }
+      _missions = uniqueMissions.values.toList();
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -46,7 +52,7 @@ class MissionProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _missionService.claimReward(_authProvider.token!, missionId);
+      final response = await _missionService.claimReward(ApiService.token!, missionId);
       
       // Update coins in AuthProvider
       if (response['success'] == true) {

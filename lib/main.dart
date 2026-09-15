@@ -35,13 +35,20 @@ import 'providers/room_provider.dart';
 import 'providers/game_provider.dart';
 import 'providers/category_provider.dart';
 import 'providers/question_provider.dart';
+import 'providers/study_quiz_provider.dart';
 import 'providers/websocket_provider.dart';
+import 'providers/network_provider.dart';
+import 'widgets/offline_banner_wrapper.dart';
 import 'providers/mission_provider.dart';
 import 'providers/store_provider.dart';
 import 'providers/solo_provider.dart';
 import 'providers/season_provider.dart';
 import 'providers/free_mode_provider.dart';
-import 'providers/study_quiz_provider.dart';
+import 'providers/friendship_provider.dart';
+import 'services/friendship_service.dart';
+import 'services/app_audio_service.dart';
+import 'screens/social/social_screen.dart';
+
 import 'screens/quests_screen.dart';
 import 'screens/store_screen.dart';
 import 'screens/profile_screen.dart';
@@ -54,6 +61,10 @@ import 'screens/season_map_screen.dart';
 import 'screens/study_mode_screen.dart';
 import 'screens/resource_download_screen.dart';
 import 'services/asset_manager_service.dart';
+import 'screens/solo_modes_screen.dart';
+import 'screens/online_modes_screen.dart';
+import 'screens/study_modes_screen.dart';
+import 'screens/onboarding_screen.dart';
 
 void main() {
   runApp(const MeuQuizApp());
@@ -71,12 +82,18 @@ class MeuQuizApp extends StatelessWidget {
           create: (_) => ApiService(),
           dispose: (_, apiService) => apiService.dispose(),
         ),
+        ChangeNotifierProvider<AppAudioService>(
+          create: (_) => AppAudioService(),
+        ),
         Provider<MissionService>(
           create: (_) => MissionService(),
           dispose: (_, missionService) => missionService.dispose(),
         ),
         Provider<StoreService>(
           create: (_) => StoreService(),
+        ),
+        Provider<FriendshipService>(
+          create: (_) => FriendshipService(ApiService()),
         ),
         ProxyProvider<ApiService, AuthService>(
           update: (_, apiService, __) => AuthService(apiService),
@@ -163,14 +180,26 @@ class MeuQuizApp extends StatelessWidget {
           create: (context) => StudyQuizProvider(service: context.read<StudyQuizService>()),
           update: (_, studyService, previous) => previous ?? StudyQuizProvider(service: studyService),
         ),
+        ChangeNotifierProxyProvider<FriendshipService, FriendshipProvider>(
+          create: (context) => FriendshipProvider(context.read<FriendshipService>()),
+          update: (_, friendshipService, previous) => previous ?? FriendshipProvider(friendshipService),
+        ),
         // WebSocket: ligação STOMP em tempo real
         ChangeNotifierProvider<WebSocketProvider>(
           create: (_) => WebSocketProvider(),
+        ),
+        ChangeNotifierProvider<NetworkProvider>(
+          create: (_) => NetworkProvider(),
         ),
       ],
       child: MaterialApp(
         title: 'Meu Quiz +',
         debugShowCheckedModeBanner: false,
+        builder: (context, child) {
+          return OfflineBannerWrapper(
+            child: child ?? const SizedBox(),
+          );
+        },
         theme: ThemeData(
           primarySwatch: Colors.indigo,
           primaryColor: const Color(0xFF6366F1),
@@ -186,6 +215,9 @@ class MeuQuizApp extends StatelessWidget {
         routes: {
           '/': (context) => const SplashScreen(),
           '/intro': (context) => const HomeScreen(),
+          '/solo_modes': (context) => const SoloModesScreen(),
+          '/online_modes': (context) => const OnlineModesScreen(),
+          '/study_modes': (context) => const StudyModesScreen(),
           '/menu': (context) => const MenuScreen(),
           '/nickname_setup': (context) => const NicknameScreen(),
           '/create-room': (context) => const CreateRoomScreen(),
@@ -215,15 +247,15 @@ class MeuQuizApp extends StatelessWidget {
           '/free-mode-results': (context) => const FreeModeResultsScreen(),
           '/resource-download': (context) => ResourceDownloadScreen(
                 onDownloadComplete: () {
-                  final authProvider = context.read<AuthProvider>();
-                  final currentUser = authProvider.currentUser;
-                  if (currentUser != null && currentUser.username.contains('@')) {
-                    Navigator.pushReplacementNamed(context, '/nickname_setup');
-                  } else {
-                    Navigator.pushReplacementNamed(context, '/menu');
-                  }
+                  Navigator.pop(context);
                 },
               ),
+          '/social': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            final initialTab = (args is int) ? args : 0;
+            return SocialScreen(initialTabIndex: initialTab);
+          },
+          '/onboarding': (context) => const OnboardingScreen(),
         },
       ),
     );

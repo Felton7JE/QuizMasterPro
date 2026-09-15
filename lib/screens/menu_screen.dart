@@ -1,19 +1,36 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_logo_text.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/cosmetic_avatar.dart';
-import '../widgets/vip_badge_widget.dart';
 import '../theme/app_colors.dart';
 import '../utils/responsive_utils.dart';
+import '../services/app_audio_service.dart';
 
 import 'menu/widgets/user_gamification_header.dart';
 import 'menu/widgets/welcome_section.dart';
-import 'menu/widgets/game_mode_card.dart';
 import 'menu/widgets/quick_action_card.dart';
 import 'menu/widgets/recent_activity_section.dart';
+import '../widgets/category_card.dart';
 
-class MenuScreen extends StatelessWidget {
+class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
+
+  @override
+  State<MenuScreen> createState() => _MenuScreenState();
+}
+
+class _MenuScreenState extends State<MenuScreen> {
+  bool _musicStarted = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_musicStarted) {
+      _musicStarted = true;
+      context.read<AppAudioService>().playMenuMusic();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,21 +42,19 @@ class MenuScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Meu Quiz +',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-
-          ],
-        ),
+        title: const AppLogoText(fontSize: 20),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.people_alt_outlined, color: Colors.white, size: 24),
+            tooltip: 'Amigos',
+            onPressed: () => Navigator.pushNamed(context, '/social', arguments: 0),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 22),
+            tooltip: 'Mensagens',
+            onPressed: () => Navigator.pushNamed(context, '/social', arguments: 2),
+          ),
+          const SizedBox(width: 4),
           Consumer<AuthProvider>(
             builder: (context, authProvider, child) {
               final user = authProvider.currentUser;
@@ -77,10 +92,6 @@ class MenuScreen extends StatelessWidget {
                       isVip: user.isVip,
                     ),
                   ),
-                  if (user.isVip) ...[  
-                    const SizedBox(width: 6),
-                    const VipBadge(scale: 0.9),
-                  ],
                   const SizedBox(width: 16),
                 ],
               );
@@ -123,145 +134,30 @@ class MenuScreen extends StatelessWidget {
   }
 
   Widget _buildGameModesGrid(BuildContext context) {
-    int crossAxisCount = context.screenWidth > 600 ? 2 : 1;
-    double aspectRatio = context.isVerySmallScreen 
-        ? 1.3 
-        : (context.isSmallScreen ? 1.2 : 1.0);
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Modos de Jogo',
-              style: TextStyle(
-                fontSize: context.isVerySmallScreen ? 20 : 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.secondary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => Navigator.pushNamed(context, '/join-room'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.meeting_room,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Entrar',
-                          style: TextStyle(
-                            fontSize: context.isVerySmallScreen ? 12 : 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+        CategoryCard(
+          title: 'SOLO',
+          subtitle: 'Aventura, Temporada e Modo Livre',
+          icon: Icons.person_outline,
+          gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+          onTap: () => Navigator.pushNamed(context, '/solo_modes'),
         ),
-        SizedBox(height: context.screenHeight * 0.02),
-        GridView.count(
-          crossAxisCount: crossAxisCount,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: context.screenWidth * 0.04,
-          mainAxisSpacing: context.screenHeight * 0.015,
-          childAspectRatio: aspectRatio,
-          children: const [
-            GameModeCard(
-              icon: Icons.group,
-              title: 'Modo Equipe',
-              description: 'Forme equipes de até 4 jogadores e compete em diferentes categorias',
-              players: '2-8 Jogadores',
-              duration: '15-30 min',
-              categories: '4 Categorias',
-              badge: 'Popular',
-              gameMode: 'team',
-            ),
-            GameModeCard(
-              icon: Icons.flash_on,
-              title: 'Duelo 1v1',
-              description: 'Desafie um amigo para um duelo direto de conhecimentos',
-              players: '2 Jogadores',
-              duration: '5-15 min',
-              categories: 'Categoria Livre',
-              badge: 'Novo',
-              gameMode: 'duel',
-            ),
-            GameModeCard(
-              icon: Icons.quiz,
-              title: 'Quiz Clássico',
-              description: 'Teste seus conhecimentos sozinho no modo tradicional',
-              players: 'Solo',
-              duration: 'Sem limite',
-              categories: 'Todas',
-              gameMode: 'solo',
-            ),
-            GameModeCard(
-              icon: Icons.emoji_emotions,
-              title: 'Estilo Kahoot',
-              description: 'Todos respondem a mesma pergunta simultaneamente',
-              players: '2-20 Jogadores',
-              duration: '10-20 min',
-              categories: 'Tempo Real',
-              badge: 'Quente',
-              gameMode: 'kahoot',
-            ),
-            GameModeCard(
-              icon: Icons.workspace_premium_rounded,
-              title: 'Passe VIP',
-              description: 'Jogue e desbloqueie prêmios incríveis',
-              players: 'Solo',
-              duration: 'Temporada',
-              categories: 'Temática',
-              badge: 'Evento',
-              gameMode: 'season',
-            ),
-            GameModeCard(
-              icon: Icons.school_rounded,
-              title: 'Modo Estudo (IA)',
-              description: 'Gera quizzes a partir de matérias, PDF e resumos para testes',
-              players: 'Solo',
-              duration: 'À tua escolha',
-              categories: 'Personalizado',
-              badge: '5 🔮',
-              gameMode: 'study',
-            ),
-            GameModeCard(
-              icon: Icons.celebration,
-              title: 'Modo Livre',
-              description: 'Treino, Sobrevivência e Corrida Contra o Tempo',
-              players: 'Solo',
-              duration: 'Variável',
-              categories: 'Livre',
-              badge: 'Novo',
-              gameMode: 'free',
-            ),
-          ],
+        const SizedBox(height: 16),
+        CategoryCard(
+          title: 'ONLINE',
+          subtitle: 'Desafia amigos em 1v1, Equipa ou Salas',
+          icon: Icons.public,
+          gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+          onTap: () => Navigator.pushNamed(context, '/online_modes'),
+        ),
+        const SizedBox(height: 16),
+        CategoryCard(
+          title: 'ESTUDO',
+          subtitle: 'Gera quizzes com IA para estudar',
+          icon: Icons.school_outlined,
+          gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+          onTap: () => Navigator.pushNamed(context, '/study_modes'),
         ),
       ],
     );

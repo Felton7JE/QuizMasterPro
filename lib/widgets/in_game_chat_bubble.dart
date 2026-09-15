@@ -105,7 +105,8 @@ class _InGameChatOverlayState extends State<InGameChatOverlay>
 
     final isVip = _currentMessage!.isVip;
 
-    return Center(
+    return Align(
+      alignment: Alignment.bottomCenter,
       child: SlideTransition(
         position: _slideAnimation,
         child: ScaleTransition(
@@ -131,26 +132,26 @@ class _InGameChatOverlayState extends State<InGameChatOverlay>
                     end: Alignment.bottomRight,
                     colors: isVip
                         ? [
-                            const Color(0xFF2E1A47).withOpacity(0.96),
-                            const Color(0xFF1E1035).withOpacity(0.98),
+                            const Color(0xFF2E1A47).withValues(alpha: 0.96),
+                            const Color(0xFF1E1035).withValues(alpha: 0.98),
                           ]
                         : [
-                            const Color(0xFF1A2238).withOpacity(0.95),
-                            const Color(0xFF111827).withOpacity(0.98),
+                            const Color(0xFF1A2238).withValues(alpha: 0.95),
+                            const Color(0xFF111827).withValues(alpha: 0.98),
                           ],
                   ),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isVip
-                        ? const Color(0xFFFFD700).withOpacity(0.8)
-                        : const Color(0xFF6C5CE7).withOpacity(0.6),
+                        ? const Color(0xFFFFD700).withValues(alpha: 0.8)
+                        : const Color(0xFF6C5CE7).withValues(alpha: 0.6),
                     width: isVip ? 2.0 : 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: isVip
-                          ? const Color(0xFFFFD700).withOpacity(0.35)
-                          : const Color(0xFF6C5CE7).withOpacity(0.3),
+                          ? const Color(0xFFFFD700).withValues(alpha: 0.35)
+                          : const Color(0xFF6C5CE7).withValues(alpha: 0.3),
                       blurRadius: 16,
                       spreadRadius: 1,
                       offset: const Offset(0, 4),
@@ -225,7 +226,7 @@ class _InGameChatOverlayState extends State<InGameChatOverlay>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: (isVip ? Colors.amber : const Color(0xFF6C5CE7))
-                            .withOpacity(0.2),
+                            .withValues(alpha: 0.2),
                       ),
                       child: Icon(
                         Icons.chat_bubble_outline_rounded,

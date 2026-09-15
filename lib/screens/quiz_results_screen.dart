@@ -153,15 +153,20 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
     final roomProv = Provider.of<RoomProvider>(context, listen: false);
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final isSeason = args?['isSeason'] == true;
+    final isPractice = args?['isPractice'] == true;
     final isSolo = args?['isSolo'] == true || roomProv.currentRoom?.gameMode == GameMode.CLASSIC;
     final isTeamMode = !isSolo && roomProv.currentRoom?.gameMode == GameMode.TEAM;
     final isDuelMode = roomProv.currentRoom?.gameMode == GameMode.DUEL;
     final isKahootMode = roomProv.currentRoom?.gameMode == GameMode.KAHOOT;
+    final isClassicRoom = roomProv.currentRoom?.gameMode == GameMode.CLASSIC;
 
     String route = '/menu';
-    if (isSeason) route = '/season-map';
-    else if (isSolo) route = '/solo-map';
-    else if (isTeamMode) route = '/team-lobby'; // Corrigido de /menu para /team-lobby se houver
+    if (isSeason) {
+      route = '/season-map';
+    } else if (isPractice) {
+      route = '/solo-setup';
+    } else if (isSolo) route = '/solo-map';
+    else if (isTeamMode || isClassicRoom) route = '/team-lobby';
     else if (isDuelMode) route = '/duel-lobby';
     else if (isKahootMode) route = '/kahoot-lobby';
 
@@ -1618,7 +1623,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
 
   Widget _buildActionButtons(bool isSmallScreen, bool isTeamMode, bool isSolo, bool isDuelMode, bool isKahootMode) {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final isProgressionMode = args?['isSolo'] == true;
+    final isProgressionMode = args?['isSolo'] == true && args?['isPractice'] != true && args?['isSeason'] != true;
 
     if (isSmallScreen) {
       // Layout vertical para telas pequenas

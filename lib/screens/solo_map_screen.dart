@@ -1,10 +1,9 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/solo_provider.dart';
 import '../services/solo_service.dart';
-import '../widgets/crystal_balance_chip.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class SoloMapScreen extends StatefulWidget {
   const SoloMapScreen({super.key});
@@ -16,7 +15,9 @@ class SoloMapScreen extends StatefulWidget {
 class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animController;
   final ScrollController _scrollController = ScrollController();
-  bool _hasInitialScrolled = false;
+
+  /// Altura fixa por nó — garante espaçamento 100% uniforme em todos os chunks
+  static const double _nodeHeight = 110.0;
 
   /// Maps category name keywords to boss image asset paths
   static const Map<String, String> _bossImages = {
@@ -58,12 +59,37 @@ class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProvider
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prov = context.read<SoloProvider>();
       if (prov.mapData == null) {
-        prov.fetchMapProgress();
+        await prov.fetchMapProgress();
+      }
+      // Scroll até ao nível atual do jogador após dados carregados
+      if (mounted) {
+        // Aguarda a renderização completa da scroll view
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) _scrollToCurrentLevel(prov);
+        });
       }
     });
+  }
+
+  /// Calcula a posição do nível atual e faz scroll até lá.
+  /// O mapa tem os níveis mais altos no TOPO, então o nível 1 está no FUNDO.
+  /// Cada nó tem altura [_nodeHeight]. O scroll máximo = nível 100 (topo).
+  void _scrollToCurrentLevel(SoloProvider prov) {
+    if (!_scrollController.hasClients) return;
+    final totalLevels = prov.mapData?.levels.length ?? 100;
+    final currentLevel = prov.mapData?.currentUnlockedLevel ?? 1;
+    final maxExtent = _scrollController.position.maxScrollExtent;
+
+    // Nível 1 está no fundo (maxExtent), nível 100 no topo (0).
+    // Calculamos a posição proporcional invertida.
+    final levelFromTop = totalLevels - currentLevel; // quantos níveis do topo
+    final ratio = levelFromTop / (totalLevels > 1 ? totalLevels - 1 : 1);
+    final targetOffset = (maxExtent * ratio).clamp(0.0, maxExtent);
+
+    _scrollController.jumpTo(targetOffset);
   }
 
   @override
@@ -134,7 +160,7 @@ class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProvider
                 const Icon(Icons.bolt_rounded, color: Colors.cyanAccent, size: 18),
                 const SizedBox(width: 4),
                 Text(
-                  '${soloProv.mapData?.currentEnergy ?? 0}/5',
+                  '${user?.energy ?? 100}/100',
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                 ),
                 const SizedBox(width: 10),
@@ -179,11 +205,11 @@ class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProvider
             ),
           ),
           // ── Conteúdo dos níveis ──
-          if (soloProv.isLoadingMap)
+          if (soloProv.isLoadingMap && soloProv.mapData == null)
             const Center(
-              child: CircularProgressIndicator(color: Color(0xFF38BDF8)),
+              child: LoadingLogo(size: 60),
             )
-          else if (soloProv.error != null)
+          else if (soloProv.error != null && soloProv.mapData == null)
             Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -207,7 +233,20 @@ class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProvider
               ),
             )
           else
-            _buildMapPath(context, soloProv.mapData?.levels ?? []),
+            Stack(
+              children: [
+                _buildMapPath(context, soloProv.mapData?.levels ?? []),
+                if (soloProv.isLoadingMap)
+                  const Positioned(
+                    top: kToolbarHeight + 40,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: LoadingLogo(size: 60),
+                    ),
+                  ),
+              ],
+            ),
         ],
       ),
     );
@@ -240,8 +279,9 @@ class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProvider
       final int visualIndex = (totalChunks - 1) - i;
       
       final bool isFirstVisual = visualIndex == 0;
-      final double overlap = 80.0; // A sobreposição recomendada de pixels
-      final double chunkHeight = 1100.0;
+      const double overlap = 80.0;
+      // Altura do chunk baseada na altura fixa por nó × 10 níveis
+      const double chunkHeight = _nodeHeight * 10;
       final double layoutHeight = isFirstVisual ? chunkHeight : chunkHeight - overlap;
 
       // SOLUÇÃO MESTRA: O Gradiente de Sobreposição no Fundo
@@ -262,10 +302,10 @@ class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProvider
           heightFactor: layoutHeight / chunkHeight,
           child: ShaderMask(
             shaderCallback: (Rect bounds) {
-              return LinearGradient(
+              return const LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: const [Colors.transparent, Colors.white],
+                colors: [Colors.transparent, Colors.white],
                 stops: [0.0, overlap / chunkHeight],
               ).createShader(bounds);
             },
@@ -275,29 +315,33 @@ class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProvider
         );
       }
 
-      // NODES (mantidos no tamanho do layout para não sobreporem e manterem a distância ideal)
+      // NODES: altura fixa por nó para espaçamento uniforme em todos os chunks
       Widget nodesWidget = SizedBox(
-        height: layoutHeight,
+        height: chunkHeight,
         child: Column(
           children: List.generate(10, (index) {
             final int expectedLevelNumber = startLevel + 9 - index;
             final levelMatch = levels.where((l) => l.levelNumber == expectedLevelNumber).toList();
-            
+
             if (levelMatch.isEmpty) {
-              return const Expanded(child: SizedBox());
+              return const SizedBox(height: _nodeHeight);
             }
-            
+
             final level = levelMatch.first;
             final isCurrent = level.unlocked && !level.completed;
-            
-            return Expanded(
+
+            Widget nodeContent = _buildLevelNode(context, level, isCurrent);
+            if (expectedLevelNumber == 1) {
+              nodeContent = Transform.translate(
+                offset: const Offset(0, -35),
+                child: nodeContent,
+              );
+            }
+
+            return SizedBox(
+              height: _nodeHeight,
               child: Center(
-                child: expectedLevelNumber == 1
-                    ? Transform.translate(
-                        offset: const Offset(0, -40), // Sobe o nível 1 para o topo do pódio
-                        child: _buildLevelNode(context, level, isCurrent),
-                      )
-                    : _buildLevelNode(context, level, isCurrent),
+                child: nodeContent,
               ),
             );
           }),
@@ -313,7 +357,7 @@ class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProvider
               bottom: 0,
               left: 0,
               right: 0,
-              height: layoutHeight,
+              height: chunkHeight,
               child: nodesWidget,
             ),
           ],
@@ -321,14 +365,7 @@ class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProvider
       );
     }
 
-    if (!_hasInitialScrolled) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-          _hasInitialScrolled = true;
-        }
-      });
-    }
+    // O scroll inicial é feito em initState via _scrollToCurrentLevel()
 
     return SingleChildScrollView(
       controller: _scrollController,
@@ -751,14 +788,20 @@ class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProvider
                     if (level.isBossLevel) {
                       Navigator.pushNamed(
                         context,
-                        '/boss-battle',
-                        arguments: {'level': level},
+                        '/quiz-countdown',
+                        arguments: {
+                          'gameMode': 'BOSS_BATTLE',
+                          'level': level,
+                        },
                       );
                     } else {
                       Navigator.pushNamed(
                         context,
-                        '/solo-game',
-                        arguments: {'levelNumber': level.levelNumber},
+                        '/quiz-countdown',
+                        arguments: {
+                          'gameMode': 'SOLO_MAP',
+                          'levelNumber': level.levelNumber,
+                        },
                       );
                     }
                   },

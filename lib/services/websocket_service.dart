@@ -176,6 +176,9 @@ class WebSocketService {
   /// Callback chamado quando o Leaderboard é atualizado
   Function(LeaderboardUpdateEvent)? onLeaderboardUpdate;
 
+  /// Callback chamado quando um amigo fica online ou offline
+  Function(Map<String, dynamic>)? onFriendStatusUpdate;
+
   /// Callback chamado quando uma frase/chat em jogo é recebida
   Function(InGameChatMessageEvent)? onChatMessage;
 
@@ -198,11 +201,13 @@ class WebSocketService {
 
   /// Liga ao servidor WebSocket.
   void connect({
-    required String roomCode,
+    String? roomCode,
+    String? userId,
     Function(GameStartedEvent)? onGameStarted,
     Function(NextQuestionEvent)? onNextQuestion,
     Function(GameEndedEvent)? onGameEnded,
     Function(LeaderboardUpdateEvent)? onLeaderboardUpdate,
+    Function(Map<String, dynamic>)? onFriendStatusUpdate,
     Function(InGameChatMessageEvent)? onChatMessage,
     Function()? onReturnToLobby,
     Function(String)? onRematchRequest,
@@ -214,6 +219,7 @@ class WebSocketService {
     this.onNextQuestion = onNextQuestion;
     this.onGameEnded = onGameEnded;
     this.onLeaderboardUpdate = onLeaderboardUpdate;
+    this.onFriendStatusUpdate = onFriendStatusUpdate;
     this.onChatMessage = onChatMessage;
     this.onReturnToLobby = onReturnToLobby;
     this.onRematchRequest = onRematchRequest;
@@ -232,6 +238,7 @@ class WebSocketService {
         },
         stompConnectHeaders: {
           if (ApiService.token != null) 'Authorization': 'Bearer ${ApiService.token}',
+          if (userId != null) 'userId': userId,
         },
         onConnect: _onConnect,
         onDisconnect: (_) {
@@ -264,9 +271,29 @@ class WebSocketService {
     if (kDebugMode) debugPrint('✅ WebSocket: Ligado com sucesso!');
     onConnected?.call();
 
-    if (_subscribedRoom != null) {
+    if (_subscribedRoom != null && _subscribedRoom!.isNotEmpty) {
       _subscribeToRoom(_subscribedRoom!);
     }
+  }
+
+  void subscribeToFriendStatus(String userId) {
+    if (_client == null || !_connected) return;
+
+    final topic = '/topic/friends/$userId/status';
+    if (kDebugMode) debugPrint('📡 WebSocket: A subscrever status de amigos: $topic');
+
+    _client!.subscribe(
+      destination: topic,
+      callback: (frame) {
+        if (frame.body == null) return;
+        try {
+          final json = jsonDecode(frame.body!) as Map<String, dynamic>;
+          onFriendStatusUpdate?.call(json);
+        } catch (e) {
+          if (kDebugMode) debugPrint('❌ WebSocket: Erro ao parsear status de amigo: $e');
+        }
+      },
+    );
   }
 
   void _subscribeToRoom(String roomCode) {

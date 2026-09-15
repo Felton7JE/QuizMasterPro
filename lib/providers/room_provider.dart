@@ -118,7 +118,7 @@ class RoomProvider extends ChangeNotifier {
       debugPrint('DEBUG RoomProvider: Conexão OK');
     } catch (e) {
       debugPrint('DEBUG RoomProvider: Erro de conexão: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -129,7 +129,7 @@ class RoomProvider extends ChangeNotifier {
       return roomPreview;
     } catch (e) {
       debugPrint('DEBUG RoomProvider: Erro ao buscar preview da sala: $e');
-      throw e;
+      rethrow;
     }
   }
 

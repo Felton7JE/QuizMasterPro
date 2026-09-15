@@ -103,10 +103,18 @@ class StoreProvider with ChangeNotifier {
   Future<bool> buyItem(StoreItem item) async {
     if (!_authProvider.isAuthenticated) return false;
     final user = _authProvider.currentUser!;
-    if (user.coins < item.price) {
-      _error = 'Moedas insuficientes';
-      notifyListeners();
-      return false;
+    if (item.currencyType == 'CRYSTALS') {
+      if ((user.crystals ?? 0) < item.price) {
+        _error = 'Cristais insuficientes';
+        notifyListeners();
+        return false;
+      }
+    } else {
+      if (user.coins < item.price) {
+        _error = 'Moedas insuficientes';
+        notifyListeners();
+        return false;
+      }
     }
 
     final userId = int.tryParse(user.id);
@@ -115,18 +123,22 @@ class StoreProvider with ChangeNotifier {
     // ─── 1. Guardar estado anterior para rollback ───────────────────────
     final previousAvailable = List<StoreItem>.from(_availableItems);
     final previousPurchased = List<StoreItem>.from(_purchasedItems);
-    final previousCoins = user.coins;
+    final previousCoins = item.currencyType == 'CRYSTALS' ? (user.crystals ?? 0) : user.coins;
 
     // ─── 2. Optimistic Update — UI actualiza IMEDIATAMENTE ─────────────
     _availableItems = _availableItems.where((i) => i.id != item.id).toList();
     _purchasedItems = [..._purchasedItems, item];
-    _authProvider.updateUserCoins(user.coins - item.price);
+    if (item.currencyType == 'CRYSTALS') {
+      _authProvider.updateUserCrystals((user.crystals ?? 0) - item.price);
+    } else {
+      _authProvider.updateUserCoins(user.coins - item.price);
+    }
     _error = null;
     notifyListeners();
 
     try {
       // ─── 3. Chamada à API ──
-      await _storeService.buyItem(userId, item.id);
+      await _storeService.buyItem(userId, item.id, currency: item.currencyType);
 
       // ─── 4. Sync — refrescar inventário do servidor ─
       _purchasedItems = await _storeService.getPurchasedItems(userId);
@@ -140,7 +152,11 @@ class StoreProvider with ChangeNotifier {
       // ─── 5. Rollback ─────────────────
       _availableItems = previousAvailable;
       _purchasedItems = previousPurchased;
-      _authProvider.updateUserCoins(previousCoins);
+      if (item.currencyType == 'CRYSTALS') {
+        _authProvider.updateUserCrystals(previousCoins); // previousCoins variable was just used for the old value, wait, let's fix the variable name.
+      } else {
+        _authProvider.updateUserCoins(previousCoins);
+      }
       _error = e.toString();
       notifyListeners();
       return false;

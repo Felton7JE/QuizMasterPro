@@ -10,12 +10,14 @@ import '../models/question_model.dart';
 import '../models/room_model.dart';
 import '../models/game_model.dart';
 import '../services/websocket_service.dart';
+import '../services/app_audio_service.dart';
 import '../widgets/in_game_chat_bubble.dart';
 import '../widgets/in_game_chat_sheet.dart';
 import '../widgets/in_game_chat_button.dart';
 import '../widgets/cosmetic_avatar.dart';
 import '../widgets/vip_badge_widget.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class QuizGameScreen extends StatefulWidget {
   const QuizGameScreen({super.key});
@@ -35,6 +37,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   bool _isAnswered = false;
   bool _showCorrectAnswer = false;
   bool _loading = true;
+  bool _timerSfxPlayed = false;
   String? _error;
   String? _category;
   String? _gameId;
@@ -58,15 +61,28 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   InGameChatMessageEvent? _latestChatMessage;
   Timer? _chatCooldownTimer;
   int _chatCooldownSeconds = 0;
+  bool _vibrationEnabled = true;
 
   @override
   void initState() {
     super.initState();
+    _loadVibrationSetting();
     _initControllers();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<WebSocketProvider>(context, listen: false).addListener(_onWebSocketEvent);
+      // Inicia música do jogo
+      Provider.of<AppAudioService>(context, listen: false).playGameMusic();
       _loadQuestions();
     });
+  }
+
+  Future<void> _loadVibrationSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _vibrationEnabled = prefs.getBool('vibrationEnabled') ?? true;
+      });
+    }
   }
 
   @override
@@ -77,6 +93,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     _questionController.dispose();
     try {
       Provider.of<WebSocketProvider>(context, listen: false).removeListener(_onWebSocketEvent);
+      Provider.of<AppAudioService>(context, listen: false).playMenuMusic();
     } catch (_) {}
     super.dispose();
   }
@@ -279,34 +296,22 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   void _startQuestion() {
     // ignore: avoid_print
     debugPrint('=== DEBUG _startQuestion ===');
-    // ignore: avoid_print
-    debugPrint('DEBUG: _questions.length = ${_questions.length}');
-    // ignore: avoid_print
-    debugPrint('DEBUG: _currentQuestion = $_currentQuestion');
     
     if (_questions.isEmpty) {
-      // ignore: avoid_print
       debugPrint('❌ AVISO: _startQuestion chamado mas _questions está vazio!');
       return;
     }
-    
-    // ignore: avoid_print
-    debugPrint('DEBUG: Iniciando questão ${_currentQuestion + 1}/${_questions.length}');
-    // ignore: avoid_print
-    debugPrint('DEBUG: Questão atual: ${_questions[_currentQuestion].toJson()}');
     
     _timer?.cancel();
     setState(() {
       _selectedAnswer = null;
       _isAnswered = false;
       _showCorrectAnswer = false;
+      _timerSfxPlayed = false; // Reset da flag de sfx
       _timeLeft = Provider.of<RoomProvider>(context, listen: false).currentRoom?.questionTime ?? _timeLeft;
     });
     
-    // ignore: avoid_print
-    debugPrint('DEBUG: Tempo configurado: $_timeLeft segundos');
-    
-    // Ajusta duração do progresso dinamicamente ao tempo configurado da sala
+    // Ajusta duração do progresso dinamicamente
     final newDuration = Duration(seconds: _timeLeft);
     if (_progressController.duration != newDuration) {
       _progressController.duration = newDuration;
@@ -321,13 +326,16 @@ class _QuizGameScreenState extends State<QuizGameScreen>
       }
       if (_timeLeft > 0 && !_isAnswered) {
         setState(() => _timeLeft--);
+        if (_timeLeft <= 5 && !_timerSfxPlayed) {
+          _timerSfxPlayed = true;
+          context.read<AppAudioService>().playSfxTimer();
+        }
       } else {
         timer.cancel();
         if (!_isAnswered) _handleTimeUp();
       }
     });
     
-    // ignore: avoid_print
     debugPrint('DEBUG: _startQuestion finalizado com sucesso');
   }
 
@@ -353,11 +361,13 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     final correctText = currentQ.options[currentQ.correctAnswer];
     final isCorrect = answer == correctText;
 
-    // Feedback háptico nativo
+    // Feedback háptico nativo e áudio
     if (isCorrect) {
-      HapticFeedback.lightImpact();
+      context.read<AppAudioService>().playSfxCorrect();
+      context.read<AppAudioService>().triggerVibration();
     } else {
-      HapticFeedback.mediumImpact();
+      context.read<AppAudioService>().playSfxWrong();
+      context.read<AppAudioService>().triggerVibration(heavy: true);
     }
 
     // Envia resposta ao backend para pontuação oficial
@@ -576,9 +586,9 @@ class _QuizGameScreenState extends State<QuizGameScreen>
               ],
             ),
 
-            // In-Game Chat Overlay (bolha animada)
+            // In-Game Chat Overlay
             Positioned(
-              top: 90,
+              bottom: 90,
               left: 20,
               right: 20,
               child: InGameChatOverlay(

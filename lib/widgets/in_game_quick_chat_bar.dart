@@ -1,3 +1,4 @@
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -274,18 +275,10 @@ class _InGameQuickChatBarState extends State<InGameQuickChatBar>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isCoolingDown) ...[
-                    SizedBox(
+                    const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(
-                        value: (widget.cooldownSecondsRemaining /
-                                widget.totalCooldownSeconds)
-                            .clamp(0.0, 1.0),
-                        strokeWidth: 2.5,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                            Colors.amberAccent),
-                        backgroundColor: Colors.white12,
-                      ),
+                      child: LoadingLogo(size: 60),
                     ),
                     const SizedBox(width: 8),
                     Text(

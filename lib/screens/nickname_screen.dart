@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import '../providers/auth_provider.dart';
 import '../utils/snackbar_utils.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class NicknameScreen extends StatefulWidget {
   const NicknameScreen({super.key});
@@ -90,8 +92,17 @@ class _NicknameScreenState extends State<NicknameScreen> {
     
     if (mounted) {
       if (success) {
+        final prefs = await SharedPreferences.getInstance();
+        final hasSeenTutorial = prefs.getBool('has_seen_tutorial') ?? false;
+
+        if (!mounted) return;
+
         AppSnackBar.showSuccess(context, 'Bem-vindo, $nickname!');
-        Navigator.pushReplacementNamed(context, '/menu');
+        if (!hasSeenTutorial) {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        } else {
+          Navigator.pushReplacementNamed(context, '/menu');
+        }
       } else {
         AppSnackBar.showError(context, authProvider.error ?? 'Erro ao atualizar nome');
       }
@@ -146,7 +157,7 @@ class _NicknameScreenState extends State<NicknameScreen> {
                   labelText: 'Nickname',
                   labelStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.05),
+                  fillColor: Colors.white.withValues(alpha: 0.05),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -176,7 +187,7 @@ class _NicknameScreenState extends State<NicknameScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6366F1),
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey.withOpacity(0.3),
+                    disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -185,10 +196,7 @@ class _NicknameScreenState extends State<NicknameScreen> {
                       ? const SizedBox(
                           width: 24,
                           height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
+                          child: LoadingLogo(size: 60),
                         )
                       : const Text(
                           'Confirmar',
@@ -214,7 +222,7 @@ class _NicknameScreenState extends State<NicknameScreen> {
         child: SizedBox(
           width: 20,
           height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
+          child: LoadingLogo(size: 60),
         ),
       );
     }

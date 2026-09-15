@@ -9,7 +9,7 @@ void main() {
         if (!isCorrect) {
           return 0; // Se errou, não ganha nada
         }
-        final basePoints = 100;
+        const basePoints = 100;
         final timeBonus = timeLeft * 10;
         return basePoints + timeBonus;
       }

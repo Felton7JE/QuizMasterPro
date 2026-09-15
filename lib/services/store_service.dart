@@ -21,8 +21,8 @@ class StoreService {
     }).toList();
   }
 
-  Future<void> buyItem(int userId, int itemId) async {
-    await _apiService.post('/api/store/buy?userId=$userId&itemId=$itemId');
+  Future<void> buyItem(int userId, int itemId, {String currency = 'COINS'}) async {
+    await _apiService.post('/api/store/buy?userId=$userId&itemId=$itemId&currency=$currency');
   }
 
   Future<void> equipItem(int userId, int itemId) async {

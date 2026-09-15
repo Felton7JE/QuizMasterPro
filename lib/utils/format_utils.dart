@@ -134,7 +134,7 @@ class FormatUtils {
     if (position == 1) return '1º';
     if (position == 2) return '2º';
     if (position == 3) return '3º';
-    return '${position}º';
+    return '$positionº';
   }
 
   static String formatRelativeTime(DateTime dateTime) {

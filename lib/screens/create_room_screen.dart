@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../widgets/custom_button_responsive.dart';
 import '../providers/auth_provider.dart';
@@ -7,11 +6,11 @@ import '../providers/room_provider.dart';
 import '../providers/category_provider.dart';
 import '../models/room_model.dart';
 import '../utils/snackbar_utils.dart';
-import '../services/question_service.dart';
 import 'create_room/widgets/basic_info_section.dart';
 import 'create_room/widgets/mode_selection_section.dart';
 import 'create_room/widgets/game_config_section.dart';
 import 'create_room/widgets/advanced_settings_section.dart';
+import '../widgets/app_logo_text.dart';
 
 class CreateRoomScreen extends StatefulWidget {
   const CreateRoomScreen({super.key});
@@ -26,7 +25,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   final _passwordController = TextEditingController();
   
   String _selectedMode = 'team';
-  String _selectedCategory = 'mixed';
+  String _selectedCategory = '';
   String _selectedDifficulty = 'medium';
   String _selectedConnection = 'online';
   int _maxPlayers = 8;
@@ -36,11 +35,12 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   bool _enableChat = true;
   bool _showRealTimeRanking = true;
   bool _allowReconnection = true;
+  int _entryFee = 0; // Taxa de aposta (0 = grátis)
   bool _showAdvanced = false;
   bool _isCreatingRoom = false;
 
   // Para modo equipe - seleção múltipla de disciplinas
-  List<String> _selectedTeamCategories = ['math', 'portuguese'];
+  List<String> _selectedTeamCategories = [];
   String _teamAssignmentType = 'CHOOSE'; // CHOOSE = jogador escolhe, RANDOM = distribuição automática
   String _categoryAssignmentMode = 'MANUAL'; // MANUAL = jogador escolhe disciplina, AUTO = automático
 
@@ -59,7 +59,26 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+    final catProvider = Provider.of<CategoryProvider>(context);
+    if (!catProvider.isLoading && catProvider.categories.isNotEmpty) {
+      if (_selectedCategory.isEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _selectedCategory = catProvider.categories.first.name.toLowerCase());
+        });
+      }
+      if (_selectedTeamCategories.isEmpty && catProvider.categories.length >= 2) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+            _selectedTeamCategories = [
+              catProvider.categories[0].name.toLowerCase(),
+              catProvider.categories[1].name.toLowerCase()
+            ];
+          });
+          }
+        });
+      }
+    }
     // Recebe o modo de jogo selecionado no menu
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (args != null && args['gameMode'] != null) {
@@ -95,9 +114,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
       
       if (_selectedMode == 'team') {
         for (final catName in _selectedTeamCategories) {
-          final apiName = _mapCategoryToApi(catName);
-          final category = categoryProvider.getCategoryByName(apiName) ?? 
-                           categoryProvider.getCategoryByName(catName) ??
+          final category = categoryProvider.getCategoryByName(catName) ??
                            categoryProvider.getCategoryByDisplayName(catName);
           if (category != null) {
             categoryIds.add(category.id);
@@ -113,9 +130,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
             categoryIds.addAll(categoryProvider.categories.map((c) => c.id));
           }
         } else {
-          final apiName = _mapCategoryToApi(_selectedCategory);
-          final category = categoryProvider.getCategoryByName(apiName) ?? 
-                           categoryProvider.getCategoryByName(_selectedCategory) ??
+          final category = categoryProvider.getCategoryByName(_selectedCategory) ??
                            categoryProvider.getCategoryByDisplayName(_selectedCategory);
           if (category != null) {
             categoryIds.add(category.id);
@@ -160,6 +175,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
         enableChat: _enableChat,
         showRealTimeRanking: _showRealTimeRanking,
         allowReconnection: _allowReconnection,
+        entryFee: _entryFee > 0 ? _entryFee : null,
         hostId: hostId,
       );
 
@@ -194,7 +210,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
       debugPrint('🔴 DEBUG CreateRoomScreen: EXCEÇÃO CAPTURADA: $e');
       debugPrint('🔴 DEBUG CreateRoomScreen: Stack trace: $stackTrace');
       if (mounted) {
-        AppSnackBar.showError(context, 'Erro inesperado: $e');
+        AppSnackBar.showError(context, e.toString());
       }
     } finally {
       if (mounted) {
@@ -204,32 +220,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     }
   }
 
-  String _mapCategoryToApi(String localCategory) {
-    switch (localCategory) {
-      case 'math':
-        return 'MATH';
-      case 'portuguese':
-        return 'PORTUGUESE';  // Corrigido: era LITERATURE, agora PORTUGUESE
-      case 'science':
-        return 'SCIENCE';
-      case 'geography':
-        return 'GEOGRAPHY';
-      case 'history':
-        return 'HISTORY';
-      case 'sports':
-        return 'MIXED';       // Corrigido: SPORTS não existe, usando MIXED
-      case 'entertainment':
-        return 'MIXED';       // Corrigido: ENTERTAINMENT não existe, usando MIXED
-      case 'technology':
-        return 'MIXED';       // Corrigido: TECHNOLOGY não existe, usando MIXED
-      case 'english':
-        return 'ENGLISH';     // Adicionado: categoria que existe no backend
-      case 'mixed':
-        return 'MIXED';       // Adicionado: categoria que existe no backend
-      default:
-        return 'MATH';
-    }
-  }
+
 
   Difficulty _mapDifficultyToApi(String localDifficulty) {
     switch (localDifficulty) {
@@ -253,19 +244,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
-        title: Row(
-          children: [
-            Text(
-              'Meu Quiz +',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 18 : 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-
-          ],
-        ),
+        title: AppLogoText(fontSize: isSmallScreen ? 18 : 20),
         actions: [
           if (!isSmallScreen)
             TextButton(
@@ -343,6 +322,8 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                 questionTime: _questionTime,
                 questionCount: _questionCount,
                 selectedConnection: _selectedConnection,
+                entryFee: _entryFee,
+                onEntryFeeChanged: (val) => setState(() => _entryFee = val ?? 0),
                 onTeamCategoryToggled: (cat) {
                   setState(() {
                     if (_selectedTeamCategories.contains(cat)) {

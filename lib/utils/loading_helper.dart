@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class LoadingHelper {
   /// Shows a loading indicator, executes [fetchData], pre-caches images from [extractImageUrls],
@@ -17,7 +18,7 @@ class LoadingHelper {
       barrierDismissible: false,
       barrierColor: Colors.black54,
       builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Colors.white),
+        child: LoadingLogo(size: 80),
       ),
     );
 

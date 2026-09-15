@@ -6,6 +6,7 @@ import '../providers/category_provider.dart';
 import '../models/room_model.dart';
 import '../models/category_models.dart' as CategoryModels;
 import '../widgets/responsive_chip.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class SoloSetupScreen extends StatefulWidget {
   const SoloSetupScreen({super.key});
@@ -120,6 +121,7 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
         'gameId': gameId,
         'playerCategory': _selectedCategory?.name,
         'isSolo': true,
+        'isPractice': true,
       },
     );
   }
@@ -177,7 +179,7 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Icon(Icons.person,
@@ -214,16 +216,19 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
                   builder: (context, catProv, _) {
                     if (catProv.isLoading) {
                       return const Center(
-                        child: CircularProgressIndicator(
-                            color: Color(0xFF6366F1)),
+                        child: LoadingLogo(size: 60),
                       );
                     }
                     final cats = catProv.categories;
+                    if (cats.isNotEmpty && _selectedCategory == null) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) setState(() => _selectedCategory = cats.first);
+                      });
+                    }
                     return Wrap(
                       spacing: 10,
                       runSpacing: 10,
                       children: [
-                        _buildCategoryChip(null, 'Aleatoria'),
                         ...cats.map((c) => _buildCategoryChip(c, c.displayName)),
                       ],
                     );
@@ -249,7 +254,7 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
                     activeTrackColor: const Color(0xFF6366F1),
                     inactiveTrackColor: const Color(0xFF334155),
                     thumbColor: const Color(0xFF6366F1),
-                    overlayColor: const Color(0xFF6366F1).withOpacity(0.2),
+                    overlayColor: const Color(0xFF6366F1).withValues(alpha: 0.2),
                     trackHeight: 4,
                   ),
                   child: Slider(
@@ -261,9 +266,9 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
                         setState(() => _questionCount = v.round()),
                   ),
                 ),
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
+                  children: [
                     Text('10',
                         style:
                             TextStyle(color: Colors.grey, fontSize: 12)),
@@ -280,7 +285,7 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
                     activeTrackColor: const Color(0xFF8B5CF6),
                     inactiveTrackColor: const Color(0xFF334155),
                     thumbColor: const Color(0xFF8B5CF6),
-                    overlayColor: const Color(0xFF8B5CF6).withOpacity(0.2),
+                    overlayColor: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
                     trackHeight: 4,
                   ),
                   child: Slider(
@@ -292,9 +297,9 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
                         setState(() => _questionTime = v.round()),
                   ),
                 ),
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
+                  children: [
                     Text('10s',
                         style:
                             TextStyle(color: Colors.grey, fontSize: 12)),
@@ -323,8 +328,7 @@ class _SoloSetupScreenState extends State<SoloSetupScreen>
                               SizedBox(
                                 width: 22,
                                 height: 22,
-                                child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2.5),
+                                child: LoadingLogo(size: 60),
                               ),
                               SizedBox(width: 12),
                               Text('A preparar jogo...',

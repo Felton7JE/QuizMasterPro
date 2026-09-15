@@ -1,3 +1,4 @@
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 import 'package:flutter/material.dart';
 
 /// Botão flutuante para acionar o chat/frases em jogo com indicador visual de cooldown.
@@ -47,7 +48,7 @@ class InGameChatButton extends StatelessWidget {
                 ? []
                 : [
                     BoxShadow(
-                      color: const Color(0xFF6C5CE7).withOpacity(0.45),
+                      color: const Color(0xFF6C5CE7).withValues(alpha: 0.45),
                       blurRadius: 12,
                       spreadRadius: 2,
                       offset: const Offset(0, 3),
@@ -56,7 +57,7 @@ class InGameChatButton extends StatelessWidget {
             border: Border.all(
               color: isCoolingDown
                   ? Colors.white24
-                  : Colors.white.withOpacity(0.8),
+                  : Colors.white.withValues(alpha: 0.8),
               width: 1.5,
             ),
           ),
@@ -64,15 +65,10 @@ class InGameChatButton extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               if (isCoolingDown) ...[
-                SizedBox(
+                const SizedBox(
                   width: 44,
                   height: 44,
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    strokeWidth: 3,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.orangeAccent),
-                    backgroundColor: Colors.white10,
-                  ),
+                  child: LoadingLogo(size: 60),
                 ),
                 Text(
                   '${cooldownSecondsRemaining}s',

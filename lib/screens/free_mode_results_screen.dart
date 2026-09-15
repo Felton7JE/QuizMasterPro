@@ -9,6 +9,7 @@ import '../providers/store_provider.dart';
 import '../config/api_config.dart';
 import '../services/api_service.dart';
 import '../widgets/cosmetic_avatar.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class FreeModeResultsScreen extends StatefulWidget {
   const FreeModeResultsScreen({super.key});
@@ -42,6 +43,7 @@ class _FreeModeResultsScreenState extends State<FreeModeResultsScreen> with Sing
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchLeaderboard();
+      Provider.of<AuthProvider>(context, listen: false).refreshUser();
     });
   }
   
@@ -238,7 +240,7 @@ class _FreeModeResultsScreenState extends State<FreeModeResultsScreen> with Sing
                         border: Border.all(color: const Color(0xFF334155)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 10,
                             spreadRadius: 2,
                           ),
@@ -388,7 +390,7 @@ class _FreeModeResultsScreenState extends State<FreeModeResultsScreen> with Sing
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF6366F1).withOpacity(0.4),
+                            color: const Color(0xFF6366F1).withValues(alpha: 0.4),
                             blurRadius: 8,
                             spreadRadius: 1,
                           ),
@@ -401,7 +403,7 @@ class _FreeModeResultsScreenState extends State<FreeModeResultsScreen> with Sing
                           Text(
                             'Alvo a Abater!',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               fontSize: isSmallScreen ? 14 : 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -464,7 +466,7 @@ class _FreeModeResultsScreenState extends State<FreeModeResultsScreen> with Sing
                         ),
                         SizedBox(height: isSmallScreen ? 16 : 24),
                         if (_isLoadingLeaderboard)
-                          const Center(child: CircularProgressIndicator())
+                          const Center(child: LoadingLogo(size: 60))
                         else if (_leaderboard == null || _leaderboard!.isEmpty)
                           const Text('Nenhum ranking encontrado', style: TextStyle(color: Colors.white54))
                         else
@@ -595,10 +597,10 @@ class _FreeModeResultsScreenState extends State<FreeModeResultsScreen> with Sing
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: performanceColor.withOpacity(0.5), width: 2),
+        border: Border.all(color: performanceColor.withValues(alpha: 0.5), width: 2),
         boxShadow: [
           BoxShadow(
-            color: performanceColor.withOpacity(0.3),
+            color: performanceColor.withValues(alpha: 0.3),
             blurRadius: 20,
             spreadRadius: 5,
           ),
@@ -614,15 +616,17 @@ class _FreeModeResultsScreenState extends State<FreeModeResultsScreen> with Sing
                   imageUrl: resolvedBanner,
                   httpHeaders: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
                   fit: BoxFit.cover,
-                  color: Colors.black.withOpacity(0.6),
+                  color: Colors.black.withValues(alpha: 0.6),
                   colorBlendMode: BlendMode.darken,
                   placeholder: (context, url) => Container(color: const Color(0xFF1E293B)),
                   errorWidget: (context, url, error) => const SizedBox.shrink(),
                 ),
               ),
-            Padding(
+            Container(
+              width: double.infinity,
               padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 32 : 48),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Stack(
                     alignment: Alignment.center,

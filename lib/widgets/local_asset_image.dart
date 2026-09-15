@@ -1,7 +1,10 @@
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../services/asset_manager_service.dart';
+import '../services/api_service.dart';
 
 class LocalAssetImage extends StatefulWidget {
   final String imageUrl;
@@ -10,12 +13,12 @@ class LocalAssetImage extends StatefulWidget {
   final BoxFit fit;
 
   const LocalAssetImage({
-    Key? key,
+    super.key,
     required this.imageUrl,
     this.width,
     this.height,
     this.fit = BoxFit.cover,
-  }) : super(key: key);
+  });
 
   @override
   _LocalAssetImageState createState() => _LocalAssetImageState();
@@ -77,7 +80,7 @@ class _LocalAssetImageState extends State<LocalAssetImage> {
         width: widget.width,
         height: widget.height,
         child: const Center(
-          child: CircularProgressIndicator(color: Colors.indigoAccent),
+          child: LoadingLogo(size: 60),
         ),
       );
     }
@@ -98,12 +101,13 @@ class _LocalAssetImageState extends State<LocalAssetImage> {
   Widget _fallbackImage() {
     // If not found locally or error, fallback to network image
     if (widget.imageUrl.startsWith('http')) {
-      return Image.network(
-        widget.imageUrl,
+      return CachedNetworkImage(
+        imageUrl: widget.imageUrl,
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
-        errorBuilder: (context, error, stackTrace) {
+        httpHeaders: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
+        errorWidget: (context, url, error) {
           return Container(
             width: widget.width,
             height: widget.height,
@@ -111,6 +115,13 @@ class _LocalAssetImageState extends State<LocalAssetImage> {
             child: const Icon(Icons.image_not_supported, color: Colors.grey),
           );
         },
+        placeholder: (context, url) => SizedBox(
+          width: widget.width,
+          height: widget.height,
+          child: const Center(
+            child: LoadingLogo(size: 60),
+          ),
+        ),
       );
     }
     

@@ -1,10 +1,11 @@
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/free_mode_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/solo_service.dart';
-import '../theme/app_colors.dart';
+import '../services/app_audio_service.dart';
 
 class TimeAttackGameScreen extends StatefulWidget {
   const TimeAttackGameScreen({super.key});
@@ -22,6 +23,7 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
   bool _isAnswered = false;
   String? _selectedOption;
   bool _gameOver = false;
+  bool _timerSfxPlayed = false;
   
   // Feedback visual para tempo
   String _timeFeedbackText = '';
@@ -47,6 +49,7 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
     ));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AppAudioService>(context, listen: false).playGameMusic();
       Provider.of<FreeModeProvider>(context, listen: false).fetchMoreQuestions(limit: 10).then((_) {
         _slideController.forward();
       });
@@ -63,6 +66,10 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
       setState(() {
         if (_timeLeft > 0) {
           _timeLeft--;
+          if (_timeLeft <= 5 && !_timerSfxPlayed) {
+            _timerSfxPlayed = true;
+            context.read<AppAudioService>().playSfxTimer();
+          }
         } else {
           timer.cancel();
           _showGameOver();
@@ -91,6 +98,9 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
     _timer?.cancel();
     _feedbackTimer?.cancel();
     _slideController.dispose();
+    try {
+      Provider.of<AppAudioService>(context, listen: false).playMenuMusic();
+    } catch (_) {}
     super.dispose();
   }
 
@@ -109,10 +119,14 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
       _score += 150; // Mais pontos para modo mais difícil
       _timeLeft += 3; // Bónus
       _showTimeFeedback('+3s', Colors.greenAccent);
+      context.read<AppAudioService>().playSfxCorrect();
+      context.read<AppAudioService>().triggerVibration();
     } else {
       _timeLeft -= 5; // Punição rigorosa
       if (_timeLeft < 0) _timeLeft = 0;
       _showTimeFeedback('-5s', Colors.redAccent);
+      context.read<AppAudioService>().playSfxWrong();
+      context.read<AppAudioService>().triggerVibration(heavy: true);
     }
 
     Future.delayed(const Duration(seconds: 1), () {
@@ -288,7 +302,7 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
         border: Border.all(color: const Color(0xFF334155)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -318,10 +332,10 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
 
     if (showResult) {
       if (isCorrect) {
-        backgroundColor = const Color(0xFF10B981).withOpacity(0.2);
+        backgroundColor = const Color(0xFF10B981).withValues(alpha: 0.2);
         borderColor = const Color(0xFF10B981);
       } else if (isSelected && !isCorrect) {
-        backgroundColor = const Color(0xFFEF4444).withOpacity(0.2);
+        backgroundColor = const Color(0xFFEF4444).withValues(alpha: 0.2);
         borderColor = const Color(0xFFEF4444);
       } else {
         backgroundColor = const Color(0xFF1E293B);
@@ -330,7 +344,7 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
       }
     } else {
       if (isSelected) {
-        backgroundColor = const Color(0xFF6366F1).withOpacity(0.2);
+        backgroundColor = const Color(0xFF6366F1).withValues(alpha: 0.2);
         borderColor = const Color(0xFF6366F1);
       } else {
         backgroundColor = const Color(0xFF1E293B);
@@ -428,7 +442,7 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
       body: Consumer<FreeModeProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading && provider.currentQuestions.isEmpty) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)));
+            return const Center(child: LoadingLogo(size: 60));
           }
           if (provider.error != null) {
             return Center(child: Text('Erro: ${provider.error}', style: const TextStyle(color: Colors.white)));
@@ -477,7 +491,7 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
                               isSmallScreen,
                             ),
                           );
-                        }).toList(),
+                        }),
                       ],
                     ),
                   ),

@@ -11,6 +11,11 @@ import '../widgets/cosmetic_avatar.dart';
 import '../widgets/vip_badge_widget.dart';
 import '../config/api_config.dart';
 import '../utils/snackbar_utils.dart';
+import 'package:quizmaster_pro/widgets/loading_logo.dart';
+import '../utils/snackbar_utils.dart';
+import '../models/friend_model.dart';
+import '../providers/friendship_provider.dart';
+import 'social/widgets/friend_profile_modal.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -23,6 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _selectedInventoryTab = 'Títulos';
   Future<Map<String, dynamic>?>? _statsFuture;
   Future<List<Map<String, dynamic>>>? _historyFuture;
+  int _historyLimit = 5;
 
   @override
   void initState() {
@@ -373,7 +379,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           bool titleFound = false;
           if (user.activeTitleId != null) {
             try {
-              final activeTitle = storeProvider.availableTitles.firstWhere(
+              final allTitles = [...storeProvider.availableTitles, ...storeProvider.earnedTitles];
+              final activeTitle = allTitles.firstWhere(
                 (t) => t.id == user.activeTitleId,
               );
               activeTitleLabel = activeTitle.name;
@@ -1290,10 +1297,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           future: _historyFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: LoadingLogo(size: 60));
             }
             if (snapshot.hasError) {
-              return Center(
+              return const Center(
                   child: Text('Erro ao carregar histórico.',
                       style: TextStyle(color: Colors.redAccent)));
             }
@@ -1304,13 +1311,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: TextStyle(color: Colors.grey)));
             }
 
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: history.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final game = history[index];
+            final visibleHistory = history.take(_historyLimit).toList();
+
+            return Column(
+              children: [
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: visibleHistory.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final game = visibleHistory[index];
                 final resultsList = game['results'] as List<dynamic>? ?? [];
 
                 // Find current user's result
@@ -1351,81 +1362,342 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     modeColor = Colors.green;
                 }
 
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: isWinner
-                            ? Colors.amber.withOpacity(0.5)
-                            : Colors.white10),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: modeColor.withOpacity(0.2),
-                          shape: BoxShape.circle,
+                return GestureDetector(
+                  onTap: () => _showGameDetailsModal(context, game, authProvider),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: isWinner
+                              ? Colors.amber.withValues(alpha: 0.5)
+                              : Colors.white10),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: modeColor.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(modeIcon, color: modeColor),
                         ),
-                        child: Icon(modeIcon, color: modeColor),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                gameMode,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$correctAnswers / $totalQuestions certas',
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              gameMode,
+                              '+$points Pts',
                               style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.primary,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$correctAnswers / $totalQuestions certas',
-                              style: const TextStyle(
-                                  color: Colors.grey, fontSize: 13),
-                            ),
+                            if (gameMode == 'DUEL' ||
+                                gameMode == 'TEAM' ||
+                                gameMode == 'KAHOOT') ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                isWinner ? 'VITÓRIA' : 'DERROTA',
+                                style: TextStyle(
+                                  color:
+                                      isWinner ? Colors.amber : Colors.redAccent,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '+$points Pts',
-                            style: const TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16),
-                          ),
-                          if (gameMode == 'DUEL' ||
-                              gameMode == 'TEAM' ||
-                              gameMode == 'KAHOOT') ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              isWinner ? 'VITÓRIA' : 'DERROTA',
-                              style: TextStyle(
-                                color:
-                                    isWinner ? Colors.amber : Colors.redAccent,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
+            ),
+                if (history.length > _historyLimit) ...[
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _historyLimit += 5;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: const BorderSide(color: AppColors.primary),
+                      ),
+                    ),
+                    child: const Text('Mostrar Mais Partidas', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ],
             );
           },
         ),
       ],
     );
+  }
+
+  void _showGameDetailsModal(BuildContext context, Map<String, dynamic> game, AuthProvider authProvider) {
+    final gameMode = game['gameMode'] ?? 'Desconhecido';
+    final startedAt = game['startedAt'];
+    final endedAt = game['endedAt'];
+    final resultsList = game['results'] as List<dynamic>? ?? [];
+    
+    // Sort players by score
+    resultsList.sort((a, b) => (b['totalPoints'] ?? 0).compareTo(a['totalPoints'] ?? 0));
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          maxChildSize: 0.85,
+          minChildSize: 0.4,
+          builder: (ctx, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFF1E293B),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Detalhes da Partida',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white54),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      children: [
+                        // Modo e Datas
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.videogame_asset, color: Colors.blueAccent, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Modo: $gameMode',
+                                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  const Icon(Icons.access_time, color: Colors.grey, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Início: ${startedAt != null ? _formatDateTime(startedAt) : 'Desconhecido'}',
+                                    style: const TextStyle(color: Colors.grey, fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Jogadores',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...resultsList.map((player) {
+                          final isMe = player['userId'].toString() == authProvider.currentUser?.id;
+                          final pts = player['totalPoints'] ?? 0;
+                          final avatarUrl = player['avatar'] != null ? ApiConfig.resolveAssetUrl(player['avatar']) : null;
+                          final correct = player['correctAnswers'] ?? 0;
+                          final total = player['totalQuestions'] ?? 0;
+                          final targetUsername = player['username'] ?? 'Desconhecido';
+                          final targetUserId = int.tryParse(player['userId']?.toString() ?? '0') ?? 0;
+                          final currentUserId = int.tryParse(authProvider.currentUser?.id ?? '0') ?? 0;
+
+                          return Consumer<FriendshipProvider>(
+                            builder: (context, friendshipProv, child) {
+                              final isFriend = friendshipProv.friends.any((f) => f.id == targetUserId);
+                              final hasPending = friendshipProv.pendingRequests.any((f) => f.id == targetUserId) ||
+                                                 friendshipProv.sentRequests.any((f) => f.id == targetUserId) ||
+                                                 friendshipProv.sentRequests.any((f) => f.username == targetUsername);
+
+                              return GestureDetector(
+                                onTap: () {
+                                  if (!isMe && targetUserId > 0) {
+                                    final dummyFriend = FriendModel(
+                                      id: targetUserId,
+                                      username: targetUsername,
+                                      avatar: player['avatar'],
+                                      level: 1,
+                                      currentLeague: 'Bronze',
+                                      isOnline: false,
+                                    );
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (ctx) => FriendProfileModal(
+                                        friend: dummyFriend,
+                                        onRemove: () {},
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: isMe ? Colors.blue.withValues(alpha: 0.1) : const Color(0xFF0F172A),
+                                    border: isMe ? Border.all(color: Colors.blue.withValues(alpha: 0.3)) : null,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: const Color(0xFF334155),
+                                        backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                                        child: avatarUrl == null ? const Icon(Icons.person, color: Colors.white54) : null,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              targetUsername,
+                                              style: TextStyle(
+                                                color: isMe ? Colors.blueAccent : Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '$correct/$total certas',
+                                              style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                        '$pts pts',
+                                        style: const TextStyle(
+                                          color: Colors.amber,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      if (!isMe && targetUserId > 0 && !isFriend)
+                                        IconButton(
+                                          icon: Icon(
+                                            hasPending ? Icons.pending : Icons.person_add,
+                                            color: hasPending ? Colors.grey : Colors.blueAccent,
+                                          ),
+                                          onPressed: hasPending
+                                              ? null
+                                              : () async {
+                                                  try {
+                                                    await friendshipProv.sendFriendRequest(currentUserId, targetUsername);
+                                                    if (context.mounted) {
+                                                      AppSnackBar.showSuccess(context, 'Pedido enviado para $targetUsername!');
+                                                    }
+                                                  } catch (e) {
+                                                    if (context.mounted) {
+                                                      AppSnackBar.showError(context, 'Erro ao enviar pedido.');
+                                                    }
+                                                  }
+                                                },
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _formatDateTime(String isoString) {
+    try {
+      final dt = DateTime.parse(isoString).toLocal();
+      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} às ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return isoString;
+    }
   }
 }

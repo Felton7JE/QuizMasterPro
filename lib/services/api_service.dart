@@ -267,15 +267,23 @@ class ApiService {
       
       String errorMessage = 'Erro $statusCode';
       
+      bool hasCustomMessage = false;
       try {
         final errorBody = jsonDecode(response.body);
-        errorMessage = errorBody['message'] ?? errorMessage;
+        if (errorBody['message'] != null) {
+          errorMessage = errorBody['message'];
+          hasCustomMessage = true;
+        }
         // ignore: avoid_print
         debugPrint('❌ ERRO ApiService: Mensagem de erro: $errorMessage');
       } catch (e) {
         // Se não conseguir decodificar, usa a mensagem padrão
         // ignore: avoid_print
         debugPrint('❌ ERRO ApiService: Não foi possível decodificar erro: $e');
+      }
+      
+      if (hasCustomMessage) {
+        throw ApiException(errorMessage);
       }
       
       switch (statusCode) {
@@ -290,7 +298,7 @@ class ApiService {
         case 409:
           throw ApiException('Conflito: $errorMessage');
         case 500:
-          throw ApiException(errorMessage != 'Erro 500' ? errorMessage : 'Erro interno do servidor');
+          throw ApiException(errorMessage != 'Erro $statusCode' ? errorMessage : 'Erro interno do servidor');
         default:
           throw ApiException(errorMessage);
       }
@@ -318,11 +326,19 @@ class ApiService {
     } else {
       String errorMessage = 'Erro $statusCode';
       
+      bool hasCustomMessage = false;
       try {
         final errorBody = jsonDecode(response.body);
-        errorMessage = errorBody['message'] ?? errorMessage;
+        if (errorBody['message'] != null) {
+          errorMessage = errorBody['message'];
+          hasCustomMessage = true;
+        }
       } catch (e) {
         // Se não conseguir decodificar, usa a mensagem padrão
+      }
+      
+      if (hasCustomMessage) {
+        throw ApiException(errorMessage);
       }
       
       switch (statusCode) {
@@ -337,7 +353,7 @@ class ApiService {
         case 409:
           throw ApiException('Conflito: $errorMessage');
         case 500:
-          throw ApiException(errorMessage != 'Erro 500' ? errorMessage : 'Erro interno do servidor');
+          throw ApiException(errorMessage != 'Erro $statusCode' ? errorMessage : 'Erro interno do servidor');
         default:
           throw ApiException(errorMessage);
       }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/game_model.dart'; // Or solo models if available
-import 'dart:async';
+// Or solo models if available
 
 class BossBattleScreen extends StatefulWidget {
   const BossBattleScreen({super.key});
@@ -91,7 +90,7 @@ class _BossBattleScreenState extends State<BossBattleScreen>
                       border: Border.all(color: Colors.redAccent, width: 4),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.redAccent.withOpacity(0.5),
+                          color: Colors.redAccent.withValues(alpha: 0.5),
                           blurRadius: 20,
                           spreadRadius: 5,
                         ),

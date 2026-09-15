@@ -152,7 +152,7 @@ class RoomService {
       await getPublicRooms(page: 0, size: 1);
     } catch (e) {
       debugPrint('DEBUG RoomService: Erro de conexão: $e');
-      throw e;
+      rethrow;
     }
   }
 

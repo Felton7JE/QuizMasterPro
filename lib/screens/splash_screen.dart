@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/animated_splash.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,8 +19,8 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
-    // Wait for widget bindings to complete and show splash for at least 1.5 seconds
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // Wait for widget bindings to complete and show splash for at least 3.5 seconds
+    await Future.delayed(const Duration(milliseconds: 3500));
     
     if (!mounted) return;
     
@@ -28,7 +30,19 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
     
     if (isLoggedIn) {
-      Navigator.pushReplacementNamed(context, '/resource-download');
+      final currentUser = authProvider.currentUser;
+      final prefs = await SharedPreferences.getInstance();
+      final hasSeenTutorial = prefs.getBool('has_seen_tutorial') ?? false;
+
+      if (!mounted) return;
+
+      if (currentUser != null && currentUser.username.contains('@')) {
+        Navigator.pushReplacementNamed(context, '/nickname_setup');
+      } else if (!hasSeenTutorial) {
+        Navigator.pushReplacementNamed(context, '/onboarding');
+      } else {
+        Navigator.pushReplacementNamed(context, '/menu');
+      }
     } else {
       Navigator.pushReplacementNamed(context, '/intro');
     }
@@ -36,39 +50,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+    return const Scaffold(
+      backgroundColor: Color(0xFF0F172A),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Using the logo asset we just added
-            Image.asset(
-              'assets/logo.png',
-              width: 150,
-              height: 150,
-              errorBuilder: (context, error, stackTrace) {
-                // Fallback in case asset is not loaded properly
-                return const Icon(
-                  Icons.quiz,
-                  size: 100,
-                  color: Color(0xFF6366F1),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Meu Quiz +',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 48),
-            const CircularProgressIndicator(
-              color: Color(0xFF6366F1),
-            ),
+            AnimatedSplash(size: 250),
           ],
         ),
       ),
