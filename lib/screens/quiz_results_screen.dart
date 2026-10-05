@@ -542,8 +542,11 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
               ),
             Padding(
               padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 32 : 48, horizontal: 16),
-              child: Column(
-                children: [
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
                   Stack(
                     alignment: Alignment.center,
                     clipBehavior: Clip.none,
@@ -610,7 +613,8 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                 ],
               ),
             ),
-          ],
+          ),
+        ],
         ),
       ),
     );
@@ -662,8 +666,11 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
               ),
             Padding(
               padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 32 : 48, horizontal: 16),
-              child: Column(
-                children: [
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
                   Stack(
                     alignment: Alignment.center,
                     clipBehavior: Clip.none,
@@ -746,7 +753,8 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                 ],
               ),
             ),
-          ],
+          ),
+        ],
         ),
       ),
     );
