@@ -12,8 +12,6 @@ import '../widgets/cosmetic_avatar.dart';
 import '../widgets/crystal_balance_chip.dart';
 import '../widgets/vip_badge_widget.dart';
 import '../widgets/local_asset_image.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import '../services/api_service.dart';
 
 // ============================================================
 //  Paleta de cores e utilitários de raridade
@@ -1212,7 +1210,7 @@ class _StoreScreenState extends State<StoreScreen>
               boxShadow: [
                 BoxShadow(
                   color: (isVip ? const Color(0xFFFFD700) : const Color(0xFFA855F7))
-                      .withOpacity(0.3),
+                      .withValues(alpha: 0.3),
                   blurRadius: 16,
                   spreadRadius: 2,
                 ),
@@ -1230,7 +1228,7 @@ class _StoreScreenState extends State<StoreScreen>
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFD700).withOpacity(0.2),
+                            color: const Color(0xFFFFD700).withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                           ),
                           child: const Text('👑', style: TextStyle(fontSize: 24)),
@@ -1291,7 +1289,7 @@ class _StoreScreenState extends State<StoreScreen>
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withOpacity(0.2),
+                      color: const Color(0xFF10B981).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: const Color(0xFF10B981)),
                     ),
@@ -1363,7 +1361,7 @@ class _StoreScreenState extends State<StoreScreen>
                 decoration: BoxDecoration(
                   color: const Color(0xFF2E1065),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFA855F7).withOpacity(0.5)),
+                  border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   children: [
@@ -1395,7 +1393,7 @@ class _StoreScreenState extends State<StoreScreen>
                 border: Border.all(
                   color: isPopular
                       ? const Color(0xFFFFD700)
-                      : const Color(0xFFA855F7).withOpacity(0.3),
+                      : const Color(0xFFA855F7).withValues(alpha: 0.3),
                   width: isPopular ? 1.8 : 1.0,
                 ),
               ),
@@ -1407,7 +1405,7 @@ class _StoreScreenState extends State<StoreScreen>
                   decoration: BoxDecoration(
                     color: const Color(0xFF2E1065),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFA855F7).withOpacity(0.4)),
+                    border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.4)),
                   ),
                   child: Center(
                     child: Text(
@@ -1548,10 +1546,10 @@ class _StoreScreenState extends State<StoreScreen>
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFA855F7).withOpacity(0.5), width: 1.5),
+        border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.5), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFA855F7).withOpacity(0.15),
+            color: const Color(0xFFA855F7).withValues(alpha: 0.15),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -1565,7 +1563,7 @@ class _StoreScreenState extends State<StoreScreen>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFA855F7).withOpacity(0.2),
+                  color: const Color(0xFFA855F7).withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Text('🎁', style: TextStyle(fontSize: 22)),
@@ -1609,7 +1607,7 @@ class _StoreScreenState extends State<StoreScreen>
             decoration: BoxDecoration(
               color: const Color(0xFF0F172A),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFA855F7).withOpacity(0.4)),
+              border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.4)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1873,10 +1871,10 @@ class _StoreScreenState extends State<StoreScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF1E1B38),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.4), width: 1.5),
+        border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.4), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6366F1).withOpacity(0.1),
+            color: const Color(0xFF6366F1).withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1890,7 +1888,7 @@ class _StoreScreenState extends State<StoreScreen>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withOpacity(0.2),
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.card_giftcard_rounded, color: Color(0xFF818CF8), size: 22),
@@ -2254,7 +2252,7 @@ class _BannerCardState extends State<_BannerCard>
                     fit: StackFit.expand,
                     children: [
                       LocalAssetImage(
-                        imageUrl: ApiConfig.resolveAssetUrl(widget.item.value) ?? '',
+                        imageUrl: ApiConfig.resolveAssetUrl(widget.item.value, isThumb: true) ?? '',
                         fit: BoxFit.cover,
                       ),
 
@@ -3209,7 +3207,7 @@ class _AvatarCardState extends State<_AvatarCard>
               width: isActive ? 2 : 1,
             ),
             boxShadow: isActive
-                ? [BoxShadow(color: const Color(0x448B5CF6), blurRadius: 16, spreadRadius: 2)]
+                ? [const BoxShadow(color: Color(0x448B5CF6), blurRadius: 16, spreadRadius: 2)]
                 : [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))],
           ),
           child: Column(

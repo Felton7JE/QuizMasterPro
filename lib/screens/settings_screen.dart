@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
@@ -393,7 +392,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent.withOpacity(0.2),
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.2),
               foregroundColor: Colors.redAccent,
               elevation: 0,
               side: const BorderSide(color: Colors.redAccent, width: 1.5),
@@ -541,7 +540,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               '4. Segurança\n'
               'Implementamos uma variedade de medidas de segurança para manter a segurança das suas informações pessoais.\n\n'
               'Ao continuar a utilizar o jogo, você concorda com a nossa política de privacidade.',
-              style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
             ),
           ),
         ),
@@ -618,7 +617,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: children,
@@ -637,7 +636,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onChanged: onChanged,
       title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 15)),
       secondary: Icon(icon, color: Colors.white70),
-      activeColor: const Color(0xFF6366F1),
+      activeThumbColor: const Color(0xFF6366F1),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
@@ -692,7 +691,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildDivider() {
     return Divider(
-      color: Colors.white.withOpacity(0.05),
+      color: Colors.white.withValues(alpha: 0.05),
       height: 1,
       thickness: 1,
       indent: 56,

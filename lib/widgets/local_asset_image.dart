@@ -101,11 +101,15 @@ class _LocalAssetImageState extends State<LocalAssetImage> {
   Widget _fallbackImage() {
     // If not found locally or error, fallback to network image
     if (widget.imageUrl.startsWith('http')) {
+      final cacheWidth = widget.width != null ? (widget.width! * 3).toInt() : 450;
+      final cacheHeight = widget.height != null ? (widget.height! * 3).toInt() : null;
       return CachedNetworkImage(
         imageUrl: widget.imageUrl,
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
+        memCacheWidth: cacheWidth,
+        memCacheHeight: cacheHeight,
         httpHeaders: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
         errorWidget: (context, url, error) {
           return Container(

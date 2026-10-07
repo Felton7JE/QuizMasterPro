@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/user_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
@@ -12,7 +11,6 @@ import '../widgets/vip_badge_widget.dart';
 import '../config/api_config.dart';
 import '../utils/snackbar_utils.dart';
 import 'package:quizmaster_pro/widgets/loading_logo.dart';
-import '../utils/snackbar_utils.dart';
 import '../models/friend_model.dart';
 import '../providers/friendship_provider.dart';
 import 'social/widgets/friend_profile_modal.dart';
@@ -451,7 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     fit: BoxFit.cover,
                     colorFilter: ColorFilter.mode(
-                      Colors.black.withOpacity(0.35),
+                      Colors.black.withValues(alpha: 0.35),
                       BlendMode.darken,
                     ),
                   )
@@ -481,7 +479,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: Colors.white,
                   shadows: [
                     Shadow(
-                      color: Colors.black.withOpacity(0.8),
+                      color: Colors.black.withValues(alpha: 0.8),
                       blurRadius: 6,
                       offset: const Offset(1, 1),
                     ),
@@ -492,12 +490,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.85),
+                  color: AppColors.primary.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.5)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
+                      color: Colors.black.withValues(alpha: 0.5),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -691,7 +689,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -874,7 +872,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
-                              color: Colors.black.withOpacity(0.5),
+                              color: Colors.black.withValues(alpha: 0.5),
                               child: Row(
                                 children: [
                                   Expanded(
@@ -1252,12 +1250,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: isEquipped
-            ? Colors.green.withOpacity(0.3)
-            : AppColors.primary.withOpacity(0.2),
+            ? Colors.green.withValues(alpha: 0.3)
+            : AppColors.primary.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
             color:
-                isEquipped ? Colors.green : AppColors.primary.withOpacity(0.5),
+                isEquipped ? Colors.green : AppColors.primary.withValues(alpha: 0.5),
             width: isEquipped ? 2 : 1),
       ),
       child: Row(

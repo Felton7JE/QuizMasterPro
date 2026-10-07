@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/exit_confirm_scope.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../providers/websocket_provider.dart';
@@ -500,6 +501,22 @@ class _KahootGameScreenState extends State<KahootGameScreen>
 
   @override
   Widget build(BuildContext context) {
+    return ExitConfirmScope(
+          title: 'Abandonar a partida?',
+          message: 'Se saíres agora, deixas a sala e perdes a tua pontuação nesta partida.',
+          confirmLabel: 'Abandonar',
+          onConfirm: () {
+            final auth = Provider.of<AuthProvider>(context, listen: false);
+            Provider.of<WebSocketProvider>(context, listen: false).disconnect();
+            Provider.of<RoomProvider>(context, listen: false)
+                .leaveRoom(auth.currentUser?.id ?? '');
+            Navigator.of(context).pushNamedAndRemoveUntil('/menu', (route) => false);
+          },
+      child: _buildScreen(context),
+    );
+  }
+
+  Widget _buildScreen(BuildContext context) {
     if (_gameEnded) {
       return const Scaffold(
         backgroundColor: Color(0xFF0F172A),

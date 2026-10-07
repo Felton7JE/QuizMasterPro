@@ -10,7 +10,7 @@ import '../../../widgets/loading_logo.dart';
 import '../../../services/api_service.dart';
 import '../../../config/api_config.dart';
 import '../../../providers/store_provider.dart';
-
+import '../../create_room_screen.dart';
 class FriendProfileModal extends StatefulWidget {
   final FriendModel friend;
   final VoidCallback onRemove;
@@ -27,6 +27,7 @@ class FriendProfileModal extends StatefulWidget {
 
 class _FriendProfileModalState extends State<FriendProfileModal> {
   UserModel? _fullProfile;
+  List<dynamic> _purchasedItems = [];
   bool _isLoading = true;
   String? _error;
 
@@ -39,8 +40,11 @@ class _FriendProfileModalState extends State<FriendProfileModal> {
   Future<void> _loadProfile() async {
     try {
       final data = await ApiService().get('/api/users/${widget.friend.id}');
+      final itemsData = await ApiService().getList('/api/store/items/purchased/${widget.friend.id}');
+      
       setState(() {
         _fullProfile = UserModel.fromJson(data);
+        _purchasedItems = itemsData;
         _isLoading = false;
       });
     } catch (e) {
@@ -241,16 +245,27 @@ class _FriendProfileModalState extends State<FriendProfileModal> {
                 ),
                 const SizedBox(height: 32),
                 
+                if (_purchasedItems.isNotEmpty) ...[
+                  _buildPurchasedItems(),
+                  const SizedBox(height: 32),
+                ],
+
                 // Actions
                 Row(
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Em breve: Desafiar amigo!')),
-                          );
                           Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CreateRoomScreen(
+                                initialMode: 'duel',
+                                invitedFriendId: widget.friend.id.toString(),
+                              ),
+                            ),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
@@ -329,6 +344,73 @@ class _FriendProfileModalState extends State<FriendProfileModal> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPurchasedItems() {
+    final titles = _purchasedItems.where((i) => i['storeItem']?['type'] == 'TITLE').toList();
+    final banners = _purchasedItems.where((i) => i['storeItem']?['type'] == 'BANNER').toList();
+    final avatars = _purchasedItems.where((i) => i['storeItem']?['type'] == 'AVATAR').toList();
+    final phrases = _purchasedItems.where((i) => i['storeItem']?['type'] == 'TEXT_PHRASE').toList();
+    final emotes = _purchasedItems.where((i) => i['storeItem']?['type'] == 'EMOTE' || i['storeItem']?['type'] == 'EMOJI').toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Coleção', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        if (titles.isNotEmpty) _buildItemsRow('Títulos', titles, Icons.label),
+        if (banners.isNotEmpty) _buildItemsRow('Banners', banners, Icons.image),
+        if (avatars.isNotEmpty) _buildItemsRow('Avatares', avatars, Icons.person),
+        if (phrases.isNotEmpty) _buildItemsRow('Frases', phrases, Icons.chat_bubble),
+        if (emotes.isNotEmpty) _buildItemsRow('Emojis & Reações', emotes, Icons.sentiment_satisfied_alt),
+      ],
+    );
+  }
+
+  Widget _buildItemsRow(String title, List<dynamic> items, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: Colors.amber, size: 16),
+              const SizedBox(width: 8),
+              Text(title, style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: items.map((item) {
+              final storeItem = item['storeItem'] ?? {};
+              final name = storeItem['name'] ?? 'Item';
+              final isEquipped = item['isEquipped'] == true;
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isEquipped ? AppColors.primary.withValues(alpha: 0.2) : Colors.white10,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isEquipped ? AppColors.primary : Colors.transparent),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(name, style: TextStyle(color: isEquipped ? AppColors.primary : Colors.white60, fontSize: 12)),
+                    if (isEquipped) ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.check_circle, color: AppColors.primary, size: 12),
+                    ]
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -28,7 +28,7 @@ class CosmeticAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Resolve full URL (supports relative paths served by the backend)
-    final resolvedUrl = ApiConfig.resolveAssetUrl(avatarUrl);
+    final resolvedUrl = ApiConfig.resolveAssetUrl(avatarUrl, isThumb: true);
     final assetManager = context.read<AssetManagerService>();
     final localPath = resolvedUrl != null ? assetManager.getLocalPathSync(resolvedUrl) : null;
     
@@ -56,6 +56,8 @@ class CosmeticAvatar extends StatelessWidget {
                 ? DecorationImage(
                     image: CachedNetworkImageProvider(
                       resolvedUrl,
+                      maxWidth: (radius * 4).toInt(),
+                      maxHeight: (radius * 4).toInt(),
                       headers: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
                     ),
                     fit: BoxFit.cover,

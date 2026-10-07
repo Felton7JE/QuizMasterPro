@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/exit_confirm_scope.dart';
 // Or solo models if available
 
 class BossBattleScreen extends StatefulWidget {
@@ -43,6 +44,14 @@ class _BossBattleScreenState extends State<BossBattleScreen>
 
   @override
   Widget build(BuildContext context) {
+    return ExitConfirmScope(
+      title: 'Sair do nível?',
+      message: 'Se saíres agora, perdes o progresso deste nível.',
+      child: _buildScreen(context),
+    );
+  }
+
+  Widget _buildScreen(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final level = args?['level']; 
     

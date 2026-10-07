@@ -425,10 +425,10 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
         decoration: BoxDecoration(
           color: const Color(0xFF1E293B),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.amber.withOpacity(0.5), width: 2),
+          border: Border.all(color: Colors.amber.withValues(alpha: 0.5), width: 2),
           boxShadow: [
             BoxShadow(
-              color: Colors.amber.withOpacity(0.25),
+              color: Colors.amber.withValues(alpha: 0.25),
               blurRadius: 20,
               spreadRadius: 4,
             ),
@@ -444,7 +444,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                     imageUrl: resolvedBanner,
                     httpHeaders: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
                     fit: BoxFit.cover,
-                    color: Colors.black.withOpacity(0.55),
+                    color: Colors.black.withValues(alpha: 0.55),
                     colorBlendMode: BlendMode.darken,
                     placeholder: (context, url) => Container(color: const Color(0xFF1E293B)),
                     errorWidget: (context, url, error) => const SizedBox.shrink(),
@@ -515,10 +515,10 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: statusColor.withOpacity(0.6), width: 2),
+        border: Border.all(color: statusColor.withValues(alpha: 0.6), width: 2),
         boxShadow: [
           BoxShadow(
-            color: statusColor.withOpacity(0.25),
+            color: statusColor.withValues(alpha: 0.25),
             blurRadius: 20,
             spreadRadius: 4,
           ),
@@ -534,7 +534,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                   imageUrl: resolvedBanner,
                   httpHeaders: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
                   fit: BoxFit.cover,
-                  color: Colors.black.withOpacity(0.55),
+                  color: Colors.black.withValues(alpha: 0.55),
                   colorBlendMode: BlendMode.darken,
                   placeholder: (context, url) => Container(color: const Color(0xFF1E293B)),
                   errorWidget: (context, url, error) => const SizedBox.shrink(),
@@ -584,9 +584,9 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.2),
+                      color: statusColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: statusColor.withOpacity(0.6), width: 1.5),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.6), width: 1.5),
                     ),
                     child: Text(
                       mainStatusText,
@@ -639,10 +639,10 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withOpacity(0.6), width: 2),
+        border: Border.all(color: color.withValues(alpha: 0.6), width: 2),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.25),
+            color: color.withValues(alpha: 0.25),
             blurRadius: 20,
             spreadRadius: 4,
           ),
@@ -658,7 +658,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                   imageUrl: resolvedBanner,
                   httpHeaders: ApiService.token != null ? {'Authorization': 'Bearer ${ApiService.token}'} : null,
                   fit: BoxFit.cover,
-                  color: Colors.black.withOpacity(0.55),
+                  color: Colors.black.withValues(alpha: 0.55),
                   colorBlendMode: BlendMode.darken,
                   placeholder: (context, url) => Container(color: const Color(0xFF1E293B)),
                   errorWidget: (context, url, error) => const SizedBox.shrink(),
@@ -726,9 +726,9 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.2),
+                      color: color.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: color.withOpacity(0.6), width: 1.5),
+                      border: Border.all(color: color.withValues(alpha: 0.6), width: 1.5),
                     ),
                     child: Text(
                       mainStatusText,
@@ -819,10 +819,10 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: winnerColor.withOpacity(0.5), width: 2),
+        border: Border.all(color: winnerColor.withValues(alpha: 0.5), width: 2),
         boxShadow: [
           BoxShadow(
-            color: winnerColor.withOpacity(0.2),
+            color: winnerColor.withValues(alpha: 0.2),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -981,10 +981,10 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: winnerColor.withOpacity(0.5), width: 2),
+        border: Border.all(color: winnerColor.withValues(alpha: 0.5), width: 2),
         boxShadow: [
           BoxShadow(
-            color: winnerColor.withOpacity(0.2),
+            color: winnerColor.withValues(alpha: 0.2),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -1030,7 +1030,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text('VS', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 18, fontWeight: FontWeight.w900, fontStyle: FontStyle.italic)),
+                  child: Text('VS', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 18, fontWeight: FontWeight.w900, fontStyle: FontStyle.italic)),
                 ),
                 Expanded(
                   child: Column(
@@ -1057,8 +1057,8 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
         width: double.infinity,
         padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
         decoration: _cardDecoration(),
-        child: Row(
-          children: const [
+        child: const Row(
+          children: [
             SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6366F1))),
             SizedBox(width: 12),
             Text('Carregando ranking final...', style: TextStyle(color: Colors.white70)),
@@ -1080,8 +1080,8 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(Icons.leaderboard, color: Color(0xFF6366F1)),
               SizedBox(width: 8),
               Text('Ranking Final', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
@@ -1099,7 +1099,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: isSmallScreen ? 8 : 10),
       decoration: BoxDecoration(
-        color: highlight ? const Color(0xFF6366F1).withOpacity(0.15) : const Color(0xFF0F172A),
+        color: highlight ? const Color(0xFF6366F1).withValues(alpha: 0.15) : const Color(0xFF0F172A),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: highlight ? const Color(0xFF6366F1) : const Color(0xFF334155)),
       ),
@@ -1166,7 +1166,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
         border: Border.all(color: const Color(0xFF334155)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -1206,7 +1206,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
             ],
           ),
           
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           
           Text(
             'Respostas Corretas',
@@ -1402,8 +1402,8 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFF10B981), width: 2),
         ),
-        child: Column(
-          children: const [
+        child: const Column(
+          children: [
             Icon(Icons.military_tech, color: Color(0xFF10B981), size: 48),
             SizedBox(height: 8),
             Text('BOSS DERROTADO!', style: TextStyle(color: Color(0xFF10B981), fontSize: 20, fontWeight: FontWeight.bold)),
@@ -1492,18 +1492,18 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
           if (isSmallScreen) ...[
             // Layout vertical para telas pequenas
             _buildStatItem('Acurácia', '${_accuracy.toStringAsFixed(1)}%', const Color(0xFF10B981), isSmallScreen),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             _buildStatItem('Maior Sequência', '$bestStreak', const Color(0xFFEF4444), isSmallScreen),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             _buildStatItem('Respostas Erradas', '$wrongAnswers', const Color(0xFFF59E0B), isSmallScreen),
           ] else ...[
             // Layout em grade para telas maiores
             Row(
               children: [
                 Expanded(child: _buildStatItem('Acurácia', '${_accuracy.toStringAsFixed(1)}%', const Color(0xFF10B981), isSmallScreen)),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
                 Expanded(child: _buildStatItem('Maior Sequência', '$bestStreak', const Color(0xFFEF4444), isSmallScreen)),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
                 Expanded(child: _buildStatItem('Respostas Erradas', '$wrongAnswers', const Color(0xFFF59E0B), isSmallScreen)),
               ],
             ),
@@ -1517,9 +1517,9 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
     return Container(
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -1531,7 +1531,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
               shape: BoxShape.circle,
             ),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1543,7 +1543,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                     color: Colors.grey[400],
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   value,
                   style: TextStyle(
@@ -1593,7 +1593,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                   color: Colors.grey[300],
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: Container(
                   height: isSmallScreen ? 8 : 12,
@@ -1613,7 +1613,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
                   ),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 '${_accuracy.toStringAsFixed(1)}%',
                 style: TextStyle(

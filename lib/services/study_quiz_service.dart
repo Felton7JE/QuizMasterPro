@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../models/study_quiz_model.dart';
+import '../models/saved_doubt_model.dart';
+import '../models/study_plan_model.dart';
 import '../services/api_service.dart';
 
 class StudyQuizService {
@@ -396,7 +398,7 @@ class StudyQuizService {
         .toList();
 
     int id = 1;
-    for (var line in lines.take(6)) {
+    for (var line in lines.take(10)) {
       flashcards.add(
         StudyFlashcard(
           id: 'fc_$id',
@@ -460,5 +462,165 @@ class StudyQuizService {
       list.removeWhere((q) => q.id == id);
       await prefs.setString(_storageKey, CustomStudyQuiz.encodeList(list));
     } catch (_) {}
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // GESTÃO DE DÚVIDAS / CADERNO DE ERROS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Future<void> saveDoubt({
+    required int userId,
+    required String questionText,
+    required List<String> options,
+    required int correctAnswer,
+    required String explanation,
+    required String topic,
+    required String difficulty,
+  }) async {
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/study/doubts');
+    final response = await _client.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        if (ApiService.token != null) 'Authorization': 'Bearer ${ApiService.token}',
+      },
+      body: jsonEncode({
+        'userId': userId,
+        'questionText': questionText,
+        'options': options,
+        'correctAnswer': correctAnswer,
+        'explanation': explanation,
+        'topic': topic,
+        'difficulty': difficulty,
+      }),
+    ).timeout(const Duration(seconds: 15));
+
+    if (response.statusCode != 201) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      throw Exception(data['error'] ?? 'Erro ao guardar dúvida.');
+    }
+  }
+
+  Future<List<SavedDoubt>> getDoubts(int userId) async {
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/study/doubts/$userId');
+    final response = await _client.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        if (ApiService.token != null) 'Authorization': 'Bearer ${ApiService.token}',
+      },
+    ).timeout(const Duration(seconds: 15));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+      return data.map((json) => SavedDoubt.fromJson(json)).toList();
+    } else {
+      throw Exception('Erro ao carregar dúvidas.');
+    }
+  }
+
+  Future<void> deleteDoubt(int userId, int doubtId) async {
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/study/doubts/$userId/$doubtId');
+    final response = await _client.delete(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        if (ApiService.token != null) 'Authorization': 'Bearer ${ApiService.token}',
+      },
+    ).timeout(const Duration(seconds: 15));
+
+    if (response.statusCode != 200) {
+      throw Exception('Erro ao apagar dúvida.');
+    }
+  }
+
+  // ==========================================
+  // Study Plans API Methods
+  // ==========================================
+
+  Future<StudyPlan> createStudyPlan({
+    required int userId,
+    required String topic,
+    required int durationDays,
+    String objective = '',
+  }) async {
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/study/plans');
+    final response = await _client.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        if (ApiService.token != null) 'Authorization': 'Bearer ${ApiService.token}',
+      },
+      body: jsonEncode({
+        'userId': userId,
+        'topic': topic,
+        'durationDays': durationDays,
+        'objective': objective,
+      }),
+    ).timeout(const Duration(seconds: 45));
+
+    if (response.statusCode == 201) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      return StudyPlan.fromJson(data);
+    } else {
+      final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      throw Exception(data['error'] ?? 'Erro ao gerar o plano de estudo.');
+    }
+  }
+
+  Future<List<StudyPlan>> getUserStudyPlans(int userId) async {
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/study/plans/user/$userId');
+    final response = await _client.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        if (ApiService.token != null) 'Authorization': 'Bearer ${ApiService.token}',
+      },
+    ).timeout(const Duration(seconds: 15));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+      return data.map((json) => StudyPlan.fromJson(json)).toList();
+    } else {
+      throw Exception('Erro ao carregar planos de estudo.');
+    }
+  }
+
+  Future<StudyPlan> getStudyPlanDetails(int planId) async {
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/study/plans/$planId');
+    final response = await _client.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        if (ApiService.token != null) 'Authorization': 'Bearer ${ApiService.token}',
+      },
+    ).timeout(const Duration(seconds: 15));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      return StudyPlan.fromJson(data);
+    } else {
+      throw Exception('Erro ao carregar detalhes do plano.');
+    }
+  }
+
+  Future<StudyPlanDay> markDayAsCompleted(int dayId) async {
+    final uri = Uri.parse('${AppConfig.baseUrl}/api/study/plans/days/$dayId/complete');
+    final response = await _client.post(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        if (ApiService.token != null) 'Authorization': 'Bearer ${ApiService.token}',
+      },
+    ).timeout(const Duration(seconds: 15));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      return StudyPlanDay.fromJson(data);
+    } else {
+      throw Exception('Erro ao marcar o dia como concluído.');
+    }
   }
 }

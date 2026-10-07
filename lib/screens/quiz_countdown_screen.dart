@@ -292,11 +292,11 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
                       child: Container(
                         padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1).withOpacity(0.2),
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF6366F1).withOpacity(0.3 * _pulseAnimation.value),
+                              color: const Color(0xFF6366F1).withValues(alpha: 0.3 * _pulseAnimation.value),
                               blurRadius: 20 * _pulseAnimation.value,
                               spreadRadius: 5 * _pulseAnimation.value,
                             ),
@@ -349,7 +349,7 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
                         color: _getCountdownColor(_countdown),
                         boxShadow: [
                           BoxShadow(
-                            color: _getCountdownColor(_countdown).withOpacity(0.5),
+                            color: _getCountdownColor(_countdown).withValues(alpha: 0.5),
                             blurRadius: 30,
                             spreadRadius: 10,
                           ),
@@ -381,7 +381,7 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF10B981).withOpacity(0.5),
+                            color: const Color(0xFF10B981).withValues(alpha: 0.5),
                             blurRadius: 20,
                             spreadRadius: 5,
                           ),
@@ -400,11 +400,11 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
                 
                 SizedBox(height: isSmallScreen ? 48 : 64),
                 if (_prefetching)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6366F1))),
                         SizedBox(width: 8),
                         Text('Carregando perguntas...', style: TextStyle(color: Colors.white70, fontSize: 12)),
@@ -434,7 +434,7 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
                   padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
                   margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 24 : 32),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B).withOpacity(0.8),
+                    color: const Color(0xFF1E293B).withValues(alpha: 0.8),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: const Color(0xFF334155),
@@ -541,7 +541,7 @@ class _QuizCountdownScreenState extends State<QuizCountdownScreen>
           color: const Color(0xFF6366F1),
           size: isSmallScreen ? 20 : 24,
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(

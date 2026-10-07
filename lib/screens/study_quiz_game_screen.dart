@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/exit_confirm_scope.dart';
 import 'package:provider/provider.dart';
 import '../models/study_quiz_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/study_quiz_provider.dart';
+import '../services/study_quiz_service.dart';
 import 'study_flashcards_screen.dart';
 
 class StudyQuizGameScreen extends StatefulWidget {
@@ -33,6 +35,7 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
   bool _isCompleted = false;
 
   final List<Map<String, dynamic>> _userReviewList = [];
+  final Set<int> _savedDoubts = {}; // Controla quais foram guardadas
 
   @override
   void initState() {
@@ -154,6 +157,14 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
 
   @override
   Widget build(BuildContext context) {
+    return ExitConfirmScope(
+      title: 'Sair do quiz?',
+      message: 'Se saíres agora, perdes o progresso deste quiz de estudo.',
+      child: _buildScreen(context),
+    );
+  }
+
+  Widget _buildScreen(BuildContext context) {
     if (_isCompleted) {
       return _buildResultsView();
     }
@@ -168,7 +179,7 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(
           widget.quiz.title,
@@ -469,6 +480,7 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
 
   Widget _buildTutorExplanationCard(CustomStudyQuestion question) {
     final isCorrect = _selectedOption == question.correctAnswer;
+    final isSaved = _savedDoubts.contains(_currentIndex);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -497,6 +509,15 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
                 ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: Icon(
+                  isSaved ? Icons.bookmark_added_rounded : Icons.bookmark_add_outlined,
+                  color: isSaved ? Colors.orange : Colors.orangeAccent,
+                ),
+                tooltip: 'Guardar no Caderno de Dúvidas',
+                onPressed: isSaved ? null : () => _saveToDoubts(question, _currentIndex),
               ),
             ],
           ),
@@ -555,13 +576,16 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
                       style: const TextStyle(color: Color(0xFFC7D2FE), fontSize: 14),
                     ),
                     const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildResultStat('Pontuação', '$_score pts', Icons.military_tech_rounded, Colors.amberAccent),
-                        _buildResultStat('XP Ganho', '+${(_score / 5).round()}', Icons.bolt_rounded, Colors.indigoAccent),
-                        _buildResultStat('Moedas', '+${_correctCount * 2}', Icons.monetization_on_rounded, Colors.amber),
-                      ],
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildResultStat('Pontuação', '$_score pts', Icons.military_tech_rounded, Colors.amberAccent),
+                          _buildResultStat('XP Ganho', '+${(_score / 5).round()}', Icons.bolt_rounded, Colors.indigoAccent),
+                          _buildResultStat('Moedas', '+${_correctCount * 2}', Icons.monetization_on_rounded, Colors.amber),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -687,5 +711,37 @@ class _StudyQuizGameScreenState extends State<StudyQuizGameScreen> with SingleTi
         Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11)),
       ],
     );
+  }
+
+  Future<void> _saveToDoubts(CustomStudyQuestion question, int index) async {
+    final auth = context.read<AuthProvider>();
+    if (auth.currentUser == null) return;
+
+    try {
+      final service = context.read<StudyQuizService>();
+      await service.saveDoubt(
+        userId: int.parse(auth.currentUser!.id),
+        questionText: question.questionText,
+        options: question.options,
+        correctAnswer: question.correctAnswer,
+        explanation: question.explanation,
+        topic: question.topic,
+        difficulty: question.difficulty,
+      );
+      if (mounted) {
+        setState(() {
+          _savedDoubts.add(index);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Guardado no Caderno de Dúvidas 🔖'), backgroundColor: Colors.orange),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }

@@ -6,9 +6,9 @@ import '../config/api_config.dart';
 class MissionService {
   final http.Client _client = http.Client();
 
-  Future<List<MissionModel>> getActiveMissions(String token) async {
+  Future<List<MissionModel>> getActiveMissions(String token, int userId) async {
     final response = await _client.get(
-      Uri.parse('${ApiConfig.baseUrl}/api/missions/active'),
+      Uri.parse('${ApiConfig.baseUrl}/api/missions/active?userId=$userId'),
       headers: ApiConfig.getHeaders(token: token),
     );
 
@@ -20,9 +20,9 @@ class MissionService {
     }
   }
 
-  Future<Map<String, dynamic>> claimReward(String token, int missionId) async {
+  Future<Map<String, dynamic>> claimReward(String token, int missionId, int userId) async {
     final response = await _client.post(
-      Uri.parse('${ApiConfig.baseUrl}/api/missions/$missionId/claim'),
+      Uri.parse('${ApiConfig.baseUrl}/api/missions/$missionId/claim?userId=$userId'),
       headers: ApiConfig.getHeaders(token: token),
     );
 

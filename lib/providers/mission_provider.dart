@@ -30,7 +30,9 @@ class MissionProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final fetched = await _missionService.getActiveMissions(ApiService.token!);
+      final userId = _authProvider.currentUser?.id;
+      if (userId == null) return;
+      final fetched = await _missionService.getActiveMissions(ApiService.token!, int.parse(userId));
       final uniqueMissions = <int, MissionModel>{};
       for (var mission in fetched) {
         uniqueMissions[mission.id] = mission;
@@ -52,7 +54,9 @@ class MissionProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _missionService.claimReward(ApiService.token!, missionId);
+      final userId = _authProvider.currentUser?.id;
+      if (userId == null) return false;
+      final response = await _missionService.claimReward(ApiService.token!, missionId, int.parse(userId));
       
       // Update coins in AuthProvider
       if (response['success'] == true) {

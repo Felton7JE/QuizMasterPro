@@ -1,6 +1,7 @@
 import 'package:quizmaster_pro/widgets/loading_logo.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/exit_confirm_scope.dart';
 import 'package:provider/provider.dart';
 import '../providers/free_mode_provider.dart';
 import '../providers/auth_provider.dart';
@@ -104,7 +105,7 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
     super.dispose();
   }
 
-  void _answerQuestion(String option, String correct) {
+  Future<void> _answerQuestion(String option, Map<String, dynamic> question) async {
     if (_isAnswered || _gameOver) return;
     
     setState(() {
@@ -113,7 +114,25 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
       _totalAnswers++;
     });
 
-    bool isCorrect = (option == correct);
+    String correctText = "";
+    final rawId = question['id'];
+    int? parsedId;
+    if (rawId is int) parsedId = rawId;
+    else if (rawId != null) parsedId = int.tryParse(rawId.toString());
+
+    if (parsedId != null) {
+      try {
+         final soloService = Provider.of<SoloService>(context, listen: false);
+         correctText = await soloService.getCorrectAnswerText(parsedId);
+         question['correctAnswer'] = correctText; // Update it so UI highlights green!
+      } catch (e) {
+         // handle error
+      }
+    }
+
+    if (!mounted) return;
+
+    bool isCorrect = (option == correctText);
     if (isCorrect) {
       _correctAnswers++;
       _score += 150; // Mais pontos para modo mais difícil
@@ -321,8 +340,9 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
     );
   }
 
-  Widget _buildAnswerOption(String option, String letter, String correctAnswer, bool isSmallScreen) {
+  Widget _buildAnswerOption(String option, String letter, Map<String, dynamic> question, bool isSmallScreen) {
     final isSelected = _selectedOption == option;
+    String? correctAnswer = question['correctAnswer'] as String?;
     final isCorrect = option == correctAnswer;
     final showResult = _isAnswered;
 
@@ -354,7 +374,7 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
 
     return GestureDetector(
       onTap: () {
-        if (!_isAnswered) _answerQuestion(option, correctAnswer);
+        if (!_isAnswered) _answerQuestion(option, question);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
@@ -434,6 +454,14 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
 
   @override
   Widget build(BuildContext context) {
+    return ExitConfirmScope(
+      title: 'Terminar o jogo?',
+      message: 'Se saíres agora, a tua pontuação desta ronda não será guardada.',
+      child: _buildScreen(context),
+    );
+  }
+
+  Widget _buildScreen(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
 
@@ -487,7 +515,7 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
                             child: _buildAnswerOption(
                               optionText,
                               String.fromCharCode(65 + index),
-                              correct,
+                              question,
                               isSmallScreen,
                             ),
                           );

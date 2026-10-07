@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../widgets/exit_confirm_scope.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/game_provider.dart';
@@ -55,7 +55,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   int _totalPoints = 0;
   // Live leaderboard
   List<LeaderboardEntry> _liveLeaderboard = [];
-  bool _loadingLeaderboard = false;
+  final bool _loadingLeaderboard = false;
 
   // In-Game Chat
   InGameChatMessageEvent? _latestChatMessage;
@@ -485,6 +485,22 @@ class _QuizGameScreenState extends State<QuizGameScreen>
 
   @override
   Widget build(BuildContext context) {
+    return ExitConfirmScope(
+          title: 'Abandonar a partida?',
+          message: 'Se saíres agora, deixas a sala e perdes a tua pontuação nesta partida.',
+          confirmLabel: 'Abandonar',
+          onConfirm: () {
+            final auth = Provider.of<AuthProvider>(context, listen: false);
+            Provider.of<WebSocketProvider>(context, listen: false).disconnect();
+            Provider.of<RoomProvider>(context, listen: false)
+                .leaveRoom(auth.currentUser?.id ?? '');
+            Navigator.of(context).pushNamedAndRemoveUntil('/menu', (route) => false);
+          },
+      child: _buildScreen(context),
+    );
+  }
+
+  Widget _buildScreen(BuildContext context) {
     // ignore: avoid_print
     debugPrint('=== DEBUG build() ===');
     // ignore: avoid_print
@@ -571,7 +587,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
                               isSmallScreen,
                             ),
                           );
-                        }).toList(),
+                        }),
                         if (_showCorrectAnswer) ...[
                           SizedBox(height: isSmallScreen ? 16 : 24),
                           _buildExplanation(currentQ.explanation ?? '', isSmallScreen),
@@ -705,7 +721,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
         border: Border.all(color: const Color(0xFF334155)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -735,10 +751,10 @@ class _QuizGameScreenState extends State<QuizGameScreen>
 
     if (showResult) {
       if (isCorrect) {
-        backgroundColor = const Color(0xFF10B981).withOpacity(0.2);
+        backgroundColor = const Color(0xFF10B981).withValues(alpha: 0.2);
         borderColor = const Color(0xFF10B981);
       } else if (isSelected && !isCorrect) {
-        backgroundColor = const Color(0xFFEF4444).withOpacity(0.2);
+        backgroundColor = const Color(0xFFEF4444).withValues(alpha: 0.2);
         borderColor = const Color(0xFFEF4444);
       } else {
         backgroundColor = const Color(0xFF1E293B);
@@ -747,7 +763,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
       }
     } else {
       if (isSelected) {
-        backgroundColor = const Color(0xFF6366F1).withOpacity(0.2);
+        backgroundColor = const Color(0xFF6366F1).withValues(alpha: 0.2);
         borderColor = const Color(0xFF6366F1);
       } else {
         backgroundColor = const Color(0xFF1E293B);
@@ -827,14 +843,14 @@ class _QuizGameScreenState extends State<QuizGameScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.lightbulb,
                 color: Color(0xFF6366F1),
               ),
-              const SizedBox(width: 8),
-              const Text(
+              SizedBox(width: 8),
+              Text(
                 'Explicação',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
@@ -984,7 +1000,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
       margin: const EdgeInsets.symmetric(vertical: 3),
       padding: EdgeInsets.symmetric(horizontal: isSmall ? 10 : 12, vertical: isSmall ? 6 : 8),
       decoration: BoxDecoration(
-        color: highlight ? const Color(0xFF6366F1).withOpacity(0.2) : const Color(0xFF0F172A),
+        color: highlight ? const Color(0xFF6366F1).withValues(alpha: 0.2) : const Color(0xFF0F172A),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: highlight ? const Color(0xFF818CF8) : const Color(0xFF334155),

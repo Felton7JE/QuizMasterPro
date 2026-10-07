@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
-import '../utils/validation_utils.dart';
 import '../utils/snackbar_utils.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -124,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       return Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red.withValues(alpha: 0.1),
                           border: Border.all(color: Colors.red),
                           borderRadius: BorderRadius.circular(8),
                         ),

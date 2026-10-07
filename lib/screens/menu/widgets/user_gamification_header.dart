@@ -42,19 +42,29 @@ class UserGamificationHeader extends StatelessWidget {
                   )
                 : null,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildStatItem(Icons.local_fire_department, Colors.orange, '${user.currentStreak}', 'Ofensiva'),
-              _buildDivider(),
-              _buildStatItem(Icons.monetization_on, Colors.amber, '${user.coins}', 'Moedas'),
-              _buildDivider(),
-              _buildStatItem(Icons.auto_awesome, const Color(0xFFC084FC), '${user.crystals}', 'Cristais 🔮'),
-              _buildDivider(),
-              _buildStatItem(Icons.bolt, Colors.lightBlueAccent, '${user.energy}', 'Energia'),
-              _buildDivider(),
-              _buildStatItem(Icons.star, Colors.purpleAccent, 'Nvl ${user.level}', '${user.xp} XP'),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildStatItem(Icons.local_fire_department, Colors.orange, '${user.currentStreak}', 'Ofensiva'),
+                      _buildDivider(),
+                      _buildStatItem(Icons.monetization_on, Colors.amber, '${user.coins}', 'Moedas'),
+                      _buildDivider(),
+                      _buildStatItem(Icons.auto_awesome, const Color(0xFFC084FC), '${user.crystals}', 'Cristais 🔮'),
+                      _buildDivider(),
+                      _buildStatItem(Icons.bolt, Colors.lightBlueAccent, '${user.energy}', 'Energia'),
+                      _buildDivider(),
+                      _buildStatItem(Icons.star, Colors.purpleAccent, 'Nvl ${user.level}', '${user.xp} XP'),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         );
       },

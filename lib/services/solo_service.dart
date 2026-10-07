@@ -234,4 +234,9 @@ class SoloService {
     final res = await _api.getList('/api/solo/free-mode/leaderboard/$gameMode');
     return res;
   }
+
+  Future<String> getCorrectAnswerText(int questionId) async {
+    final res = await _api.get('/api/solo/question/$questionId/answer');
+    return res['correctAnswerText'] as String;
+  }
 }

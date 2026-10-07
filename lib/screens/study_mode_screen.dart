@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -10,7 +11,9 @@ import '../providers/study_quiz_provider.dart';
 import '../widgets/crystal_balance_chip.dart';
 import 'study_flashcards_screen.dart';
 import 'study_quiz_game_screen.dart';
+import 'study_pdf_screen.dart';
 import 'store_screen.dart';
+import 'study_plans_list_screen.dart';
 import 'package:quizmaster_pro/widgets/loading_logo.dart';
 
 class StudyModeScreen extends StatefulWidget {
@@ -27,13 +30,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
   late TabController _tabController;
   Timer? _cooldownTicker;
 
-  // Modos de entrada
-  int _inputModeIndex = 0; // 0 = PDF, 1 = Tema/Texto
-
-  // Dados do Arquivo PDF
-  Uint8List? _pdfBytes;
-  String? _pdfFileName;
-  int? _pdfFileSize;
+  final List<Map<String, dynamic>> _myManuals = [];
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
@@ -84,7 +81,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _cooldownTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         final auth = context.read<AuthProvider>();
@@ -109,36 +106,38 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
 
   void _applyPreset(Map<String, String> preset) {
     setState(() {
-      _inputModeIndex = 1;
       _titleController.text = preset['title']!;
       _contentController.text = preset['sample']!;
       _topicController.text = preset['topic']!;
     });
   }
 
-  Future<void> _pickPdfFile() async {
+
+  Future<void> _pickManualFile() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
-        withData: true,
+        allowMultiple: true,
+        withData: kIsWeb,
       );
 
       if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
         setState(() {
-          _pdfBytes = file.bytes;
-          _pdfFileName = file.name;
-          _pdfFileSize = file.size;
-          if (_titleController.text.isEmpty) {
-            _titleController.text = file.name.replaceAll('.pdf', '');
+          for (var file in result.files) {
+            _myManuals.add({
+              'bytes': file.bytes,
+              'path': file.path,
+              'name': file.name,
+              'size': file.size,
+            });
           }
         });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📄 PDF selecionado: ${file.name}'),
+              content: Text('📄 ${result.files.length} manuais adicionados!'),
               backgroundColor: _emerald,
             ),
           );
@@ -148,7 +147,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao selecionar arquivo: $e'),
+            content: Text('Erro ao carregar PDF: $e'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -156,13 +155,12 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
     }
   }
 
-  void _clearPdf() {
+  void _removeManual(int index) {
     setState(() {
-      _pdfBytes = null;
-      _pdfFileName = null;
-      _pdfFileSize = null;
+      _myManuals.removeAt(index);
     });
   }
+
 
   Future<void> _handleGenerate() async {
     final auth = context.read<AuthProvider>();
@@ -179,49 +177,38 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
 
     CustomStudyQuiz? generatedQuiz;
 
-    if (_inputModeIndex == 0) {
-      // Modo PDF
-      if (_pdfBytes == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor seleciona um arquivo PDF primeiro.'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-        return;
-      }
-
-      generatedQuiz = await study.generateQuizFromPdf(
-        fileBytes: _pdfBytes!,
-        fileName: _pdfFileName ?? 'documento.pdf',
-        title: title.isEmpty ? (_pdfFileName?.replaceAll('.pdf', '') ?? 'Quiz de Estudo') : title,
-        questionCount: _selectedQuestionCount,
-        difficulty: _selectedDifficulty,
-        topic: topic.isNotEmpty ? topic : 'Geral',
-        authProvider: auth,
+    // Modo Tema / Texto
+    final content = _contentController.text.trim();
+    
+    if (content.isEmpty && topic.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor digita um tema de estudo ou cola o texto da matéria.'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
-    } else {
-      // Modo Tema / Texto
-      final content = _contentController.text.trim();
-      if (content.isEmpty && topic.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor digita um tema de estudo ou cola o texto da matéria.'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-        return;
-      }
-
-      generatedQuiz = await study.generateQuiz(
-        title: title.isEmpty ? (topic.isNotEmpty ? 'Quiz: $topic' : 'Quiz de Estudo') : title,
-        content: content.isNotEmpty ? content : 'Estudo focado no tema: $topic',
-        questionCount: _selectedQuestionCount,
-        difficulty: _selectedDifficulty,
-        topic: topic.isNotEmpty ? topic : 'Geral',
-        authProvider: auth,
-      );
+      return;
     }
+    
+    if (content.length > 4000) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, cola um texto menor (máx. 4000 caracteres) para poupar os teus créditos.'),
+          backgroundColor: Colors.amber,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    generatedQuiz = await study.generateQuiz(
+      title: title.isEmpty ? (topic.isNotEmpty ? 'Quiz: $topic' : 'Quiz de Estudo') : title,
+      content: content.isNotEmpty ? content : 'Estudo focado no tema: $topic',
+      questionCount: _selectedQuestionCount,
+      difficulty: _selectedDifficulty,
+      topic: topic.isNotEmpty ? topic : 'Geral',
+      authProvider: auth,
+    );
 
     if (generatedQuiz != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -541,10 +528,12 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
           indicatorWeight: 3,
           labelColor: Colors.indigoAccent,
           unselectedLabelColor: Colors.grey.shade400,
+          isScrollable: true,
           tabs: const [
             Tab(icon: Icon(Icons.psychology_rounded), text: 'Criar com IA'),
             Tab(icon: Icon(Icons.folder_special_rounded), text: 'Meus Quizzes'),
-            Tab(icon: Icon(Icons.qr_code_rounded), text: 'Importar'),
+            Tab(icon: Icon(Icons.calendar_month), text: 'Planos'),
+            Tab(icon: Icon(Icons.menu_book), text: 'Manuais'),
           ],
         ),
       ),
@@ -555,7 +544,8 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
             children: [
               _buildCreateTab(),
               _buildMyQuizzesTab(studyProvider),
-              _buildImportTab(),
+              const StudyPlansListScreen(),
+              _buildMyManualsTab(),
             ],
           ),
           if (studyProvider.isGenerating) _buildGeneratingOverlay(),
@@ -583,6 +573,8 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
         children: [
           // Card de Quotas Diárias e Cooldown
           _buildQuotaAndCooldownCard(user, study, auth),
+
+          const SizedBox(height: 16),
 
           // Banner Explicativo
           Container(
@@ -622,33 +614,8 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
 
           const SizedBox(height: 20),
 
-          // Seletor de Tipo de Entrada (PDF vs Tema/Texto)
-          Row(
-            children: [
-              Expanded(
-                child: _buildInputTypeButton(
-                  title: 'Upload de PDF',
-                  icon: Icons.picture_as_pdf_rounded,
-                  isSelected: _inputModeIndex == 0,
-                  onTap: () => setState(() => _inputModeIndex = 0),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildInputTypeButton(
-                  title: 'Tema / Texto',
-                  icon: Icons.edit_note_rounded,
-                  isSelected: _inputModeIndex == 1,
-                  onTap: () => setState(() => _inputModeIndex = 1),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Conteúdo de Entrada dependendo do modo
-          if (_inputModeIndex == 0) _buildPdfUploadSection() else _buildTextTopicSection(),
+          // Conteúdo de Entrada (Tema/Texto)
+          _buildTextTopicSection(),
 
           const SizedBox(height: 20),
 
@@ -701,184 +668,7 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildInputTypeButton({
-    required String title,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF4F46E5).withValues(alpha: 0.2) : const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? Colors.indigoAccent : Colors.grey.withValues(alpha: 0.2),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: isSelected ? Colors.indigoAccent : Colors.grey, size: 20),
-            const SizedBox(width: 8),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.grey.shade400,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildPdfUploadSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Arquivo PDF da Matéria',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        const SizedBox(height: 10),
-        if (_pdfBytes == null)
-          GestureDetector(
-            onTap: _pickPdfFile,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: Colors.indigoAccent.withValues(alpha: 0.4),
-                  style: BorderStyle.solid,
-                  width: 1.5,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.indigo.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.cloud_upload_rounded, color: Colors.indigoAccent, size: 36),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Toque para selecionar o arquivo PDF',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Apostilas, resumos, artigos ou capítulos (.pdf)',
-                    style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _emerald.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.picture_as_pdf_rounded, color: Colors.redAccent, size: 36),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _pdfFileName ?? 'Documento.pdf',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _pdfFileSize != null ? '${(_pdfFileSize! / 1024).toStringAsFixed(1)} KB' : 'Arquivo pronto',
-                        style: const TextStyle(color: _emeraldAccent, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded, color: Colors.grey),
-                  onPressed: _clearPdf,
-                  tooltip: 'Remover PDF',
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1B4B).withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF818CF8).withValues(alpha: 0.35)),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.lightbulb_rounded, color: Color(0xFFFBBF24), size: 20),
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '💡 Dica para Máxima Eficiência (IA & Retenção)',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                    SizedBox(height: 3),
-                    Text(
-                      'Recomendamos arquivos de 10 a 25 páginas (1 capítulo por vez) com 15 a 30 questões. Isso garante 100% de atenção da IA e retenção máxima sem cansaço mental!',
-                      style: TextStyle(
-                        color: Color(0xFFC7D2FE),
-                        fontSize: 11,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildTextTopicSection() {
     return Column(
@@ -1031,35 +821,43 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
     }
 
     if (provider.quizzes.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.school_outlined, size: 64, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text(
-                'Nenhum quiz de estudo gerado',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Cria o teu primeiro quiz com IA na aba "Criar com IA" usando PDF ou qualquer matéria!',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              ),
-            ],
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildImportSection(),
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.school_outlined, size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                const Text(
+                  'Nenhum quiz de estudo gerado',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Cria o teu primeiro quiz com IA na aba "Criar com IA" usando PDF ou qualquer matéria!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: provider.quizzes.length,
+      itemCount: provider.quizzes.length + 1,
       itemBuilder: (context, index) {
-        final quiz = provider.quizzes[index];
+        if (index == 0) {
+          return _buildImportSection();
+        }
+
+        final quiz = provider.quizzes[index - 1];
         final isPdf = quiz.sourceType == 'PDF';
 
         return Container(
@@ -1108,17 +906,9 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
                   ),
                   if (quiz.shareCode != null)
                     IconButton(
-                      tooltip: 'Copiar Código de Partilha',
+                      tooltip: 'Partilhar Quiz de Estudo',
                       icon: const Icon(Icons.share_rounded, color: Colors.amberAccent, size: 20),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: quiz.shareCode!));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: _emerald,
-                            content: Text('📋 Código ${quiz.shareCode} copiado! Partilha com os teus colegas.'),
-                          ),
-                        );
-                      },
+                      onPressed: () => _showShareModal(context, quiz),
                     ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline_rounded, color: Colors.grey, size: 20),
@@ -1176,57 +966,61 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
   // ABA 3: IMPORTAR CÓDIGO (STUDY-XXXXX)
   // ─────────────────────────────────────────────────────────────────────────
 
-  Widget _buildImportTab() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
+  Widget _buildImportSection() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.indigo.withValues(alpha: 0.3)),
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.indigo.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.qr_code_rounded, color: Colors.indigoAccent, size: 48),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Importar Quiz de Estudo',
-            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Cola o código partilhado por um colega para carregar o quiz e flashcards instantaneamente.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _shareCodeController,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2),
-            decoration: InputDecoration(
-              hintText: 'STUDY-12345',
-              hintStyle: TextStyle(color: Colors.grey.shade600, letterSpacing: 2),
-              filled: true,
-              fillColor: const Color(0xFF1E293B),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-            ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: _handleImportShared,
-              icon: const Icon(Icons.download_rounded, color: Colors.white),
-              label: const Text('Carregar Quiz', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          Row(
+            children: [
+              const Icon(Icons.qr_code_rounded, color: Colors.indigoAccent, size: 24),
+              const SizedBox(width: 8),
+              const Text(
+                'Importar Quiz de Colega',
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
               ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: TextField(
+                    controller: _shareCodeController,
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: 'Cód. STUDY-12345',
+                      hintStyle: TextStyle(color: Colors.grey.shade600),
+                      filled: true,
+                      fillColor: const Color(0xFF0F172A),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _handleImportShared,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4F46E5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Carregar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1268,6 +1062,258 @@ class _StudyModeScreenState extends State<StudyModeScreen> with SingleTickerProv
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showShareModal(BuildContext context, CustomStudyQuiz quiz) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade600,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Partilhar Quiz de Estudo',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                quiz.title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.amberAccent, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.indigoAccent.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Código de Acesso:',
+                          style: TextStyle(color: Colors.grey, fontSize: 11),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          quiz.shareCode ?? 'N/A',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1),
+                        ),
+                      ],
+                    ),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _emerald,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: quiz.shareCode ?? ''));
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: _emerald,
+                            content: Text('📋 Código ${quiz.shareCode} copiado! Envia para o teu amigo.'),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: const Text('Copiar'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Teus amigos podem colar este código na aba "Importar Quiz" para estudar a mesma matéria!',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ABA 4: MEUS MANUAIS (LEITOR PDF)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildMyManualsTab() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Os Meus Manuais',
+                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              ElevatedButton.icon(
+                onPressed: _pickManualFile,
+                icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                label: const Text('Adicionar', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _emerald,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Carrega os teus manuais PDF, lê e gera quizzes diretamente a partir do texto que selecionares.',
+            style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: _myManuals.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.library_books_rounded, size: 64, color: Colors.indigoAccent),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Ainda não tens manuais.',
+                          style: TextStyle(color: Colors.grey.shade400, fontSize: 16),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _pickManualFile,
+                          icon: const Icon(Icons.upload_file, color: Colors.white),
+                          label: const Text('Carregar Primeiro Manual', style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.indigoAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 0.75,
+                    ),
+                    itemCount: _myManuals.length,
+                    itemBuilder: (context, index) {
+                      final manual = _myManuals[index];
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.indigoAccent.withValues(alpha: 0.3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.indigo.withValues(alpha: 0.15),
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+                                    ),
+                                    child: const Center(
+                                      child: Icon(Icons.menu_book_rounded, size: 48, color: Colors.indigoAccent),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                                      onPressed: () => _removeManual(index),
+                                      tooltip: 'Remover',
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Colors.black.withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    manual['name'] ?? 'Documento',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${((manual['size'] as int) / 1024).toStringAsFixed(1)} KB',
+                                    style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 32,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => StudyPdfScreen(
+                                              pdfBytes: manual['bytes'] as Uint8List?,
+                                              pdfPath: manual['path'] as String?,
+                                              fileName: manual['name'] as String,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _emerald,
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                      child: const Text('Abrir', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }

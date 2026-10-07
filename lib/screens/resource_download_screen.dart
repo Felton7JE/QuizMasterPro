@@ -98,6 +98,39 @@ class _ResourceDownloadScreenState extends State<ResourceDownloadScreen> {
       if (!mounted) return;
       final assetManager = context.read<AssetManagerService>();
       if (urls.isNotEmpty) {
+        bool? proceed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: const Color(0xFF1A2235),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Baixar Recursos', style: TextStyle(color: Colors.white)),
+            content: Text(
+              'Foram encontrados ${urls.length} recursos da loja/temporada que precisam ser baixados.\nDesejas baixar agora? (Pode consumir dados móveis)',
+              style: const TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Mais Tarde', style: TextStyle(color: Colors.white54)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigoAccent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Baixar', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+
+        if (proceed != true) {
+          if (mounted) widget.onDownloadComplete();
+          return;
+        }
+
         await assetManager.startDownload(urls);
       } else {
         widget.onDownloadComplete();

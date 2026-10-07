@@ -13,7 +13,10 @@ import 'create_room/widgets/advanced_settings_section.dart';
 import '../widgets/app_logo_text.dart';
 
 class CreateRoomScreen extends StatefulWidget {
-  const CreateRoomScreen({super.key});
+  final String? initialMode;
+  final String? invitedFriendId;
+
+  const CreateRoomScreen({super.key, this.initialMode, this.invitedFriendId});
 
   @override
   State<CreateRoomScreen> createState() => _CreateRoomScreenState();
@@ -24,7 +27,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   final _roomNameController = TextEditingController();
   final _passwordController = TextEditingController();
   
-  String _selectedMode = 'team';
+  late String _selectedMode;
   String _selectedCategory = '';
   String _selectedDifficulty = 'medium';
   String _selectedConnection = 'online';
@@ -47,6 +50,10 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedMode = widget.initialMode ?? 'team';
+    if (widget.initialMode == 'duel') {
+      _maxPlayers = 2;
+    }
     // Valor padrão para facilitar os testes
     _roomNameController.text = "Quiz em Equipe - Teste";
     

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../widgets/exit_confirm_scope.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -53,6 +54,7 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
 
   int? _selectedOptionIndex;
   bool _hasAnswered = false;
+  bool _isSubmittingAnswer = false;
   bool _botAnsweredThisTurn = false;
   bool? _botWasCorrectThisTurn;
   bool _playerDamagedThisTurn = false;
@@ -235,6 +237,7 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
       _isLoading = false;
     });
 
+    if (!mounted) return;
     // Inicia a música certa para o nível
     final audio = context.read<AppAudioService>();
     if (data.isBossLevel) {
@@ -315,14 +318,43 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
     }
   }
 
-  void _submitPlayerAnswer(int optionIndex) {
-    if (_hasAnswered) return;
+  Future<void> _submitPlayerAnswer(int optionIndex) async {
+    if (_hasAnswered || _isSubmittingAnswer) return;
+
+    setState(() {
+      _isSubmittingAnswer = true;
+    });
 
     _questionTimer?.cancel();
     _timerAnimController.stop();
+    _botThinkingTimer?.cancel();
 
     final currentQuestion = _gameData!.questions[_currentQuestionIndex];
-    final int correctAnswerIndex = currentQuestion['correctAnswer'] ?? 0;
+    
+    final rawId = currentQuestion['id'];
+    int? parsedId;
+    if (rawId is int) {
+      parsedId = rawId;
+    } else if (rawId != null) {
+      parsedId = int.tryParse(rawId.toString());
+    }
+
+    int correctAnswerIndex = currentQuestion['correctAnswer'] ?? 0;
+    if (currentQuestion['correctAnswer'] == null && parsedId != null) {
+      try {
+        final soloService = Provider.of<SoloService>(context, listen: false);
+        final correctText = await soloService.getCorrectAnswerText(parsedId);
+        final options = List<String>.from(currentQuestion['options'] ?? []);
+        correctAnswerIndex = options.indexOf(correctText);
+        if (correctAnswerIndex == -1) correctAnswerIndex = 0;
+        currentQuestion['correctAnswer'] = correctAnswerIndex;
+      } catch (e) {
+        debugPrint('Error fetching correct answer: $e');
+      }
+    }
+    
+    if (!mounted) return;
+
     final bool isCorrect = (optionIndex == correctAnswerIndex);
 
     final isGoldenLast = (_currentQuestionIndex == _gameData!.questions.length - 1);
@@ -347,20 +379,13 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
 
     setState(() {
       _hasAnswered = true;
+      _isSubmittingAnswer = false;
       _selectedOptionIndex = optionIndex;
       if (isCorrect) {
         _playerScore += pointsEarned;
         _playerCorrectCount++;
       }
     });
-
-    final rawId = currentQuestion['id'];
-    int? parsedId;
-    if (rawId is int) {
-      parsedId = rawId;
-    } else if (rawId != null) {
-      parsedId = int.tryParse(rawId.toString());
-    }
 
     _answeredQuestions.add({
       'questionId': parsedId,
@@ -545,6 +570,14 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
 
   @override
   Widget build(BuildContext context) {
+    return ExitConfirmScope(
+      title: 'Sair do nível?',
+      message: 'Se saíres agora, perdes o progresso deste nível.',
+      child: _buildScreen(context),
+    );
+  }
+
+  Widget _buildScreen(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF0F172A),
@@ -790,30 +823,34 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Jogador
-          Row(
-            children: [
-              CosmeticAvatar(
-                radius: 20,
-                avatarUrl: user?.avatar,
-                username: user?.username ?? 'U',
-                activeAvatarId: user?.activeAvatarId,
-                activeFrameId: user?.activeFrameId,
-                isVip: user?.isVip ?? false,
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  VipUsernameText(
-                    username: user?.username ?? 'Jogador',
-                    isVip: user?.isVip ?? false,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          Expanded(
+            child: Row(
+              children: [
+                CosmeticAvatar(
+                  radius: 20,
+                  avatarUrl: user?.avatar,
+                  username: user?.username ?? 'U',
+                  activeAvatarId: user?.activeAvatarId,
+                  activeFrameId: user?.activeFrameId,
+                  isVip: user?.isVip ?? false,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      VipUsernameText(
+                        username: user?.username ?? 'Jogador',
+                        isVip: user?.isVip ?? false,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                      Text('$_playerScore pts',
+                          style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
                   ),
-                  Text('$_playerScore pts',
-                      style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 16)),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
 
           // VS Indicator
@@ -843,28 +880,35 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
           ),
 
           // BOT / CHEFE Oponente
-          Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      if (isBoss) const Icon(Icons.local_fire_department, color: Colors.orangeAccent, size: 14),
-                      Text(
-                        _gameData?.botName ?? 'BOT',
-                        style: TextStyle(
-                          color: isBoss ? Colors.orangeAccent : Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isBoss) const Icon(Icons.local_fire_department, color: Colors.orangeAccent, size: 14),
+                          Flexible(
+                            child: Text(
+                              _gameData?.botName ?? 'BOT',
+                              style: TextStyle(
+                                color: isBoss ? Colors.orangeAccent : Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Text('$_botScore pts',
-                          style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text('$_botScore pts',
+                              style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16)),
                       if (_botAnsweredThisTurn) ...[
                         const SizedBox(width: 4),
                         Icon(
@@ -877,6 +921,7 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
                   ),
                 ],
               ),
+                ),
               const SizedBox(width: 8),
               if (isBoss)
                 AnimatedBuilder(
@@ -917,10 +962,11 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
                 ),
             ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildOptionButton(int index, String optionText, int? correctAnswerIndex) {
     Color btnColor = const Color(0xFF1E293B);

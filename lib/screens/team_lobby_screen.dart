@@ -1,5 +1,6 @@
 import 'package:quizmaster_pro/widgets/loading_logo.dart';
 import 'package:flutter/material.dart';
+import '../widgets/exit_confirm_scope.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -242,9 +243,11 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
           assignedTeam = TeamColor.BLUE;
         }
 
+        if (!mounted) return;
         await Provider.of<RoomProvider>(context, listen: false)
             .setPlayerTeam(currentUser.id, assignedTeam);
             
+        if (!mounted) return;
         // Marca o jogador como pronto após atribuição automática
         await Provider.of<RoomProvider>(context, listen: false)
             .setPlayerReady(currentUser.id);
@@ -627,6 +630,23 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    return ExitConfirmScope(
+          title: 'Sair da sala?',
+          message: 'Se saíres agora, deixas a sala e os outros jogadores seguem sem ti.',
+          confirmLabel: 'Sair da sala',
+          icon: Icons.meeting_room_rounded,
+          onConfirm: () {
+            final auth = Provider.of<AuthProvider>(context, listen: false);
+            Provider.of<WebSocketProvider>(context, listen: false).disconnect();
+            Provider.of<RoomProvider>(context, listen: false)
+                .leaveRoom(auth.currentUser?.id ?? '');
+            Navigator.of(context).pushNamedAndRemoveUntil('/menu', (route) => false);
+          },
+      child: _buildScreen(context),
+    );
+  }
+
+  Widget _buildScreen(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
     
@@ -1571,13 +1591,17 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        VipUsernameText(
-                          username: player.username,
-                          isVip: player.isVip,
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 14 : 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: VipUsernameText(
+                            username: player.username,
+                            isVip: player.isVip,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 16,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                         if (isCurrentUser) ...[
@@ -1718,6 +1742,7 @@ class _TeamLobbyScreenState extends State<TeamLobbyScreen> with TickerProviderSt
                       final currentUser = authProvider.currentUser;
                       if (currentUser != null) {
                         await Provider.of<RoomProvider>(context, listen: false).addBots(currentUser.id, count: 3);
+                        if (!context.mounted) return;
                         AppSnackBar.showSuccess(context, 'Bots adicionados!');
                       }
                     },

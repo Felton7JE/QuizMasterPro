@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/exit_confirm_scope.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -205,6 +206,23 @@ class _KahootLobbyScreenState extends State<KahootLobbyScreen>
 
   @override
   Widget build(BuildContext context) {
+    return ExitConfirmScope(
+          title: 'Sair da sala?',
+          message: 'Se saíres agora, deixas a sala e os outros jogadores seguem sem ti.',
+          confirmLabel: 'Sair da sala',
+          icon: Icons.meeting_room_rounded,
+          onConfirm: () {
+            final auth = Provider.of<AuthProvider>(context, listen: false);
+            Provider.of<WebSocketProvider>(context, listen: false).disconnect();
+            Provider.of<RoomProvider>(context, listen: false)
+                .leaveRoom(auth.currentUser?.id ?? '');
+            Navigator.of(context).pushNamedAndRemoveUntil('/menu', (route) => false);
+          },
+      child: _buildScreen(context),
+    );
+  }
+
+  Widget _buildScreen(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF0F172A),
@@ -269,12 +287,7 @@ class _KahootLobbyScreenState extends State<KahootLobbyScreen>
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Provider.of<WebSocketProvider>(context, listen: false).disconnect();
-            Provider.of<RoomProvider>(context, listen: false)
-                .leaveRoom(currentUser?.id ?? '');
-            Navigator.pushReplacementNamed(context, '/menu');
-          },
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
         actions: [
           Container(

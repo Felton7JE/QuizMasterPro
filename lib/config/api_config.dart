@@ -6,10 +6,14 @@ class ApiConfig {
   /// Constrói o URL completo de um asset estático servido pelo backend.
   /// Se o [value] já for um URL absoluto (começa com http/https), retorna-o tal como está.
   /// Se for um caminho relativo (ex: "images/avatars/ninja.png"), prefixar com [baseUrl].
-  static String? resolveAssetUrl(String? value) {
+  /// Se [isThumb] for true, utiliza o endpoint de miniaturas.
+  static String? resolveAssetUrl(String? value, {bool isThumb = false}) {
     if (value == null || value.isEmpty) return null;
     if (value.startsWith('http://') || value.startsWith('https://')) return value;
-    // Caminho relativo: servido pelo Spring Boot static resources
+    // Caminho relativo: servido pelo Spring Boot static resources ou via thumb
+    if (isThumb) {
+      return '$baseUrl/api/images/thumb?path=$value&width=150';
+    }
     return '$baseUrl/$value';
   }
   static const Duration requestTimeout = Duration(seconds: 30);

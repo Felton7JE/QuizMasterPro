@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/exit_confirm_scope.dart';
+import 'package:flutter/services.dart';
 import '../widgets/app_logo_text.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -34,6 +36,18 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return ExitConfirmScope(
+          title: 'Sair do QuizMaster Pro?',
+          message: 'Tens a certeza que queres fechar a aplicação?',
+          confirmLabel: 'Fechar app',
+          cancelLabel: 'Ficar',
+          icon: Icons.power_settings_new_rounded,
+          onConfirm: () => SystemNavigator.pop(),
+      child: _buildScreen(context),
+    );
+  }
+
+  Widget _buildScreen(BuildContext context) {
     double horizontalPadding = context.isVerySmallScreen ? 16 : 20;
     double verticalPadding = context.isVerySmallScreen ? 16 : 20;
 
