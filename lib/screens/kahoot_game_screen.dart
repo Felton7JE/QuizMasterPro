@@ -62,6 +62,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
   // Timer
   int _timeLeft = 15;
   Timer? _timer;
+  Timer? _lastQuestionFallbackTimer;
 
   // Game end
   bool _gameEnded = false;
@@ -98,6 +99,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
   @override
   void dispose() {
     _timer?.cancel();
+    _lastQuestionFallbackTimer?.cancel();
     _chatCooldownTimer?.cancel();
     _progressController.dispose();
     _questionController.dispose();
@@ -308,6 +310,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
 
   void _onNextQuestion(NextQuestionEvent event) {
     _timer?.cancel();
+    _lastQuestionFallbackTimer?.cancel();
     _progressController.stop();
 
     setState(() {
@@ -330,6 +333,20 @@ class _KahootGameScreenState extends State<KahootGameScreen>
     _progressController.duration = Duration(seconds: _questionTime);
     _progressController.forward(from: 0);
     _startTimer();
+
+    // Recuperação após a última questão
+    if (event.isLastQuestion) {
+      _lastQuestionFallbackTimer = Timer(
+        Duration(seconds: _questionTime + 6),
+        () {
+          if (!mounted || _gameEnded) return;
+          if (kDebugMode) {
+            debugPrint('Kahoot: GAME_ENDED não recebido; a abrir resultados após a última pergunta.');
+          }
+          _onGameEnded();
+        },
+      );
+    }
   }
 
   void _startTimer() {
@@ -476,7 +493,9 @@ class _KahootGameScreenState extends State<KahootGameScreen>
   }
 
   void _onGameEnded() {
+    if (_gameEnded) return;
     _timer?.cancel();
+    _lastQuestionFallbackTimer?.cancel();
     _progressController.stop();
     if (!mounted) return;
     setState(() => _gameEnded = true);
