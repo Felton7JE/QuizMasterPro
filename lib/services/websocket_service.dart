@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import '../config/app_config.dart';
-import '../services/api_service.dart';
+import './api_service.dart';
 
 /// Evento recebido via WebSocket quando o host inicia o jogo.
 class GameStartedEvent {

@@ -120,6 +120,7 @@ class AppAudioService extends ChangeNotifier with WidgetsBindingObserver {
     _currentMusicAsset = asset;
     try {
       await _musicPlayer.stop(); // Garante que a anterior pare
+      await _musicPlayer.setReleaseMode(ReleaseMode.loop);
       await _musicPlayer.setVolume(_musicVolume);
       await _musicPlayer.play(AssetSource(asset));
     } catch (e) {

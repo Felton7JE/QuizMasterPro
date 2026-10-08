@@ -1,5 +1,5 @@
 import '../models/user_model.dart';
-import 'api_service.dart';
+import './api_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;

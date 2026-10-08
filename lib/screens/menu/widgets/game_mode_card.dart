@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../widgets/custom_button.dart';
+import '../../../widgets/core/custom_button.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/responsive_utils.dart';
 import '../../../utils/loading_helper.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../providers/solo_provider.dart';
-import '../../../providers/season_provider.dart';
-import '../../free_mode_menu_screen.dart';
+import '../../../providers/core/auth_provider.dart';
+import '../../../providers/solo/solo_provider.dart';
+import '../../../providers/economy/season_provider.dart';
+import '../../modes/free_mode_menu_screen.dart';
 
 class GameModeCard extends StatelessWidget {
   final IconData icon;

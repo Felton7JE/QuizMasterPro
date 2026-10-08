@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../services/api_service.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../providers/store_provider.dart';
+import '../../../providers/core/auth_provider.dart';
+import '../../../providers/economy/store_provider.dart';
 import '../../../config/api_config.dart';
 import '../../../theme/app_colors.dart';
 

@@ -52,6 +52,7 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^28.1.35 # (using a recent major version)
 
   flutter_svg: ^2.3.0
+  toastification: ^3.2.0
 
 dev_dependencies:
   flutter_test:

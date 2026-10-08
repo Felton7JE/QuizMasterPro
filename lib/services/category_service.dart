@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/category_models.dart' as CategoryModels;
-import 'api_service.dart';
+import './api_service.dart';
 
 class CategoryService {
   final ApiService _apiService;

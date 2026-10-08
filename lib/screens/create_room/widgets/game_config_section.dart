@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../widgets/responsive_chip.dart';
-import '../../../providers/category_provider.dart';
-import 'package:quizmaster_pro/widgets/loading_logo.dart';
+import '../../../widgets/core/responsive_chip.dart';
+import '../../../providers/game/category_provider.dart';
+import 'package:quizmaster_pro/widgets/core/loading_logo.dart';
 
 class GameConfigSection extends StatelessWidget {
   final String selectedMode;

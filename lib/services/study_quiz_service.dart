@@ -7,7 +7,7 @@ import '../config/app_config.dart';
 import '../models/study_quiz_model.dart';
 import '../models/saved_doubt_model.dart';
 import '../models/study_plan_model.dart';
-import '../services/api_service.dart';
+import './api_service.dart';
 
 class StudyQuizService {
   static const String _storageKey = 'saved_study_quizzes_v2';

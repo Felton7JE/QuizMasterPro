@@ -1,6 +1,6 @@
 import '../models/store_item.dart';
 import '../models/title_model.dart';
-import 'api_service.dart';
+import './api_service.dart';
 
 class StoreService {
   final ApiService _apiService = ApiService();

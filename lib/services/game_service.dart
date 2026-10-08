@@ -1,5 +1,5 @@
 import '../models/game_model.dart';
-import 'api_service.dart';
+import './api_service.dart';
 
 /// Serviço alinhado ao GameController do backend (endpoints reais).
 class GameService {

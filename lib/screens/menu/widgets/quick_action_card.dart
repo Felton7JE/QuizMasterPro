@@ -4,7 +4,7 @@ import '../../../theme/app_colors.dart';
 import '../../../utils/responsive_utils.dart';
 import '../../../utils/snackbar_utils.dart';
 import '../../../utils/loading_helper.dart';
-import '../../../providers/store_provider.dart';
+import '../../../providers/economy/store_provider.dart';
 
 class QuickActionCard extends StatelessWidget {
   final IconData icon;

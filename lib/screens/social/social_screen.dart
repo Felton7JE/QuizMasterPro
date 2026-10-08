@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/friendship_provider.dart';
+import '../../providers/core/auth_provider.dart';
+import '../../providers/social/friendship_provider.dart';
 import '../../theme/app_colors.dart';
-import 'widgets/friend_card.dart';
-import 'widgets/friend_request_card.dart';
-import 'package:quizmaster_pro/widgets/loading_logo.dart';
-import '../../widgets/cosmetic_avatar.dart';
+import './widgets/friend_card.dart';
+import './widgets/friend_request_card.dart';
+import 'package:quizmaster_pro/widgets/core/loading_logo.dart';
+import '../../widgets/profile/cosmetic_avatar.dart';
 
 class SocialScreen extends StatefulWidget {
   final int initialTabIndex;

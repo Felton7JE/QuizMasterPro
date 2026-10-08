@@ -12,7 +12,10 @@ class AssetManagerService extends ChangeNotifier {
   String currentTaskStatus = '';
 
   final Map<String, String> _localPaths = {};
+  final Set<String> _failedUrls = {};
   List<DownloadTask> _tasks = [];
+  
+  bool hasFailed(String url) => _failedUrls.contains(url);
 
   Future<void> initialize() async {
     // Notifications disabled to prevent spamming the Android notification tray
@@ -86,6 +89,9 @@ class AssetManagerService extends ChangeNotifier {
         final status = update.status;
         if (status == TaskStatus.complete) {
           _localPaths[task.url] = '${dir.path}/assets/${task.filename}';
+          _failedUrls.remove(task.url);
+        } else if (status == TaskStatus.failed || status == TaskStatus.notFound || status == TaskStatus.canceled) {
+          _failedUrls.add(task.url);
         } else if (status == TaskStatus.paused) {
           isPaused = true;
           notifyListeners();
@@ -141,5 +147,20 @@ class AssetManagerService extends ChangeNotifier {
       return file.path;
     }
     return null;
+  }
+
+  Future<List<String>> getMissingUrls(List<String> urls) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final missing = <String>[];
+    for (var url in urls) {
+      final fileName = getFileNameFromUrl(url);
+      final filePath = '${dir.path}/assets/$fileName';
+      if (!(await File(filePath).exists())) {
+        missing.add(url);
+      } else {
+        _localPaths[url] = filePath;
+      }
+    }
+    return missing;
   }
 }

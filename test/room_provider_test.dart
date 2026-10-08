@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:quizmaster_pro/providers/room_provider.dart';
+import 'package:quizmaster_pro/providers/game/room_provider.dart';
 import 'package:quizmaster_pro/models/room_model.dart';
 import 'package:quizmaster_pro/services/room_service.dart';
 

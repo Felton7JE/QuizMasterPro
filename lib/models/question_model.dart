@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'room_model.dart';
+import './room_model.dart';
 
 // Modelo independente para questões por categoria
 class QuestionData {
