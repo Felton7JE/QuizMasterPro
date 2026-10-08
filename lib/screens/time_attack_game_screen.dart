@@ -24,7 +24,6 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
   bool _isAnswered = false;
   String? _selectedOption;
   bool _gameOver = false;
-  bool _timerSfxPlayed = false;
   
   // Feedback visual para tempo
   String _timeFeedbackText = '';
@@ -67,8 +66,7 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen> with Single
       setState(() {
         if (_timeLeft > 0) {
           _timeLeft--;
-          if (_timeLeft <= 5 && !_timerSfxPlayed) {
-            _timerSfxPlayed = true;
+          if (_timeLeft <= 5 && _timeLeft > 0) {
             context.read<AppAudioService>().playSfxTimer();
           }
         } else {

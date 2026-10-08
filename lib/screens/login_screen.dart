@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../utils/snackbar_utils.dart';
+import '../widgets/meu_quiz_logo_text.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -50,19 +51,14 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
-                const Icon(
-                  Icons.quiz,
-                  size: 100,
-                  color: Color(0xFF6366F1),
+                Image.asset(
+                  'assets/logo.png',
+                  height: 100,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'MeuQuiz+',
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                const MeuQuizLogoText(
+                  fontSize: 36,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),

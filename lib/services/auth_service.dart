@@ -92,6 +92,8 @@ class AuthService {
 
   Future<void> deleteAccount(String userId) async {
     await _apiService.delete('/api/users/$userId');
+    await _googleSignIn.signOut();
+    ApiService.token = null;
   }
 
   Future<bool> checkUsername(String username) async {
@@ -120,6 +122,8 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    await _googleSignIn.signOut();
+    ApiService.token = null;
     // Implementar logout se necessário no backend
     // await _apiService.post('/api/auth/logout');
   }

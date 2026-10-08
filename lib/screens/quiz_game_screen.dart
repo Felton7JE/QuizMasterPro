@@ -37,7 +37,6 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   bool _isAnswered = false;
   bool _showCorrectAnswer = false;
   bool _loading = true;
-  bool _timerSfxPlayed = false;
   String? _error;
   String? _category;
   String? _gameId;
@@ -51,6 +50,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   // Player stats
   int _correctAnswers = 0;
   int _streak = 0;
+  int? _serverCorrectAnswer;
   int _bestStreak = 0;
   int _totalPoints = 0;
   // Live leaderboard
@@ -307,7 +307,6 @@ class _QuizGameScreenState extends State<QuizGameScreen>
       _selectedAnswer = null;
       _isAnswered = false;
       _showCorrectAnswer = false;
-      _timerSfxPlayed = false; // Reset da flag de sfx
       _timeLeft = Provider.of<RoomProvider>(context, listen: false).currentRoom?.questionTime ?? _timeLeft;
     });
     
@@ -326,8 +325,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
       }
       if (_timeLeft > 0 && !_isAnswered) {
         setState(() => _timeLeft--);
-        if (_timeLeft <= 5 && !_timerSfxPlayed) {
-          _timerSfxPlayed = true;
+        if (_timeLeft <= 5 && _timeLeft > 0) {
           context.read<AppAudioService>().playSfxTimer();
         }
       } else {
@@ -339,43 +337,32 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     debugPrint('DEBUG: _startQuestion finalizado com sucesso');
   }
 
-  void _handleTimeUp() {
+  Future<void> _handleTimeUp() async {
     setState(() {
       _isAnswered = true;
-      _showCorrectAnswer = true;
+      _showCorrectAnswer = false;
       _streak = 0;
     });
     _timer?.cancel();
-    Future.delayed(const Duration(seconds: 2), _nextQuestion);
+    final currentQ = _questions[_currentQuestion];
+    await _submitAnswerToServer(currentQ, "");
   }
 
-  void _selectAnswer(String answer) {
+  Future<void> _selectAnswer(String answer) async {
     if (_isAnswered) return;
     setState(() {
       _selectedAnswer = answer;
       _isAnswered = true;
-      _showCorrectAnswer = true;
+      _showCorrectAnswer = false;
     });
     _progressController.stop();
+
     final currentQ = _questions[_currentQuestion];
-    final correctText = currentQ.options[currentQ.correctAnswer];
-    final isCorrect = answer == correctText;
-
-    // Feedback háptico nativo e áudio
-    if (isCorrect) {
-      context.read<AppAudioService>().playSfxCorrect();
-      context.read<AppAudioService>().triggerVibration();
-    } else {
-      context.read<AppAudioService>().playSfxWrong();
-      context.read<AppAudioService>().triggerVibration(heavy: true);
-    }
-
-    // Envia resposta ao backend para pontuação oficial
-    _submitAnswerToServer(isCorrect, currentQ, answer);
-    Future.delayed(const Duration(seconds: 2), _nextQuestion);
+    await _submitAnswerToServer(currentQ, answer);
   }
 
-  Future<void> _submitAnswerToServer(bool isCorrectLocal, QuestionData currentQ, String selectedText) async {
+  Future<void> _submitAnswerToServer(QuestionData currentQ, String selectedText) async {
+    bool isCorrect = false;
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final userId = auth.currentUser?.id;
@@ -384,7 +371,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
       if (gameId == null) return;
       final gp = Provider.of<GameProvider>(context, listen: false);
 
-      final selectedIndex = currentQ.options.indexOf(selectedText);
+      final selectedIndex = selectedText.isEmpty ? -1 : currentQ.options.indexOf(selectedText);
       final timeSpent = ((Provider.of<RoomProvider>(context, listen: false).currentRoom?.questionTime ?? _timeLeft) - _timeLeft) * 1000;
 
       final success = await gp.submitAnswer(
@@ -400,6 +387,10 @@ class _QuizGameScreenState extends State<QuizGameScreen>
         final answers = gp.playerAnswers.where((a) => a.questionId == currentQ.id).toList();
         if (answers.isNotEmpty) {
           final resp = answers.last;
+          isCorrect = resp.isCorrect;
+          if (resp.correctAnswer != null) {
+            _serverCorrectAnswer = resp.correctAnswer;
+          }
           // Atualiza estatísticas locais com dados do servidor
           if (resp.isCorrect) {
             _correctAnswers++;
@@ -410,28 +401,37 @@ class _QuizGameScreenState extends State<QuizGameScreen>
           }
           _totalPoints += resp.points; // Usa pontuação oficial agregada
         } else {
-          // fallback se resposta não retornou na lista (mas sucesso foi true)
-          if (isCorrectLocal) {
-            _correctAnswers++;
-            _streak++;
-            if (_streak > _bestStreak) _bestStreak = _streak;
-          } else {
-            _streak = 0;
-          }
+          _streak = 0;
         }
       } else {
         // Falha no servidor. Não dá pontos locais para evitar cheating.
         if (kDebugMode) debugPrint('Falha no servidor ao submeter resposta.');
       }
-      if (mounted) setState(() {});
     } catch (e) {
       if (kDebugMode) debugPrint('Falha ao enviar resposta: $e');
-      // Sem pontos locais para evitar cheating
-      if (mounted) setState(() {});
+    }
+    
+    if (mounted) {
+      setState(() {
+        _showCorrectAnswer = true;
+      });
+
+      if (selectedText.isNotEmpty) {
+        if (isCorrect) {
+          context.read<AppAudioService>().playSfxCorrect();
+          context.read<AppAudioService>().triggerVibration();
+        } else {
+          context.read<AppAudioService>().playSfxWrong();
+          context.read<AppAudioService>().triggerVibration(heavy: true);
+        }
+      }
+
+      Future.delayed(const Duration(seconds: 2), _nextQuestion);
     }
   }
 
   void _nextQuestion() {
+    _serverCorrectAnswer = null;
     if (_currentQuestion + 1 < _questions.length) {
       setState(() => _currentQuestion++);
       _startQuestion();
@@ -444,6 +444,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     final routeArgs = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final isSolo = routeArgs?['isSolo'] == true;
     final isSeason = routeArgs?['isSeason'] == true;
+    final isPractice = routeArgs?['isPractice'] == true;
 
     setState(() => _loading = true);
 
@@ -477,6 +478,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
         'category': _category,
         'isSolo': isSolo,
         'isSeason': isSeason,
+        'isPractice': isPractice,
       },
     );
   }
@@ -583,7 +585,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
                             child: _buildAnswerOption(
                               option,
                               String.fromCharCode(65 + index),
-                              currentQ.correctAnswer,
+                              _serverCorrectAnswer ?? currentQ.correctAnswer,
                               isSmallScreen,
                             ),
                           );

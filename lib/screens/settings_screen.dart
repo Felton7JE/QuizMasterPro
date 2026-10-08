@@ -95,10 +95,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
-              context.read<AuthProvider>().logout();
-              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+              await context.read<AuthProvider>().logout();
+              if (mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+              }
             },
             child: const Text('Sair', style: TextStyle(color: Colors.white)),
           ),
@@ -527,20 +529,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         title: const Text('Termos de Privacidade', style: TextStyle(color: Colors.white)),
-        content: const SizedBox(
+        content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
-            child: Text(
-              '1. Coleta de Dados\n'
-              'Coletamos informações básicas como o seu nome de usuário, e-mail e estatísticas de jogo para fornecer a melhor experiência possível no MeuQuiz+.\n\n'
-              '2. Uso das Informações\n'
-              'As suas informações são utilizadas exclusivamente para o funcionamento do jogo, como o sistema de ranking global, partidas multiplayer e missões.\n\n'
-              '3. Compartilhamento\n'
-              'Não vendemos, trocamos ou transferimos as suas informações pessoais para terceiros.\n\n'
-              '4. Segurança\n'
-              'Implementamos uma variedade de medidas de segurança para manter a segurança das suas informações pessoais.\n\n'
-              'Ao continuar a utilizar o jogo, você concorda com a nossa política de privacidade.',
-              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+            child: RichText(
+              text: const TextSpan(
+                style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+                children: [
+                  TextSpan(text: '1. Coleta de Dados\nColetamos informações básicas como o seu nome de usuário, e-mail e estatísticas de jogo para fornecer a melhor experiência possível no '),
+                  TextSpan(text: 'MeuQuiz', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  TextSpan(text: '+', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                  TextSpan(text: '.\n\n2. Uso das Informações\nAs suas informações são utilizadas exclusivamente para o funcionamento do jogo, como o sistema de ranking global, partidas multiplayer e missões.\n\n3. Compartilhamento\nNão vendemos, trocamos ou transferimos as suas informações pessoais para terceiros.\n\n4. Segurança\nImplementamos uma variedade de medidas de segurança para manter a segurança das suas informações pessoais.\n\nAo continuar a utilizar o jogo, você concorda com a nossa política de privacidade.'),
+                ],
+              ),
             ),
           ),
         ),

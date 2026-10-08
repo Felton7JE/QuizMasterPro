@@ -773,33 +773,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
       content = titles.isEmpty
           ? const Text('Nenhum item',
               style: TextStyle(color: Colors.grey, fontSize: 14))
-          : Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: titles.map((t) {
-                final isEquipped = user.activeTitleId == t.id;
-                return GestureDetector(
-                  onTap: () async {
-                    if (isEquipped) {
-                      final confirmed = await _confirmUnequip(t.name);
-                      if (!confirmed || !context.mounted) return;
-                      await storeProvider.unequipTitle();
-                      if (context.mounted) {
-                        AppSnackBar.showInfo(context, 'Título desequipado!');
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: titles.map((t) {
+                  final isEquipped = user.activeTitleId == t.id;
+                  return GestureDetector(
+                    onTap: () async {
+                      if (isEquipped) {
+                        final confirmed = await _confirmUnequip(t.name);
+                        if (!confirmed || !context.mounted) return;
+                        await storeProvider.unequipTitle();
+                        if (context.mounted) {
+                          AppSnackBar.showInfo(context, 'Título desequipado!');
+                        }
+                      } else {
+                        final confirmed =
+                            await _confirmEquip(t.name, 'TITLE', null);
+                        if (!confirmed || !context.mounted) return;
+                        await storeProvider.equipTitle(t);
+                        if (context.mounted) {
+                          AppSnackBar.showInfo(context, 'Título equipado!');
+                        }
                       }
-                    } else {
-                      final confirmed =
-                          await _confirmEquip(t.name, 'TITLE', null);
-                      if (!confirmed || !context.mounted) return;
-                      await storeProvider.equipTitle(t);
-                      if (context.mounted) {
-                        AppSnackBar.showInfo(context, 'Título equipado!');
-                      }
-                    }
-                  },
-                  child: _buildTextChip(t.name, isEquipped: isEquipped),
-                );
-              }).toList(),
+                    },
+                    child: _buildTextChip(t.name, isEquipped: isEquipped),
+                  );
+                }).toList(),
+              ),
             );
     } else if (_selectedInventoryTab == 'Banners') {
       final banners = storeProvider.purchasedItems
@@ -809,45 +812,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
       content = banners.isEmpty
           ? const Text('Nenhum item',
               style: TextStyle(color: Colors.grey, fontSize: 14))
-          : GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: context.isSmallScreen ? 1 : 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 3.0,
-              ),
-              itemCount: banners.length,
-              itemBuilder: (context, index) {
-                final banner = banners[index];
-                final isEquipped = user.activeBannerId == banner.id;
-
-                return GestureDetector(
-                  onTap: () async {
-                    if (isEquipped) {
-                      final confirmed = await _confirmUnequip(banner.name);
-                      if (!confirmed || !context.mounted) return;
-                      await storeProvider.unequipItem(banner.type);
-                      if (context.mounted) {
-                        AppSnackBar.showInfo(context, 'Banner desequipado!');
-                      }
-                    } else {
-                      final confirmed = await _confirmEquip(
-                          banner.name, banner.type, banner.value);
-                      if (!confirmed || !context.mounted) return;
-                      await storeProvider.equipItem(banner);
-                      if (context.mounted) {
-                        AppSnackBar.showInfo(context, 'Banner equipado!');
-                      }
-                    }
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: isEquipped ? Colors.green : Colors.transparent,
-                          width: 2),
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: banners.map((banner) {
+                  final isEquipped = user.activeBannerId == banner.id;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: GestureDetector(
+                      onTap: () async {
+                        if (isEquipped) {
+                          final confirmed = await _confirmUnequip(banner.name);
+                          if (!confirmed || !context.mounted) return;
+                          await storeProvider.unequipItem(banner.type);
+                          if (context.mounted) {
+                            AppSnackBar.showInfo(context, 'Banner desequipado!');
+                          }
+                        } else {
+                          final confirmed = await _confirmEquip(
+                              banner.name, banner.type, banner.value);
+                          if (!confirmed || !context.mounted) return;
+                          await storeProvider.equipItem(banner);
+                          if (context.mounted) {
+                            AppSnackBar.showInfo(context, 'Banner equipado!');
+                          }
+                        }
+                      },
+                      child: SizedBox(
+                        width: 240,
+                        height: 80,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: isEquipped ? Colors.green : Colors.transparent,
+                                width: 2),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(6),
@@ -893,10 +892,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ))
                       ]),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                }).toList(),
+              ),
             );
     } else if (_selectedInventoryTab == 'Avatares') {
       final avatars = storeProvider.purchasedItems
@@ -906,72 +908,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
       content = avatars.isEmpty
           ? const Text('Nenhum item',
               style: TextStyle(color: Colors.grey, fontSize: 14))
-          : Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: avatars.map((a) {
-                final isEquipped = user.activeAvatarId == a.id;
-                return GestureDetector(
-                  onTap: () async {
-                    if (isEquipped) {
-                      final confirmed = await _confirmUnequip(a.name);
-                      if (!confirmed || !context.mounted) return;
-                      await storeProvider.unequipItem(a.type);
-                      if (context.mounted) {
-                        AppSnackBar.showInfo(context, 'Avatar desequipado!');
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: avatars.map((a) {
+                  final isEquipped = user.activeAvatarId == a.id;
+                  return GestureDetector(
+                    onTap: () async {
+                      if (isEquipped) {
+                        final confirmed = await _confirmUnequip(a.name);
+                        if (!confirmed || !context.mounted) return;
+                        await storeProvider.unequipItem(a.type);
+                        if (context.mounted) {
+                          AppSnackBar.showInfo(context, 'Avatar desequipado!');
+                        }
+                      } else {
+                        final confirmed =
+                            await _confirmEquip(a.name, a.type, a.value);
+                        if (!confirmed || !context.mounted) return;
+                        await storeProvider.equipItem(a);
+                        if (context.mounted) {
+                          AppSnackBar.showInfo(context, 'Avatar equipado!');
+                        }
                       }
-                    } else {
-                      final confirmed =
-                          await _confirmEquip(a.name, a.type, a.value);
-                      if (!confirmed || !context.mounted) return;
-                      await storeProvider.equipItem(a);
-                      if (context.mounted) {
-                        AppSnackBar.showInfo(context, 'Avatar equipado!');
-                      }
-                    }
-                  },
-                  child: SizedBox(
-                    width: 80,
-                    child: Column(
-                      children: [
-                        Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            CosmeticAvatar(
-                              radius: 30,
-                              avatarUrl: a.value.isNotEmpty ? a.value : null,
-                              username: user.username,
-                              activeAvatarId: a.id,
-                              isVip: user.isVip,
-                            ),
-                            if (isEquipped)
-                              Container(
-                                decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white),
-                                child: const Icon(Icons.check_circle,
-                                    color: Colors.green, size: 20),
+                    },
+                    child: SizedBox(
+                      width: 80,
+                      child: Column(
+                        children: [
+                          Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              CosmeticAvatar(
+                                radius: 30,
+                                avatarUrl: a.value.isNotEmpty ? a.value : null,
+                                username: user.username,
+                                activeAvatarId: a.id,
+                                isVip: user.isVip,
                               ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          a.name,
-                          style: TextStyle(
-                              color: isEquipped ? Colors.green : Colors.white,
-                              fontSize: 10,
-                              fontWeight: isEquipped
-                                  ? FontWeight.bold
-                                  : FontWeight.normal),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                              if (isEquipped)
+                                Container(
+                                  decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white),
+                                  child: const Icon(Icons.check_circle,
+                                      color: Colors.green, size: 20),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            a.name,
+                            style: TextStyle(
+                                color: isEquipped ? Colors.green : Colors.white,
+                                fontSize: 10,
+                                fontWeight: isEquipped
+                                    ? FontWeight.bold
+                                    : FontWeight.normal),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             );
     } else if (_selectedInventoryTab == 'Molduras') {
       final frames = storeProvider.purchasedItems
@@ -981,72 +986,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
       content = frames.isEmpty
           ? const Text('Nenhum item',
               style: TextStyle(color: Colors.grey, fontSize: 14))
-          : Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: frames.map((f) {
-                final isEquipped = user.activeFrameId == f.id;
-                return GestureDetector(
-                  onTap: () async {
-                    if (isEquipped) {
-                      final confirmed = await _confirmUnequip(f.name);
-                      if (!confirmed || !context.mounted) return;
-                      await storeProvider.unequipItem(f.type);
-                      if (context.mounted) {
-                        AppSnackBar.showInfo(context, 'Moldura desequipada!');
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: frames.map((f) {
+                  final isEquipped = user.activeFrameId == f.id;
+                  return GestureDetector(
+                    onTap: () async {
+                      if (isEquipped) {
+                        final confirmed = await _confirmUnequip(f.name);
+                        if (!confirmed || !context.mounted) return;
+                        await storeProvider.unequipItem(f.type);
+                        if (context.mounted) {
+                          AppSnackBar.showInfo(context, 'Moldura desequipada!');
+                        }
+                      } else {
+                        final confirmed =
+                            await _confirmEquip(f.name, f.type, f.value);
+                        if (!confirmed || !context.mounted) return;
+                        await storeProvider.equipItem(f);
+                        if (context.mounted) {
+                          AppSnackBar.showInfo(context, 'Moldura equipada!');
+                        }
                       }
-                    } else {
-                      final confirmed =
-                          await _confirmEquip(f.name, f.type, f.value);
-                      if (!confirmed || !context.mounted) return;
-                      await storeProvider.equipItem(f);
-                      if (context.mounted) {
-                        AppSnackBar.showInfo(context, 'Moldura equipada!');
-                      }
-                    }
-                  },
-                  child: SizedBox(
-                    width: 80,
-                    child: Column(
-                      children: [
-                        Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            CosmeticAvatar(
-                              radius: 30,
-                              avatarUrl: user.avatar,
-                              username: user.username,
-                              activeFrameId: f.id,
-                              isVip: user.isVip,
-                            ),
-                            if (isEquipped)
-                              Container(
-                                decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white),
-                                child: const Icon(Icons.check_circle,
-                                    color: Colors.green, size: 20),
+                    },
+                    child: SizedBox(
+                      width: 80,
+                      child: Column(
+                        children: [
+                          Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              CosmeticAvatar(
+                                radius: 30,
+                                avatarUrl: user.avatar,
+                                username: user.username,
+                                activeFrameId: f.id,
+                                isVip: user.isVip,
                               ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          f.name,
-                          style: TextStyle(
-                              color: isEquipped ? Colors.green : Colors.white,
-                              fontSize: 10,
-                              fontWeight: isEquipped
-                                  ? FontWeight.bold
-                                  : FontWeight.normal),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                              if (isEquipped)
+                                Container(
+                                  decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white),
+                                  child: const Icon(Icons.check_circle,
+                                      color: Colors.green, size: 20),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            f.name,
+                            style: TextStyle(
+                                color: isEquipped ? Colors.green : Colors.white,
+                                fontSize: 10,
+                                fontWeight: isEquipped
+                                    ? FontWeight.bold
+                                    : FontWeight.normal),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             );
     } else if (_selectedInventoryTab == 'Frases') {
       final phrases = storeProvider.purchasedItems
@@ -1057,45 +1065,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
       content = phrases.isEmpty
           ? const Text('Nenhuma frase desbloqueada ainda. Compra na Loja!',
               style: TextStyle(color: Colors.grey, fontSize: 14))
-          : Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: phrases.map((p) {
-                final isEquipped = storeProvider.isItemEquipped(p.id);
-                return GestureDetector(
-                  onTap: () async {
-                    if (isEquipped) {
-                      final confirmed = await _confirmUnequip(p.name);
-                      if (!confirmed || !context.mounted) return;
-                      await storeProvider.unequipSpecificItem(p);
-                      if (context.mounted) {
-                        AppSnackBar.showInfo(context, 'Frase desequipada!');
-                      }
-                    } else {
-                      if (equippedPhrases.length >= 5) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Limite de 5 frases equipadas atingido! Desequipa uma primeiro.'),
-                              backgroundColor: Colors.orange,
-                            ));
-                        return;
-                      }
-                      final confirmed =
-                          await _confirmEquip(p.name, p.type, p.value);
-                      if (!confirmed || !context.mounted) return;
-                      final ok = await storeProvider.equipItem(p);
-                      if (context.mounted) {
-                        if (ok) {
-                          AppSnackBar.showInfo(context, 'Frase equipada! (${equippedPhrases.length + 1}/5)');
-                        } else if (storeProvider.error != null) {
-                          AppSnackBar.showError(context, storeProvider.error!);
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: phrases.map((p) {
+                  final isEquipped = storeProvider.isItemEquipped(p.id);
+                  return GestureDetector(
+                    onTap: () async {
+                      if (isEquipped) {
+                        final confirmed = await _confirmUnequip(p.name);
+                        if (!confirmed || !context.mounted) return;
+                        await storeProvider.unequipSpecificItem(p);
+                        if (context.mounted) {
+                          AppSnackBar.showInfo(context, 'Frase desequipada!');
+                        }
+                      } else {
+                        if (equippedPhrases.length >= 5) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Limite de 5 frases equipadas atingido! Desequipa uma primeiro.'),
+                                backgroundColor: Colors.orange,
+                              ));
+                          return;
+                        }
+                        final confirmed =
+                            await _confirmEquip(p.name, p.type, p.value);
+                        if (!confirmed || !context.mounted) return;
+                        final ok = await storeProvider.equipItem(p);
+                        if (context.mounted) {
+                          if (ok) {
+                            AppSnackBar.showInfo(context, 'Frase equipada! (${equippedPhrases.length + 1}/5)');
+                          } else if (storeProvider.error != null) {
+                            AppSnackBar.showError(context, storeProvider.error!);
+                          }
                         }
                       }
-                    }
-                  },
-                  child: _buildTextChip('"${p.value}"', isEquipped: isEquipped),
-                );
-              }).toList(),
+                    },
+                    child: _buildTextChip('"${p.value}"', isEquipped: isEquipped),
+                  );
+                }).toList(),
+              ),
             );
     } else if (_selectedInventoryTab == 'Emojis') {
       final emotes = storeProvider.purchasedItems
@@ -1106,87 +1117,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
       content = emotes.isEmpty
           ? const Text('Nenhum emoji desbloqueado ainda. Conclua missões ou compre na Loja!',
               style: TextStyle(color: Colors.grey, fontSize: 14))
-          : Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: emotes.map((e) {
-                final isEquipped = storeProvider.isItemEquipped(e.id);
-                return GestureDetector(
-                  onTap: () async {
-                    if (isEquipped) {
-                      final confirmed = await _confirmUnequip(e.name);
-                      if (!confirmed || !context.mounted) return;
-                      await storeProvider.unequipSpecificItem(e);
-                      if (context.mounted) {
-                        AppSnackBar.showInfo(context, 'Emoji desequipado!');
-                      }
-                    } else {
-                      if (equippedEmotes.length >= 10) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Limite de 10 emojis equipados atingido! Desequipa um primeiro.'),
-                              backgroundColor: Colors.orange,
-                            ));
-                        return;
-                      }
-                      final confirmed =
-                          await _confirmEquip(e.name, e.type, e.value);
-                      if (!confirmed || !context.mounted) return;
-                      final ok = await storeProvider.equipItem(e);
-                      if (context.mounted) {
-                        if (ok) {
-                          AppSnackBar.showInfo(context, 'Emoji equipado! (${equippedEmotes.length + 1}/10)');
-                        } else if (storeProvider.error != null) {
-                          AppSnackBar.showError(context, storeProvider.error!);
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: emotes.map((e) {
+                  final isEquipped = storeProvider.isItemEquipped(e.id);
+                  return GestureDetector(
+                    onTap: () async {
+                      if (isEquipped) {
+                        final confirmed = await _confirmUnequip(e.name);
+                        if (!confirmed || !context.mounted) return;
+                        await storeProvider.unequipSpecificItem(e);
+                        if (context.mounted) {
+                          AppSnackBar.showInfo(context, 'Emoji desequipado!');
+                        }
+                      } else {
+                        if (equippedEmotes.length >= 10) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Limite de 10 emojis equipados atingido! Desequipa um primeiro.'),
+                                backgroundColor: Colors.orange,
+                              ));
+                          return;
+                        }
+                        final confirmed =
+                            await _confirmEquip(e.name, e.type, e.value);
+                        if (!confirmed || !context.mounted) return;
+                        final ok = await storeProvider.equipItem(e);
+                        if (context.mounted) {
+                          if (ok) {
+                            AppSnackBar.showInfo(context, 'Emoji equipado! (${equippedEmotes.length + 1}/10)');
+                          } else if (storeProvider.error != null) {
+                            AppSnackBar.showError(context, storeProvider.error!);
+                          }
                         }
                       }
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isEquipped
-                          ? Colors.green.withValues(alpha: 0.25)
-                          : const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isEquipped ? Colors.greenAccent : const Color(0xFF334155),
-                        width: isEquipped ? 2 : 1,
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isEquipped
+                            ? Colors.green.withValues(alpha: 0.25)
+                            : const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isEquipped ? Colors.greenAccent : const Color(0xFF334155),
+                          width: isEquipped ? 2 : 1,
+                        ),
+                        boxShadow: isEquipped
+                            ? [
+                                BoxShadow(
+                                  color: Colors.greenAccent.withValues(alpha: 0.3),
+                                  blurRadius: 10,
+                                )
+                              ]
+                            : [],
                       ),
-                      boxShadow: isEquipped
-                          ? [
-                              BoxShadow(
-                                color: Colors.greenAccent.withValues(alpha: 0.3),
-                                blurRadius: 10,
-                              )
-                            ]
-                          : [],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          e.value,
-                          style: const TextStyle(fontSize: 26),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          e.name,
-                          style: TextStyle(
-                            color: isEquipped ? Colors.greenAccent : Colors.white,
-                            fontWeight: isEquipped ? FontWeight.bold : FontWeight.w500,
-                            fontSize: 13,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            e.value,
+                            style: const TextStyle(fontSize: 26),
                           ),
-                        ),
-                        if (isEquipped) ...[
                           const SizedBox(width: 8),
-                          const Icon(Icons.check_circle, color: Colors.greenAccent, size: 16),
+                          Text(
+                            e.name,
+                            style: TextStyle(
+                              color: isEquipped ? Colors.greenAccent : Colors.white,
+                              fontWeight: isEquipped ? FontWeight.bold : FontWeight.w500,
+                              fontSize: 13,
+                            ),
+                          ),
+                          if (isEquipped) ...[
+                            const SizedBox(width: 8),
+                            const Icon(Icons.check_circle, color: Colors.greenAccent, size: 16),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             );
     } else if (_selectedInventoryTab == 'Extras') {
       final extras = storeProvider.purchasedItems
@@ -1197,12 +1211,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       content = extras.isEmpty
           ? const Text('Nenhum item extra',
               style: TextStyle(color: Colors.grey, fontSize: 14))
-          : Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: extras.map((e) {
-                return _buildTextChip('${e.name} (${e.type})');
-              }).toList(),
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: extras.map((e) {
+                  return _buildTextChip('${e.name} (${e.type})');
+                }).toList(),
+              ),
             );
     }
 
@@ -1435,23 +1452,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               },
             ),
-                if (history.length > _historyLimit) ...[
+                if (history.length > 5 || _historyLimit > 5) ...[
                   const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _historyLimit += 5;
-                      });
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: const BorderSide(color: AppColors.primary),
-                      ),
-                    ),
-                    child: const Text('Mostrar Mais Partidas', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (_historyLimit > 5)
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _historyLimit = (_historyLimit - 5).clamp(5, history.length);
+                            });
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey,
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: const BorderSide(color: Colors.white10),
+                            ),
+                          ),
+                          child: const Text('Mostrar menos', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      if (_historyLimit > 5 && history.length > _historyLimit)
+                        const SizedBox(width: 16),
+                      if (history.length > _historyLimit)
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _historyLimit += 5;
+                            });
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: const BorderSide(color: AppColors.primary),
+                            ),
+                          ),
+                          child: const Text('Mostrar mais', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                    ],
                   ),
                 ],
               ],

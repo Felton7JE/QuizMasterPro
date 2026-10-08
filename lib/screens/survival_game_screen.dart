@@ -24,7 +24,6 @@ class _SurvivalGameScreenState extends State<SurvivalGameScreen> with SingleTick
   bool _isAnswered = false;
   String? _selectedOption;
   bool _gameOver = false;
-  bool _timerSfxPlayed = false;
   
   Timer? _questionTimer;
   Timer? _livesFeedbackTimer;
@@ -63,7 +62,6 @@ class _SurvivalGameScreenState extends State<SurvivalGameScreen> with SingleTick
     _questionTimer?.cancel();
     setState(() {
       _questionTimeLeft = 15;
-      _timerSfxPlayed = false;
     });
     
     _questionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -74,8 +72,7 @@ class _SurvivalGameScreenState extends State<SurvivalGameScreen> with SingleTick
       setState(() {
         if (_questionTimeLeft > 0) {
           _questionTimeLeft--;
-          if (_questionTimeLeft <= 5 && !_timerSfxPlayed) {
-            _timerSfxPlayed = true;
+          if (_questionTimeLeft <= 5 && _questionTimeLeft > 0) {
             context.read<AppAudioService>().playSfxTimer();
           }
         } else {

@@ -139,13 +139,20 @@ class _NicknameScreenState extends State<NicknameScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Como você quer ser chamado no MeuQuiz+? (Esse nome será visível para os outros jogadores).',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
+              RichText(
                 textAlign: TextAlign.center,
+                text: const TextSpan(
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                  children: [
+                    TextSpan(text: 'Como você quer ser chamado no '),
+                    TextSpan(text: 'MeuQuiz', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    TextSpan(text: '+', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                    TextSpan(text: '?\n(Esse nome será visível para os outros jogadores).'),
+                  ],
+                ),
               ),
               
               const SizedBox(height: 48),

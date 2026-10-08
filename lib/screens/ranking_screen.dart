@@ -26,6 +26,7 @@ class _RankingScreenState extends State<RankingScreen> {
   List<Map<String, dynamic>> _topPlayers = [];
   List<Map<String, dynamic>> _allPlayers = [];
   bool _isLoading = true;
+  bool _showFullRanking = false;
 
   @override
   void initState() {
@@ -730,7 +731,28 @@ class _RankingScreenState extends State<RankingScreen> {
             ],
             
             // Player Rows
-            ..._allPlayers.map((player) => _buildPlayerRow(player)),
+            ...(_showFullRanking ? _allPlayers : _allPlayers.take(47)).map((player) => _buildPlayerRow(player)),
+            if (_allPlayers.length > 47)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _showFullRanking = !_showFullRanking;
+                      });
+                    },
+                    icon: Icon(
+                      _showFullRanking ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                      color: const Color(0xFF6366F1),
+                    ),
+                    label: Text(
+                      _showFullRanking ? 'Mostrar Menos' : 'Mostrar Top ${_allPlayers.length + 3}',
+                      style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
           ],
         );
       },

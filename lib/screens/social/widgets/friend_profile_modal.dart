@@ -106,8 +106,9 @@ class _FriendProfileModalState extends State<FriendProfileModal> {
         color: AppColors.background,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
         children: [
           // Banner & Avatar Section
           Stack(
@@ -321,7 +322,7 @@ class _FriendProfileModalState extends State<FriendProfileModal> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildStatCol(String label, String value, Color color) {
@@ -382,32 +383,35 @@ class _FriendProfileModalState extends State<FriendProfileModal> {
             ],
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: items.map((item) {
-              final storeItem = item['storeItem'] ?? {};
-              final name = storeItem['name'] ?? 'Item';
-              final isEquipped = item['isEquipped'] == true;
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isEquipped ? AppColors.primary.withValues(alpha: 0.2) : Colors.white10,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isEquipped ? AppColors.primary : Colors.transparent),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(name, style: TextStyle(color: isEquipped ? AppColors.primary : Colors.white60, fontSize: 12)),
-                    if (isEquipped) ...[
-                      const SizedBox(width: 4),
-                      const Icon(Icons.check_circle, color: AppColors.primary, size: 12),
-                    ]
-                  ],
-                ),
-              );
-            }).toList(),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: items.map((item) {
+                final storeItem = item['storeItem'] ?? {};
+                final name = storeItem['name'] ?? 'Item';
+                final isEquipped = item['isEquipped'] == true;
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isEquipped ? AppColors.primary.withValues(alpha: 0.2) : Colors.white10,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: isEquipped ? AppColors.primary : Colors.transparent),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(name, style: TextStyle(color: isEquipped ? AppColors.primary : Colors.white60, fontSize: 12)),
+                      if (isEquipped) ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.check_circle, color: AppColors.primary, size: 12),
+                      ]
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
           ),
         ],
       ),

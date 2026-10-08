@@ -260,7 +260,6 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
       _botAnsweredThisTurn = false;
       _botWasCorrectThisTurn = null;
       _playerDamagedThisTurn = false;
-      _timerSfxPlayed = false; // Reset do som do timer
     });
 
     _timerAnimController.reset();
@@ -272,8 +271,7 @@ class _SoloQuizGameScreenState extends State<SoloQuizGameScreen>
       if (_timeRemaining > 0) {
         setState(() => _timeRemaining--);
         // Toca o som do timer nos últimos 5 segundos
-        if (_timeRemaining <= 5 && !_timerSfxPlayed && mounted) {
-          _timerSfxPlayed = true;
+        if (_timeRemaining <= 5 && _timeRemaining > 0 && mounted) {
           context.read<AppAudioService>().playSfxTimer();
         }
       } else {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../widgets/meu_quiz_logo_text.dart';
 import 'package:provider/provider.dart';
 import '../providers/store_provider.dart';
 import '../providers/auth_provider.dart';
@@ -80,34 +81,8 @@ class _StoreScreenState extends State<StoreScreen>
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
-        title: Row(
-          children: [
-            Text(
-              'MeuQuiz',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 18 : 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            SizedBox(width: isSmallScreen ? 6 : 8),
-            Container(
-              padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 4 : 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6366F1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '+',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
+        title: MeuQuizLogoText(
+          fontSize: isSmallScreen ? 18 : 20,
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -143,6 +118,99 @@ class _StoreScreenState extends State<StoreScreen>
         },
       ),
     );
+  }
+
+  List<Widget> _buildCarousels(
+    List<StoreItem> items, 
+    StoreProvider store, 
+    Widget Function(StoreItem item) cardBuilder,
+  ) {
+    if (items.isEmpty) {
+      return [
+        const SliverToBoxAdapter(child: _EmptyState(message: 'Nenhum item disponível.')),
+      ];
+    }
+    
+    final slivers = <Widget>[];
+
+    // Destaques (Top 5 items by ID)
+    final featured = items.toList()..sort((a, b) => b.id.compareTo(a.id));
+    final topFeatured = featured.take(5).toList();
+    if (topFeatured.isNotEmpty) {
+      slivers.add(
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: Text('Itens em Destaque', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              SizedBox(
+                height: 260,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: topFeatured.length,
+                  separatorBuilder: (ctx, i) => const SizedBox(width: 16),
+                  itemBuilder: (ctx, i) => SizedBox(width: 160, child: cardBuilder(topFeatured[i])),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Rarities
+    final rarities = ['LEGENDARY', 'EPIC', 'RARE', 'COMMON'];
+    for (final rarity in rarities) {
+      final rarityItems = items.where((i) => (i.rarity).toUpperCase() == rarity).toList();
+      if (rarityItems.isEmpty) continue;
+
+      Color rarityColor;
+      String rarityLabel;
+      switch (rarity) {
+        case 'LEGENDARY': rarityColor = Colors.orange; rarityLabel = 'Lendário'; break;
+        case 'EPIC': rarityColor = Colors.purpleAccent; rarityLabel = 'Épico'; break;
+        case 'RARE': rarityColor = Colors.lightBlueAccent; rarityLabel = 'Raro'; break;
+        default: rarityColor = Colors.grey; rarityLabel = 'Comum'; break;
+      }
+
+      slivers.add(
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.star_rounded, color: rarityColor, size: 20),
+                    const SizedBox(width: 8),
+                    Text(rarityLabel, style: TextStyle(color: rarityColor, fontSize: 16, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 260,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: rarityItems.length,
+                  separatorBuilder: (ctx, i) => const SizedBox(width: 16),
+                  itemBuilder: (ctx, i) => SizedBox(width: 160, child: cardBuilder(rarityItems[i])),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return slivers;
   }
 
   // ----------------------------------------------------------
@@ -260,7 +328,6 @@ class _StoreScreenState extends State<StoreScreen>
         ),
 
         if (_selectedCategoryIndex == 0) ...[
-          // Header de secção Banners
           _buildSectionHeader(
               'Banners',
               Icons.image_rounded,
@@ -268,7 +335,6 @@ class _StoreScreenState extends State<StoreScreen>
                 _StoreColors.bannerGradStart,
                 _StoreColors.bannerGradEnd
               ])),
-
           if (!hasBanners)
             const SliverToBoxAdapter(
               child: _EmptyState(message: 'Nenhum banner disponível.'),
@@ -405,24 +471,24 @@ class _StoreScreenState extends State<StoreScreen>
                 );
                 
                 slivers.add(
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverGrid(
-                      delegate: SliverChildBuilderDelegate(
-                        (ctx, i) => _AvatarCard(
-                          item: groupItems[i],
-                          isPurchased: store.purchasedItems.any((p) => p.id == groupItems[i].id),
-                          store: store,
-                          onBuy: () => _handleBuy(groupItems[i], store),
-                          onEquip: () => _handleEquip(groupItems[i], store),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 220,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: groupItems.length,
+                        separatorBuilder: (ctx, i) => const SizedBox(width: 16),
+                        itemBuilder: (ctx, i) => SizedBox(
+                          width: 150,
+                          child: _AvatarCard(
+                            item: groupItems[i],
+                            isPurchased: store.purchasedItems.any((p) => p.id == groupItems[i].id),
+                            store: store,
+                            onBuy: () => _handleBuy(groupItems[i], store),
+                            onEquip: () => _handleEquip(groupItems[i], store),
+                          ),
                         ),
-                        childCount: groupItems.length,
-                      ),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.75,
                       ),
                     ),
                   )
@@ -443,24 +509,24 @@ class _StoreScreenState extends State<StoreScreen>
                   )
                 );
                 slivers.add(
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverGrid(
-                      delegate: SliverChildBuilderDelegate(
-                        (ctx, i) => _AvatarCard(
-                          item: groupItems[i],
-                          isPurchased: store.purchasedItems.any((p) => p.id == groupItems[i].id),
-                          store: store,
-                          onBuy: () => _handleBuy(groupItems[i], store),
-                          onEquip: () => _handleEquip(groupItems[i], store),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 220,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: groupItems.length,
+                        separatorBuilder: (ctx, i) => const SizedBox(width: 16),
+                        itemBuilder: (ctx, i) => SizedBox(
+                          width: 150,
+                          child: _AvatarCard(
+                            item: groupItems[i],
+                            isPurchased: store.purchasedItems.any((p) => p.id == groupItems[i].id),
+                            store: store,
+                            onBuy: () => _handleBuy(groupItems[i], store),
+                            onEquip: () => _handleEquip(groupItems[i], store),
+                          ),
                         ),
-                        childCount: groupItems.length,
-                      ),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.75,
                       ),
                     ),
                   )
@@ -512,29 +578,13 @@ class _StoreScreenState extends State<StoreScreen>
               Icons.bolt_rounded,
               const LinearGradient(
                   colors: [Color(0xFF10B981), Color(0xFF0EA5E9)])),
-          if (!hasExtras)
-            const SliverToBoxAdapter(
-              child: _EmptyState(message: 'Nenhum item extra disponível.'),
-            )
-          else
-            SliverPadding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (ctx, i) => _ExtraCard(
-                    item: extraItems[i],
-                    isPurchased: store.purchasedItems
-                        .any((p) => p.id == extraItems[i].id),
-                    store: store,
-                    onBuy: () => _handleBuy(extraItems[i], store),
-                    onConsume: () =>
-                        _handleConsume(extraItems[i], store),
-                  ),
-                  childCount: extraItems.length,
-                ),
-              ),
-            ),
+          ..._buildCarousels(extraItems, store, (item) => _ExtraCard(
+            item: item,
+            isPurchased: store.purchasedItems.any((p) => p.id == item.id),
+            store: store,
+            onBuy: () => _handleBuy(item, store),
+            onConsume: () => _handleConsume(item, store),
+          )),
         ],
 
         const SliverToBoxAdapter(child: SizedBox(height: 32)),

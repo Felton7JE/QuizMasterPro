@@ -5,13 +5,17 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Serviço central de áudio da app.
-/// Usa dois AudioPlayers independentes:
+/// Usa dois AudioPlayers independentes para música e um pool para SFX:
 /// - _musicPlayer: música de fundo em loop contínuo
-/// - _sfxPlayer: efeitos sonoros que tocam por cima da música
+/// - _sfxPlayers: efeitos sonoros que tocam por cima da música
 class AppAudioService extends ChangeNotifier with WidgetsBindingObserver {
-  // Dois players independentes
+  // Player de música
   final AudioPlayer _musicPlayer = AudioPlayer();
-  final AudioPlayer _sfxPlayer = AudioPlayer();
+  
+  // Pool de players para SFX para não cortarem uns aos outros
+  static const int _sfxPoolSize = 5;
+  final List<AudioPlayer> _sfxPlayers = List.generate(_sfxPoolSize, (_) => AudioPlayer());
+  int _currentSfxIndex = 0;
 
   // Estado atual
   bool _musicEnabled = true;
@@ -78,7 +82,9 @@ class AppAudioService extends ChangeNotifier with WidgetsBindingObserver {
 
     await loadSettings();
     await _musicPlayer.setReleaseMode(ReleaseMode.loop);
-    await _sfxPlayer.setReleaseMode(ReleaseMode.stop);
+    for (var player in _sfxPlayers) {
+      await player.setReleaseMode(ReleaseMode.stop);
+    }
   }
 
   /// Carrega as preferências guardadas
@@ -91,7 +97,9 @@ class AppAudioService extends ChangeNotifier with WidgetsBindingObserver {
     _sfxVolume = prefs.getDouble('sfxVolume') ?? 0.70;
 
     await _musicPlayer.setVolume(_musicVolume);
-    await _sfxPlayer.setVolume(_sfxVolume);
+    for (var player in _sfxPlayers) {
+      await player.setVolume(_sfxVolume);
+    }
     notifyListeners();
   }
 
@@ -142,8 +150,11 @@ class AppAudioService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _playSfx(String asset, {double? volume}) async {
     if (!_sfxEnabled) return;
     try {
-      await _sfxPlayer.setVolume(volume ?? _sfxVolume);
-      await _sfxPlayer.play(AssetSource(asset));
+      final player = _sfxPlayers[_currentSfxIndex];
+      _currentSfxIndex = (_currentSfxIndex + 1) % _sfxPoolSize;
+      
+      await player.setVolume(volume ?? _sfxVolume);
+      await player.play(AssetSource(asset));
     } catch (e) {
       if (kDebugMode) debugPrint('🔇 AudioService: Erro ao tocar SFX: $e');
     }
@@ -203,6 +214,9 @@ class AppAudioService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> setSfxVolume(double value) async {
     _sfxVolume = value;
+    for (var player in _sfxPlayers) {
+      await player.setVolume(value);
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('sfxVolume', value);
     notifyListeners();
@@ -212,7 +226,9 @@ class AppAudioService extends ChangeNotifier with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _musicPlayer.dispose();
-    _sfxPlayer.dispose();
+    for (var player in _sfxPlayers) {
+      player.dispose();
+    }
     super.dispose();
   }
 }
