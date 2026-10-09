@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
 
 import 'package:provider/provider.dart';
-import '../../../providers/auth_provider.dart';
-import 'package:quizmaster_pro/widgets/loading_logo.dart';
+import '../../../providers/core/auth_provider.dart';
+import 'package:quizmaster_pro/widgets/core/loading_logo.dart';
 
 class RecentActivitySection extends StatefulWidget {
   const RecentActivitySection({super.key});

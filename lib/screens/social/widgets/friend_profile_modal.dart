@@ -4,13 +4,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../models/friend_model.dart';
 import '../../../models/user_model.dart';
 import '../../../theme/app_colors.dart';
-import '../../../widgets/cosmetic_avatar.dart';
-import '../../../widgets/vip_badge_widget.dart';
-import '../../../widgets/loading_logo.dart';
+import '../../../widgets/profile/cosmetic_avatar.dart';
+import '../../../widgets/economy/vip_badge_widget.dart';
+import '../../../widgets/core/loading_logo.dart';
 import '../../../services/api_service.dart';
 import '../../../config/api_config.dart';
-import '../../../providers/store_provider.dart';
-import '../../create_room_screen.dart';
+import '../../../providers/economy/store_provider.dart';
+import '../../multiplayer/create_room_screen.dart';
 class FriendProfileModal extends StatefulWidget {
   final FriendModel friend;
   final VoidCallback onRemove;

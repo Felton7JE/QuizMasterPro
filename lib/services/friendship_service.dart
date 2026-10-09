@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/friend_model.dart';
-import 'api_service.dart';
+import './api_service.dart';
 
 class FriendshipService {
   final ApiService _apiService;

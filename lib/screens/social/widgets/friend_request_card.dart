@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/friend_model.dart';
 import '../../../theme/app_colors.dart';
-import '../../../widgets/cosmetic_avatar.dart';
+import '../../../widgets/profile/cosmetic_avatar.dart';
 
 class FriendRequestCard extends StatelessWidget {
   final FriendModel request;

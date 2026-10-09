@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' hide Category;
 import '../models/room_model.dart';
 import '../models/category_models.dart';
-import 'api_service.dart';
+import './api_service.dart';
 
 class RoomService {
   final ApiService _apiService;

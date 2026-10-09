@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import 'package:quizmaster_pro/widgets/loading_logo.dart';
+import 'package:quizmaster_pro/widgets/core/loading_logo.dart';
 
 class LoadingHelper {
   /// Shows a loading indicator, executes [fetchData], pre-caches images from [extractImageUrls],

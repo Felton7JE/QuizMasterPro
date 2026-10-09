@@ -1,4 +1,4 @@
-import 'room_model.dart';
+import './room_model.dart';
 
 enum GameStatus {
   WAITING('WAITING'),

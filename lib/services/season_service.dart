@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/season_models.dart';
-import 'api_service.dart';
+import './api_service.dart';
 
 class SeasonService {
   final ApiService _api;
