@@ -985,9 +985,9 @@ class _KahootGameScreenState extends State<KahootGameScreen>
   Widget _buildLiveLeaderboard(bool isSmallScreen) {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final myId = auth.currentUser?.id;
-    final top = _liveLeaderboard.take(3).toList();
+    final top = _liveLeaderboard.take(5).toList();
     LeaderboardEntry? me;
-    if (myId != null && !_liveLeaderboard.any((e) => e.userId == myId && e.position <= 3)) {
+    if (myId != null && !_liveLeaderboard.any((e) => e.userId == myId && e.position <= 5)) {
       me = _liveLeaderboard.where((e) => e.userId == myId).isNotEmpty
           ? _liveLeaderboard.firstWhere((e) => e.userId == myId)
           : null;

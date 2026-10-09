@@ -94,12 +94,23 @@ class _RankingScreenState extends State<RankingScreen> {
       }).toList();
 
       setState(() {
-        _topPlayers = mappedData.take(3).toList();
-        if (mappedData.length > 3) {
-          _allPlayers = mappedData.skip(3).toList();
+        final top20 = mappedData.take(20).toList();
+        _topPlayers = top20.take(3).toList();
+        if (top20.length > 3) {
+          _allPlayers = top20.skip(3).toList();
         } else {
           _allPlayers = [];
         }
+
+        // Ensure current user is in the list if not in top 20
+        final isCurrentUserInTop20 = top20.any((p) => p['isCurrentUser'] == true);
+        if (!isCurrentUserInTop20) {
+          final currentUserData = mappedData.firstWhere((p) => p['isCurrentUser'] == true, orElse: () => <String, dynamic>{});
+          if (currentUserData.isNotEmpty) {
+            _allPlayers.add(currentUserData);
+          }
+        }
+
         _isLoading = false;
       });
     } catch (e) {
