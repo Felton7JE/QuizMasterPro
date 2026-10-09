@@ -55,6 +55,7 @@ class _QuizGameScreenState extends State<QuizGameScreen>
   int _totalPoints = 0;
   // Live leaderboard
   List<LeaderboardEntry> _liveLeaderboard = [];
+  List<LeaderboardEntry>? _pendingLeaderboard;
   final bool _loadingLeaderboard = false;
 
   // In-Game Chat
@@ -106,9 +107,14 @@ class _QuizGameScreenState extends State<QuizGameScreen>
       try {
         final list = event.payload as List<dynamic>;
         final parsed = list.map((e) => LeaderboardEntry.fromJson(e)).toList();
-        setState(() {
-          _liveLeaderboard = parsed;
-        });
+        
+        if (!_showCorrectAnswer) {
+          _pendingLeaderboard = parsed;
+        } else {
+          setState(() {
+            _liveLeaderboard = parsed;
+          });
+        }
       } catch (e) {
         if (kDebugMode) debugPrint('Erro ao parsear leaderboard via WS: $e');
       }
@@ -414,6 +420,10 @@ class _QuizGameScreenState extends State<QuizGameScreen>
     if (mounted) {
       setState(() {
         _showCorrectAnswer = true;
+        if (_pendingLeaderboard != null) {
+          _liveLeaderboard = _pendingLeaderboard!;
+          _pendingLeaderboard = null;
+        }
       });
 
       if (selectedText.isNotEmpty) {

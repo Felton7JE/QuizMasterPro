@@ -53,6 +53,7 @@ class _KahootGameScreenState extends State<KahootGameScreen>
 
   // Live leaderboard
   List<LeaderboardEntry> _liveLeaderboard = [];
+  List<LeaderboardEntry>? _pendingLeaderboard;
 
   // In-Game Chat
   InGameChatMessageEvent? _latestChatMessage;
@@ -225,9 +226,14 @@ class _KahootGameScreenState extends State<KahootGameScreen>
       try {
         final list = lbEvent.payload as List<dynamic>;
         final parsed = list.map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>)).toList();
-        setState(() {
-          _liveLeaderboard = parsed;
-        });
+        
+        if (!_showCorrectAnswer) {
+          _pendingLeaderboard = parsed;
+        } else {
+          setState(() {
+            _liveLeaderboard = parsed;
+          });
+        }
       } catch (e) {
         if (kDebugMode) debugPrint('Erro ao parsear leaderboard via WS no Kahoot: $e');
       }
@@ -365,6 +371,11 @@ class _KahootGameScreenState extends State<KahootGameScreen>
         context.read<AppAudioService>().playSfxWrong();
         context.read<AppAudioService>().triggerVibration(heavy: true);
       }
+
+      if (_pendingLeaderboard != null) {
+        _liveLeaderboard = _pendingLeaderboard!;
+        _pendingLeaderboard = null;
+      }
     });
     // O backend enviará o NEXT_QUESTION após os 4 segundos de revelação
   }
@@ -424,12 +435,14 @@ class _KahootGameScreenState extends State<KahootGameScreen>
           _pendingIsCorrect = false;
         }
 
-        // Atualizar pontuação e ranking local imediatamente
-        final myIdx = _liveLeaderboard.indexWhere((e) => e.userId == userId);
+        // Atualizar pontuação e ranking local (guardamos em pending para não estragar a surpresa)
+        final curList = _pendingLeaderboard ?? _liveLeaderboard;
+        final copyList = List<LeaderboardEntry>.from(curList);
+        final myIdx = copyList.indexWhere((e) => e.userId == userId);
         if (myIdx != -1) {
-          final cur = _liveLeaderboard[myIdx];
+          final cur = copyList[myIdx];
           final newScore = cur.score + _pendingPointsEarned;
-          _liveLeaderboard[myIdx] = LeaderboardEntry(
+          copyList[myIdx] = LeaderboardEntry(
             userId: cur.userId,
             username: cur.username,
             fullName: cur.fullName,
@@ -445,10 +458,10 @@ class _KahootGameScreenState extends State<KahootGameScreen>
             activeFrameId: cur.activeFrameId,
             isVip: cur.isVip,
           );
-          _liveLeaderboard.sort((a, b) => b.score.compareTo(a.score));
-          for (int i = 0; i < _liveLeaderboard.length; i++) {
-            final e = _liveLeaderboard[i];
-            _liveLeaderboard[i] = LeaderboardEntry(
+          copyList.sort((a, b) => b.score.compareTo(a.score));
+          for (int i = 0; i < copyList.length; i++) {
+            final e = copyList[i];
+            copyList[i] = LeaderboardEntry(
               userId: e.userId,
               username: e.username,
               fullName: e.fullName,
@@ -465,10 +478,13 @@ class _KahootGameScreenState extends State<KahootGameScreen>
               isVip: e.isVip,
             );
           }
-          setState(() {});
+          _pendingLeaderboard = copyList;
         }
+      }
+      setState(() {});
+    }
 
-        if (kDebugMode) debugPrint('Kahoot submit ok: correct=$isCorrect pts=$_pendingPointsEarned (pendente)');
+    if (kDebugMode) debugPrint('Kahoot submit ok: correct=$isCorrect pts=$_pendingPointsEarned (pendente)');
       }
     } catch (e) {
       if (kDebugMode) debugPrint('Kahoot submit error: $e');
