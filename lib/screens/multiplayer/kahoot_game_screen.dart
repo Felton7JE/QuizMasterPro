@@ -480,12 +480,9 @@ class _KahootGameScreenState extends State<KahootGameScreen>
           }
           _pendingLeaderboard = copyList;
         }
+        if (kDebugMode) debugPrint('Kahoot submit ok: correct=$isCorrect pts=$_pendingPointsEarned (pendente)');
       }
       setState(() {});
-    }
-
-    if (kDebugMode) debugPrint('Kahoot submit ok: correct=$isCorrect pts=$_pendingPointsEarned (pendente)');
-      }
     } catch (e) {
       if (kDebugMode) debugPrint('Kahoot submit error: $e');
     }
