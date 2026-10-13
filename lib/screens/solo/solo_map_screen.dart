@@ -394,24 +394,28 @@ class _SoloMapScreenState extends State<SoloMapScreen> with SingleTickerProvider
         if (level.unlocked) {
           _showLevelDetailsModal(context, level);
         } else {
-          final totalStars = context.read<SoloProvider>().mapData?.totalStars ?? 0;
-          if (level.requiredStarsToUnlock > totalStars) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Precisas de ${level.requiredStarsToUnlock} estrelas para abrir este capítulo! Tens $totalStars.'),
-                backgroundColor: Colors.amber.shade800,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Nível bloqueado! Completa os níveis anteriores.'),
-                backgroundColor: Colors.redAccent,
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
+          final totalStars =
+              context.read<SoloProvider>().mapData?.totalStars ?? 0;
+
+          final snackBar = level.requiredStarsToUnlock > totalStars
+              ? SnackBar(
+                  content: Text(
+                    'Precisas de ${level.requiredStarsToUnlock} estrelas para abrir este capítulo! Tens $totalStars.',
+                  ),
+                  backgroundColor: Colors.amber.shade800,
+                  duration: const Duration(seconds: 3),
+                )
+              : const SnackBar(
+                  content: Text(
+                    'Nível bloqueado! Completa os níveis anteriores.',
+                  ),
+                  backgroundColor: Colors.redAccent,
+                  duration: Duration(seconds: 2),
+                );
+
+          final messenger = ScaffoldMessenger.of(context);
+          messenger.clearSnackBars();
+          messenger.showSnackBar(snackBar);
         }
       },
       child: AnimatedBuilder(

@@ -164,7 +164,14 @@ class _QuizResultsScreenState extends State<QuizResultsScreen>
     if (isSeason) {
       route = '/season-map';
     } else if (isPractice) {
-      route = '/solo-setup';
+      // Mantém o Modo Livre na pilha para que o botão Voltar da seleção
+      // de categoria tenha um destino válido.
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/solo-setup',
+        ModalRoute.withName('/free-mode'),
+      );
+      return;
     } else if (isSolo) route = '/solo-map';
     else if (isTeamMode || isClassicRoom) route = '/team-lobby';
     else if (isDuelMode) route = '/duel-lobby';

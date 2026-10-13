@@ -7,7 +7,6 @@ import '../../../utils/loading_helper.dart';
 import '../../../providers/core/auth_provider.dart';
 import '../../../providers/solo/solo_provider.dart';
 import '../../../providers/economy/season_provider.dart';
-import '../../modes/free_mode_menu_screen.dart';
 
 class GameModeCard extends StatelessWidget {
   final IconData icon;
@@ -201,10 +200,7 @@ class GameModeCard extends StatelessWidget {
                   child: CustomButton(
                     text: 'Jogar Agora',
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const FreeModeMenuScreen()),
-                      );
+                      Navigator.pushNamed(context, '/free-mode');
                     },
                     isPrimary: true,
                   ),

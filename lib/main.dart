@@ -19,6 +19,7 @@ import './screens/solo/solo_setup_screen.dart';
 import './screens/solo/survival_game_screen.dart';
 import './screens/solo/time_attack_game_screen.dart';
 import './screens/solo/free_mode_results_screen.dart';
+import './screens/modes/free_mode_menu_screen.dart';
 import './services/api_service.dart';
 import './services/auth_service.dart';
 import './services/room_service.dart';
@@ -232,6 +233,7 @@ class MeuQuizApp extends StatelessWidget {
           '/ranking': (context) => const RankingScreen(),
           '/login': (context) => const LoginScreen(),
           '/solo-setup': (context) => const SoloSetupScreen(),
+          '/free-mode': (context) => const FreeModeMenuScreen(),
           '/quests': (context) => const QuestsScreen(),
           '/store': (context) => const StoreScreen(),
           '/profile': (context) => const ProfileScreen(),
